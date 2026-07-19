@@ -39,6 +39,8 @@ function frameCamera() {
 }
 frameCamera()
 window.addEventListener('resize', frameCamera)
+// VRM 등 비동기 모델은 로드 완료 후 실측 높이로 재프레이밍
+mingo.ready?.then(frameCamera)
 
 // ---------- 트래킹 + 생명감 ----------
 const tracker = createTracker()

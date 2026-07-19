@@ -29,6 +29,7 @@ const camera = new THREE.PerspectiveCamera(17, 1, 0.1, 100)
 
 const mingo = createMingo()
 scene.add(mingo.root)
+if (mingo.ready) await mingo.ready // VRM 등 비동기 로드 대기 (모듈 TLA)
 
 const w = window.innerWidth, h = window.innerHeight
 renderer.setSize(w, h, false)

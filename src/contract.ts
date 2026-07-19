@@ -79,8 +79,10 @@ export function neutralFrame(): RigFrame {
 export interface MingoModel {
   /** 씬에 추가할 루트. 발 밑 원점, 캐릭터 정면 = +Z(카메라 방향) */
   root: import('three').Group
-  /** 전체 높이(월드 단위). 카메라 프레이밍용 */
+  /** 전체 높이(월드 단위). 카메라 프레이밍용 — ready 이후 확정값 */
   height: number
+  /** 비동기 에셋(VRM 등) 로드 완료. 없으면 동기 모델. 호출측은 완료 후 카메라 재프레이밍 */
+  ready?: Promise<void>
   /** 매 프레임 호출. t는 앱 시작 후 초. 내부 스프링/2차 모션도 여기서 갱신 */
   apply(frame: RigFrame, dt: number, t: number): void
   /** 히트테스트(클릭스루 토글)용 — 레이캐스트 대상 메시들 */
