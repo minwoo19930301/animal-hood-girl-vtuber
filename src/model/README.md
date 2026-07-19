@@ -1,5 +1,9 @@
 # src/model — VRM 휴머노이드 + 프로시저럴 플라밍고 후드
 
+> 2026-07 룩 업데이트: avatar.vrm(리페인트 VRoid)에서 후드 상시 켬, AccessoryNeck(보타이)
+> 런타임 숨김, 드로스트링 슬림화(골드 링 제거·카라 기부 앵커), smile → closed-lip 리매핑.
+> 긴팔은 Body 텍스처(15) 팔 스트립을 화이트+코랄 커프로 페인트해 표현(메쉬 연장 없음).
+
 `createMingo(): MingoModel` (계약: `src/contract.ts`). **동기 생성 + `ready` 프라미스**로
 VRM 비동기 로드 — 로드 전 `apply()`는 no-op, 로드 후 `height`/`hitMeshes` 실측 갱신
 (호출측은 `ready` 후 카메라 재프레이밍). `Math.random()` 없음 — 2차 모션은 전부 dt 기반 스프링.
@@ -71,7 +75,9 @@ pivot (정규화 head 본에 어태치; VRM1이면 y π 플립)
 - **gaze** → `vrm.lookAt.yaw/pitch` (deg): `yaw = gaze.x·14`, `pitch = −gaze.y·11`
   (three-vrm은 pitch+가 아래).
 - **표정**: blinkL/R→`blinkLeft/Right`(폴백 `blink`에 max), mouthOpen→`aa`,
-  smile>0→`happy`×0.6 / <0→`sad`×0.4, fx.happy→`happy` 1.0, browRaise>0→`surprised`×0.3.
+  smile>0→**closed-lip 리매핑**: `relaxed`(VRoid Fun, 입꼬리 상승)×0.8 주 채널 +
+  `happy`(Joy, jaw-open 포함)는 min(×0.5, **0.12 캡**) — 다문 입꼬리 미소(레퍼런스).
+  smile<0→`sad`×0.4, fx.happy→`happy` 1.0(이벤트만 풀 Joy), browRaise>0→`surprised`×0.3.
 - **호흡**: 정규화 chest 회전 x ±0.012·sin + raw chest 균일 스케일 ±0.6% + 어깨 들썩 0.02.
 - **FX**: visible 토글 + t 기반 펄스/바운스 (하트 스케일 ±10%, 땀 y 바운스, 분노 ±6%).
 - 매 프레임 끝에 `vrm.update(dt)` (정규화→raw 복사·expression·lookAt·스프링본).

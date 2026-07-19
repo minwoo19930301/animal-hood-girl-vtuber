@@ -20,16 +20,24 @@ import { TOON } from '../palette'
 import { Follower } from './springs'
 import { buildHood, type HoodRig } from './hood'
 import { buildFx, type FxRig } from './fx'
-import { buildSportsJacket } from './clothing'
+import { buildAccessories, type AccessoryRig } from './accessories'
 
 const { clamp } = THREE.MathUtils
 
 /** ★ 사용자 VRoid 모델 교체 지점: public/models/에 .vrm을 넣고 이 경로만 바꾼다 */
-const MODEL_URL = './models/flamingo_motion.vrm'
+const MODEL_URL = './models/avatar.vrm'
 
 /** 머리 회전 분배: neck 40% + head 60% */
 const NECK_SHARE = 0.4
 const HEAD_SHARE = 0.6
+
+/**
+ * 눈매 강화 바이어스 (0~1): `angry` 표정(VRoid 프리셋 — 아래 눈꺼풀 리프트 + 눈썹
+ * 미세 각도)을 상시 소량 적용해 눈을 살짝 가늘게 — 레퍼런스(refs/target-human.png)의
+ * 어른스럽고 또렷한 눈매. blink 가중치가 클 땐 (1 - blink)로 자동 감쇠해
+ * 눈꺼풀 이중 변형(과닫힘)을 막는다. 0 = 끔. 권장 0.1~0.2 (과하면 사나워짐).
+ */
+export const EYE_SHARPEN = 0.15
 
 /** 팔 FK 포즈 튜닝 상수 (rad) — VRM T포즈 기준 upperArm z 회전으로 A포즈化 */
 export const ARM = {
@@ -85,9 +93,10 @@ interface Rig {
   armL: ArmRig
   armR: ArmRig
   em: VRMExpressionManager | null
-  has: Record<'blinkL' | 'blinkR' | 'blink' | 'aa' | 'happy' | 'sad' | 'surprised', boolean>
+  has: Record<'blinkL' | 'blinkR' | 'blink' | 'aa' | 'happy' | 'relaxed' | 'sad' | 'surprised' | 'angry', boolean>
   hood: HoodRig
   fx: FxRig
+  acc: AccessoryRig
 }
 
 /** MToon 순회 튜닝: 셰이드는 어둡게가 아니라 hue-shift, 셀 경계 크리스프, 아웃라인 강화 */
@@ -170,9 +179,17 @@ export function createMingo(): MingoModel {
         } else if (has.blink) {
           em.setValue('blink', Math.max(blL, blR))
         }
+        // ---- 눈매 강화: angry를 상시 소량 적용해 눈을 살짝 가늘게 (EYE_SHARPEN 주석 참조).
+        //      blink가 진행 중일 땐 (1 - max(blink))로 감쇠 — 감은 눈에 겹치지 않게.
+        if (has.angry) em.setValue('angry', EYE_SHARPEN * (1 - Math.max(blL, blR)))
         if (has.aa) em.setValue('aa', clamp(frame.mouthOpen, 0, 1))
         const smile = clamp(frame.mouthSmile, -1, 1)
-        if (has.happy) em.setValue('happy', frame.fx.happy ? 1 : Math.max(0, smile) * 0.6)
+        const sm = Math.max(0, smile)
+        // 미소 리매핑 (closed-lip): 레퍼런스는 다문 입꼬리 미소 — jaw-open이 포함된
+        // happy(VRoid Joy)는 상위 구간을 0.2로 캡하고, 입꼬리 상승 위주의
+        // relaxed(VRoid Fun)를 주 채널로 쓴다. fx.happy(이벤트)만 풀 Joy.
+        if (has.happy) em.setValue('happy', frame.fx.happy ? 1 : Math.min(sm * 0.5, 0.12))
+        if (has.relaxed) em.setValue('relaxed', sm * 0.8)
         if (has.sad) em.setValue('sad', Math.max(0, -smile) * 0.4)
         if (has.surprised) {
           const browRaise = Math.max(clamp(frame.browL, -1, 1), clamp(frame.browR, -1, 1))
@@ -198,6 +215,9 @@ export function createMingo(): MingoModel {
       const by = beakY.step(yaw, dt)
       // 부리 pitch 오버슈트 0.55→0.32: 고개 숙임 때 부리 끝이 눈썹 아래로 안 내려오게
       rig.hood.beakPivot.rotation.set(bp * 0.32, 0, -by * 0.30)
+
+      // ---- 드로스트링 2차 모션 (몸/고개 지연 추종 살랑임 — 액세서리 내부 스프링) ----
+      rig.acc.sway(S * pitch, yaw, breathAmp, dt)
 
       // ---- FX ----
       const fx = rig.fx
@@ -269,9 +289,17 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
   vrm.scene.traverse((o) => { o.frustumCulled = false })
   // Do not reuse the donor's visible outfit. The new jacket is authored in
   // this app and is attached to the live humanoid bones below.
+  // AccessoryNeck(교복 보타이)도 숨김 — 레퍼런스 트랙탑 룩에 리본이 남으면
+  // 교복으로 읽힌다 (원본 VRM은 불변, 런타임 가시성만 끔).
   vrm.scene.traverse((o) => {
     const n = o.name.toLowerCase()
-    if (n.includes('athleticjacket') || n.includes('athleticjogger') || n.includes('athleticsneaker')) {
+    const mats = (o as THREE.Mesh).isMesh
+      ? [(o as THREE.Mesh).material].flat().map((m) => (m?.name ?? '').toLowerCase())
+      : []
+    if (
+      n.includes('athleticjacket') || n.includes('athleticjogger') || n.includes('athleticsneaker') ||
+      n.includes('accessoryneck') || mats.some((m) => m.includes('accessoryneck'))
+    ) {
       o.visible = false
     }
   })
@@ -310,7 +338,7 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
   }
 
   const headNode = bone('head')
-  const rig: Omit<Rig, 'hood' | 'fx'> = {
+  const rig: Omit<Rig, 'hood' | 'fx' | 'acc'> = {
     vrm,
     S,
     neck: bone('neck'),
@@ -326,8 +354,10 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
       blink: !!vrm.expressionManager?.getExpression('blink'),
       aa: !!vrm.expressionManager?.getExpression('aa'),
       happy: !!vrm.expressionManager?.getExpression('happy'),
+      relaxed: !!vrm.expressionManager?.getExpression('relaxed'),
       sad: !!vrm.expressionManager?.getExpression('sad'),
       surprised: !!vrm.expressionManager?.getExpression('surprised'),
+      angry: !!vrm.expressionManager?.getExpression('angry'),
     },
   }
 
@@ -367,21 +397,30 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
         halfW: Math.max(Math.abs(faceBox.max.x - headWp.x), Math.abs(faceBox.min.x - headWp.x)),
       }
 
-  // The image-guided flamingo VRM already contains the pink hood, beak and
-  // hood-side eyes as skinned meshes. Keep the procedural hood rig available
-  // for the fallback VRoid model, but do not stack it on top of the authored
-  // VRM (the duplicate shell makes the beak/eye line look muddy).
+  // avatar.vrm(리페인트 VRoid)에는 후드 지오메트리가 없으므로 프로시저럴
+  // 플라밍고 후드(hood.ts)를 항상 켠다 — 레퍼런스의 시그니처 액세서리
+  // (핑크 후드+부리+아이패치). 머리 바운딩 실측 스케일이라 모델 무관하게 맞는다.
+  // 프로시저럴 스포츠재킷(clothing.ts)은 구 플라밍고 모델 전용 하드코딩 치수 —
+  // avatar.vrm은 텍스처 리페인트(화이트 트랙탑+코랄 트림)로 의상을 표현하므로 중첩 금지.
   const hood = buildHood(crownH, hw, face)
-  buildSportsJacket(rig.chest, rig.armL.upper, rig.armR.upper)
   const fx = buildFx(crownH)
   fx.sweat.userData.baseY = fx.sweat.position.y
   if (S === -1) { // VRM1: 후드는 -Z 정면 프레임으로 빌드했으므로 π 뒤집기
     hood.pivot.rotation.y = Math.PI
     // fx.group은 hood.pivot의 자식이라 위 π를 상속한다 — 자체 회전을 더하면 2π(원위치)
   }
-  hood.pivot.visible = false
   headNode?.add(fx.group)
   headNode?.add(hood.pivot)
+
+  // ---- 트랙재킷 액세서리 (손목밴드 + 후드 드로스트링) — 본 실측 자동 배치 ----
+  // rest 포즈 월드 행렬 기준으로 산출하므로 위 updateMatrixWorld(337행) 이후·포즈 적용 전 빌드
+  const acc = buildAccessories({
+    chest: rig.chest,
+    neck: rig.neck ?? headNode,
+    upperArmL: rig.armL.upper, upperArmR: rig.armR.upper,
+    lowerArmL: rig.armL.lower, lowerArmR: rig.armR.lower,
+    handL: rig.armL.hand, handR: rig.armR.hand,
+  }, S)
 
   // ---- 높이/히트메시 갱신 ----
   root.updateMatrixWorld(true)
@@ -391,5 +430,5 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
   vrm.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) hit.push(o) })
   api.hitMeshes = hit
 
-  return { ...rig, hood, fx }
+  return { ...rig, hood, fx, acc }
 }

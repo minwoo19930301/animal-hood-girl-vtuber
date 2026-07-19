@@ -18,6 +18,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.2",
     "@types/three": "^0.185.1",
     "concurrently": "^10.0.3",
     "electron": "^43.1.1",

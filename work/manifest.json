@@ -1,0 +1,602 @@
+[
+  {
+    "imageIdx": 0,
+    "file": "work/textures/0_F00_000_00_FaceMouth_00_FACE.png",
+    "imageName": "F00_000_FaceMouth_00",
+    "mime": "image/png",
+    "width": 512,
+    "height": 512,
+    "byteLength": 55137,
+    "materials": [
+      "F00_000_00_FaceMouth_00_FACE",
+      "F00_000_00_FaceMouth_00_FACE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 0,
+      "byteOffset": 0,
+      "byteLength": 55137
+    }
+  },
+  {
+    "imageIdx": 1,
+    "file": "work/textures/1_F00_000_00_FaceMouth_00_FACE_normal+F00_000_00_EyeWhite_00_EYE_normal+F00_000_00_FaceEyeline_00_FACE_normal.png",
+    "imageName": "Shader_NoneNormal_01",
+    "mime": "image/png",
+    "width": 8,
+    "height": 8,
+    "byteLength": 80,
+    "materials": [
+      "F00_000_00_FaceMouth_00_FACE(normal)",
+      "F00_000_00_EyeWhite_00_EYE(normal)",
+      "F00_000_00_FaceEyeline_00_FACE(normal)",
+      "F00_000_00_FaceEyelash_00_FACE(normal)",
+      "F00_000_00_FaceBrow_00_FACE(normal)",
+      "F00_000_00_EyeIris_00_EYE(normal)",
+      "F00_000_00_EyeHighlight_00_EYE(normal)",
+      "F00_000_00_EyeExtra_01_EYE(normal)",
+      "F00_001_01_AccessoryNeck_01_CLOTH(normal)",
+      "F00_001_01_Bottoms_01_CLOTH(normal)",
+      "F00_001_01_Shoes_01_CLOTH(normal)",
+      "F00_000_00_FaceMouth_00_FACE(_BumpMap)",
+      "F00_000_00_EyeWhite_00_EYE(_BumpMap)",
+      "F00_000_00_FaceEyeline_00_FACE(_BumpMap)",
+      "F00_000_00_FaceEyelash_00_FACE(_BumpMap)",
+      "F00_000_00_FaceBrow_00_FACE(_BumpMap)",
+      "F00_000_00_EyeIris_00_EYE(_BumpMap)",
+      "F00_000_00_EyeHighlight_00_EYE(_BumpMap)",
+      "F00_000_00_EyeExtra_01_EYE(_BumpMap)",
+      "F00_001_01_AccessoryNeck_01_CLOTH(_BumpMap)",
+      "F00_001_01_Bottoms_01_CLOTH(_BumpMap)",
+      "F00_001_01_Shoes_01_CLOTH(_BumpMap)"
+    ],
+    "bufferView": {
+      "index": 1,
+      "byteOffset": 55137,
+      "byteLength": 80
+    }
+  },
+  {
+    "imageIdx": 2,
+    "file": "work/textures/2_F00_000_00_FaceMouth_00_FACE_emissive+F00_000_00_EyeWhite_00_EYE_emissive+F00_000_00_FaceEyeline_00_FACE_emissive.png",
+    "imageName": "Shader_NoneBlack",
+    "mime": "image/png",
+    "width": 8,
+    "height": 8,
+    "byteLength": 81,
+    "materials": [
+      "F00_000_00_FaceMouth_00_FACE(emissive)",
+      "F00_000_00_EyeWhite_00_EYE(emissive)",
+      "F00_000_00_FaceEyeline_00_FACE(emissive)",
+      "F00_000_00_FaceEyelash_00_FACE(emissive)",
+      "F00_000_00_FaceBrow_00_FACE(emissive)",
+      "F00_000_00_EyeIris_00_EYE(emissive)",
+      "F00_000_00_EyeHighlight_00_EYE(emissive)",
+      "F00_000_00_Face_00_SKIN(emissive)",
+      "F00_000_00_EyeExtra_01_EYE(emissive)",
+      "F00_001_01_Body_00_SKIN(emissive)",
+      "F00_001_01_Tops_01_CLOTH(emissive)",
+      "F00_001_01_AccessoryNeck_01_CLOTH(emissive)",
+      "F00_001_01_Bottoms_01_CLOTH(emissive)",
+      "F00_001_01_Shoes_01_CLOTH(emissive)",
+      "F00_000_HairBack_00_HAIR(emissive)",
+      "F00_000_00_FaceMouth_00_FACE(_SphereAdd)",
+      "F00_000_00_FaceMouth_00_FACE(_EmissionMap)",
+      "F00_000_00_EyeWhite_00_EYE(_SphereAdd)",
+      "F00_000_00_EyeWhite_00_EYE(_EmissionMap)",
+      "F00_000_00_FaceEyeline_00_FACE(_EmissionMap)",
+      "F00_000_00_FaceEyelash_00_FACE(_SphereAdd)",
+      "F00_000_00_FaceEyelash_00_FACE(_EmissionMap)",
+      "F00_000_00_FaceBrow_00_FACE(_SphereAdd)",
+      "F00_000_00_FaceBrow_00_FACE(_EmissionMap)",
+      "F00_000_00_EyeIris_00_EYE(_SphereAdd)",
+      "F00_000_00_EyeIris_00_EYE(_EmissionMap)",
+      "F00_000_00_EyeHighlight_00_EYE(_SphereAdd)",
+      "F00_000_00_EyeHighlight_00_EYE(_EmissionMap)",
+      "F00_000_00_Face_00_SKIN(_EmissionMap)",
+      "F00_000_00_EyeExtra_01_EYE(_EmissionMap)",
+      "F00_001_01_Body_00_SKIN(_EmissionMap)",
+      "F00_001_01_Tops_01_CLOTH(_EmissionMap)",
+      "F00_001_01_AccessoryNeck_01_CLOTH(_EmissionMap)",
+      "F00_001_01_Bottoms_01_CLOTH(_EmissionMap)",
+      "F00_001_01_Shoes_01_CLOTH(_EmissionMap)",
+      "F00_000_HairBack_00_HAIR(_EmissionMap)"
+    ],
+    "bufferView": {
+      "index": 2,
+      "byteOffset": 55217,
+      "byteLength": 81
+    }
+  },
+  {
+    "imageIdx": 3,
+    "file": "work/textures/3_Shader_NoneBlack.png",
+    "imageName": "Shader_NoneBlack",
+    "mime": "image/png",
+    "width": 8,
+    "height": 8,
+    "byteLength": 81,
+    "materials": [],
+    "bufferView": {
+      "index": 3,
+      "byteOffset": 55298,
+      "byteLength": 81
+    }
+  },
+  {
+    "imageIdx": 4,
+    "file": "work/textures/4_F00_000_00_EyeWhite_00_EYE.png",
+    "imageName": "F00_000_EyeWhite_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 512,
+    "byteLength": 83854,
+    "materials": [
+      "F00_000_00_EyeWhite_00_EYE",
+      "F00_000_00_EyeWhite_00_EYE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 4,
+      "byteOffset": 55379,
+      "byteLength": 83854
+    }
+  },
+  {
+    "imageIdx": 5,
+    "file": "work/textures/5_F00_000_00_FaceEyeline_00_FACE.png",
+    "imageName": "F00_000_FaceEyeline_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 256,
+    "byteLength": 54184,
+    "materials": [
+      "F00_000_00_FaceEyeline_00_FACE",
+      "F00_000_00_FaceEyeline_00_FACE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 5,
+      "byteOffset": 139233,
+      "byteLength": 54184
+    }
+  },
+  {
+    "imageIdx": 6,
+    "file": "work/textures/6_F00_000_00_FaceEyeline_00_FACE__SphereAdd+F00_000_00_Face_00_SKIN__SphereAdd+F00_000_00_EyeExtra_01_EYE__SphereAdd.png",
+    "imageName": "Matcap_Rim",
+    "mime": "image/png",
+    "width": 512,
+    "height": 512,
+    "byteLength": 75681,
+    "materials": [
+      "F00_000_00_FaceEyeline_00_FACE(_SphereAdd)",
+      "F00_000_00_Face_00_SKIN(_SphereAdd)",
+      "F00_000_00_EyeExtra_01_EYE(_SphereAdd)",
+      "F00_001_01_Body_00_SKIN(_SphereAdd)",
+      "F00_001_01_Tops_01_CLOTH(_SphereAdd)",
+      "F00_001_01_AccessoryNeck_01_CLOTH(_SphereAdd)",
+      "F00_001_01_Bottoms_01_CLOTH(_SphereAdd)",
+      "F00_001_01_Shoes_01_CLOTH(_SphereAdd)"
+    ],
+    "bufferView": {
+      "index": 6,
+      "byteOffset": 193417,
+      "byteLength": 75681
+    }
+  },
+  {
+    "imageIdx": 7,
+    "file": "work/textures/7_F00_000_00_FaceEyelash_00_FACE.png",
+    "imageName": "F00_000_FaceEyelash_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 256,
+    "byteLength": 76134,
+    "materials": [
+      "F00_000_00_FaceEyelash_00_FACE",
+      "F00_000_00_FaceEyelash_00_FACE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 7,
+      "byteOffset": 269098,
+      "byteLength": 76134
+    }
+  },
+  {
+    "imageIdx": 8,
+    "file": "work/textures/8_F00_000_00_FaceBrow_00_FACE.png",
+    "imageName": "F00_000_FaceBrow_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 256,
+    "byteLength": 27053,
+    "materials": [
+      "F00_000_00_FaceBrow_00_FACE",
+      "F00_000_00_FaceBrow_00_FACE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 8,
+      "byteOffset": 345232,
+      "byteLength": 27053
+    }
+  },
+  {
+    "imageIdx": 9,
+    "file": "work/textures/9_F00_000_00_EyeIris_00_EYE.png",
+    "imageName": "F00_000_EyeIris_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 512,
+    "byteLength": 147513,
+    "materials": [
+      "F00_000_00_EyeIris_00_EYE",
+      "F00_000_00_EyeIris_00_EYE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 9,
+      "byteOffset": 372285,
+      "byteLength": 147513
+    }
+  },
+  {
+    "imageIdx": 10,
+    "file": "work/textures/10_F00_000_00_EyeHighlight_00_EYE.png",
+    "imageName": "F00_000_EyeHighlight_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 512,
+    "byteLength": 17893,
+    "materials": [
+      "F00_000_00_EyeHighlight_00_EYE",
+      "F00_000_00_EyeHighlight_00_EYE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 10,
+      "byteOffset": 519798,
+      "byteLength": 17893
+    }
+  },
+  {
+    "imageIdx": 11,
+    "file": "work/textures/11_F00_000_00_Face_00_SKIN.png",
+    "imageName": "F00_000_Face_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 1024,
+    "byteLength": 274924,
+    "materials": [
+      "F00_000_00_Face_00_SKIN",
+      "F00_000_00_Face_00_SKIN(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 11,
+      "byteOffset": 537691,
+      "byteLength": 274924
+    }
+  },
+  {
+    "imageIdx": 12,
+    "file": "work/textures/12_F00_000_00_Face_00_SKIN_normal+F00_000_00_Face_00_SKIN__BumpMap.png",
+    "imageName": "F00_000_00_Face_00_nml",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 1024,
+    "byteLength": 388199,
+    "materials": [
+      "F00_000_00_Face_00_SKIN(normal)",
+      "F00_000_00_Face_00_SKIN(_BumpMap)"
+    ],
+    "bufferView": {
+      "index": 12,
+      "byteOffset": 812615,
+      "byteLength": 388199
+    }
+  },
+  {
+    "imageIdx": 13,
+    "file": "work/textures/13_F00_000_00_Face_00_SKIN__OutlineWidthTexture.png",
+    "imageName": "F00_000_00_Face_00_out",
+    "mime": "image/png",
+    "width": 256,
+    "height": 256,
+    "byteLength": 9851,
+    "materials": [
+      "F00_000_00_Face_00_SKIN(_OutlineWidthTexture)"
+    ],
+    "bufferView": {
+      "index": 13,
+      "byteOffset": 1200814,
+      "byteLength": 9851
+    }
+  },
+  {
+    "imageIdx": 14,
+    "file": "work/textures/14_F00_000_00_EyeExtra_01_EYE.png",
+    "imageName": "F00_000_00_EyeExtra_01",
+    "mime": "image/png",
+    "width": 512,
+    "height": 256,
+    "byteLength": 31878,
+    "materials": [
+      "F00_000_00_EyeExtra_01_EYE",
+      "F00_000_00_EyeExtra_01_EYE(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 14,
+      "byteOffset": 1210665,
+      "byteLength": 31878
+    }
+  },
+  {
+    "imageIdx": 15,
+    "file": "work/textures/15_F00_001_01_Body_00_SKIN.png",
+    "imageName": "F00_000_Body_00",
+    "mime": "image/png",
+    "width": 2048,
+    "height": 2048,
+    "byteLength": 1835550,
+    "materials": [
+      "F00_001_01_Body_00_SKIN",
+      "F00_001_01_Body_00_SKIN(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 15,
+      "byteOffset": 1242543,
+      "byteLength": 1835550
+    }
+  },
+  {
+    "imageIdx": 16,
+    "file": "work/textures/16_F00_001_01_Body_00_SKIN_normal+F00_001_01_Body_00_SKIN__BumpMap.png",
+    "imageName": "F00_001_01_Body_00_nml",
+    "mime": "image/png",
+    "width": 2048,
+    "height": 2048,
+    "byteLength": 2147231,
+    "materials": [
+      "F00_001_01_Body_00_SKIN(normal)",
+      "F00_001_01_Body_00_SKIN(_BumpMap)"
+    ],
+    "bufferView": {
+      "index": 16,
+      "byteOffset": 3078093,
+      "byteLength": 2147231
+    }
+  },
+  {
+    "imageIdx": 17,
+    "file": "work/textures/17_F00_001_01_Tops_01_CLOTH.png",
+    "imageName": "F00_001_Tops_01",
+    "mime": "image/png",
+    "width": 2048,
+    "height": 2048,
+    "byteLength": 1521578,
+    "materials": [
+      "F00_001_01_Tops_01_CLOTH",
+      "F00_001_01_Tops_01_CLOTH(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 17,
+      "byteOffset": 5225324,
+      "byteLength": 1521578
+    }
+  },
+  {
+    "imageIdx": 18,
+    "file": "work/textures/18_F00_001_01_Tops_01_CLOTH_normal+F00_001_01_Tops_01_CLOTH__BumpMap.png",
+    "imageName": "Shader_NoneNormal_02",
+    "mime": "image/png",
+    "width": 8,
+    "height": 8,
+    "byteLength": 80,
+    "materials": [
+      "F00_001_01_Tops_01_CLOTH(normal)",
+      "F00_001_01_Tops_01_CLOTH(_BumpMap)"
+    ],
+    "bufferView": {
+      "index": 18,
+      "byteOffset": 6746902,
+      "byteLength": 80
+    }
+  },
+  {
+    "imageIdx": 19,
+    "file": "work/textures/19_F00_001_01_AccessoryNeck_01_CLOTH.png",
+    "imageName": "F00_001_Accessory_01",
+    "mime": "image/png",
+    "width": 256,
+    "height": 256,
+    "byteLength": 53733,
+    "materials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH",
+      "F00_001_01_AccessoryNeck_01_CLOTH(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 19,
+      "byteOffset": 6746982,
+      "byteLength": 53733
+    }
+  },
+  {
+    "imageIdx": 20,
+    "file": "work/textures/20_F00_001_01_Bottoms_01_CLOTH.png",
+    "imageName": "F00_001_Bottoms_01",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 512,
+    "byteLength": 147501,
+    "materials": [
+      "F00_001_01_Bottoms_01_CLOTH",
+      "F00_001_01_Bottoms_01_CLOTH(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 20,
+      "byteOffset": 6800715,
+      "byteLength": 147501
+    }
+  },
+  {
+    "imageIdx": 21,
+    "file": "work/textures/21_F00_001_01_Shoes_01_CLOTH.png",
+    "imageName": "F00_001_Shoes_01",
+    "mime": "image/png",
+    "width": 512,
+    "height": 512,
+    "byteLength": 82585,
+    "materials": [
+      "F00_001_01_Shoes_01_CLOTH",
+      "F00_001_01_Shoes_01_CLOTH(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 21,
+      "byteOffset": 6948216,
+      "byteLength": 82585
+    }
+  },
+  {
+    "imageIdx": 22,
+    "file": "work/textures/22_F00_000_HairBack_00_HAIR.png",
+    "imageName": "F00_000_HairBack_00",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 1024,
+    "byteLength": 287349,
+    "materials": [
+      "F00_000_HairBack_00_HAIR",
+      "F00_000_HairBack_00_HAIR(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 22,
+      "byteOffset": 7030801,
+      "byteLength": 287349
+    }
+  },
+  {
+    "imageIdx": 23,
+    "file": "work/textures/23_F00_000_HairBack_00_HAIR_normal+F00_000_HairBack_00_HAIR__BumpMap.png",
+    "imageName": "F00_000_HairBack_00_nml",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 1024,
+    "byteLength": 368948,
+    "materials": [
+      "F00_000_HairBack_00_HAIR(normal)",
+      "F00_000_HairBack_00_HAIR(_BumpMap)"
+    ],
+    "bufferView": {
+      "index": 23,
+      "byteOffset": 7318150,
+      "byteLength": 368948
+    }
+  },
+  {
+    "imageIdx": 24,
+    "file": "work/textures/24_F00_000_HairBack_00_HAIR__SphereAdd+F00_000_Hair_00_HAIR_01__SphereAdd+F00_000_Hair_00_HAIR_02__SphereAdd.png",
+    "imageName": "Matcap_RimHair",
+    "mime": "image/png",
+    "width": 512,
+    "height": 512,
+    "byteLength": 39288,
+    "materials": [
+      "F00_000_HairBack_00_HAIR(_SphereAdd)",
+      "F00_000_Hair_00_HAIR_01(_SphereAdd)",
+      "F00_000_Hair_00_HAIR_02(_SphereAdd)"
+    ],
+    "bufferView": {
+      "index": 24,
+      "byteOffset": 7687098,
+      "byteLength": 39288
+    }
+  },
+  {
+    "imageIdx": 25,
+    "file": "work/textures/25_F00_000_Hair_00_HAIR_01.png",
+    "imageName": "F00_000_Hair_00_01",
+    "mime": "image/png",
+    "width": 512,
+    "height": 1024,
+    "byteLength": 184189,
+    "materials": [
+      "F00_000_Hair_00_HAIR_01",
+      "F00_000_Hair_00_HAIR_01(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 25,
+      "byteOffset": 7726386,
+      "byteLength": 184189
+    }
+  },
+  {
+    "imageIdx": 26,
+    "file": "work/textures/26_F00_000_Hair_00_HAIR_01_normal+F00_000_Hair_00_HAIR_02_normal+F00_000_Hair_00_HAIR_01__BumpMap.png",
+    "imageName": "F00_000_Hair_00_nml",
+    "mime": "image/png",
+    "width": 512,
+    "height": 1024,
+    "byteLength": 105128,
+    "materials": [
+      "F00_000_Hair_00_HAIR_01(normal)",
+      "F00_000_Hair_00_HAIR_02(normal)",
+      "F00_000_Hair_00_HAIR_01(_BumpMap)",
+      "F00_000_Hair_00_HAIR_02(_BumpMap)"
+    ],
+    "bufferView": {
+      "index": 26,
+      "byteOffset": 7910575,
+      "byteLength": 105128
+    }
+  },
+  {
+    "imageIdx": 27,
+    "file": "work/textures/27_F00_000_Hair_00_HAIR_01_emissive+F00_000_Hair_00_HAIR_02_emissive+F00_000_Hair_00_HAIR_01__EmissionMap.png",
+    "imageName": "F00_000_Hair_00_spe",
+    "mime": "image/png",
+    "width": 512,
+    "height": 1024,
+    "byteLength": 126661,
+    "materials": [
+      "F00_000_Hair_00_HAIR_01(emissive)",
+      "F00_000_Hair_00_HAIR_02(emissive)",
+      "F00_000_Hair_00_HAIR_01(_EmissionMap)",
+      "F00_000_Hair_00_HAIR_02(_EmissionMap)"
+    ],
+    "bufferView": {
+      "index": 27,
+      "byteOffset": 8015703,
+      "byteLength": 126661
+    }
+  },
+  {
+    "imageIdx": 28,
+    "file": "work/textures/28_F00_000_Hair_00_HAIR_02.png",
+    "imageName": "F00_000_Hair_00_02",
+    "mime": "image/png",
+    "width": 512,
+    "height": 1024,
+    "byteLength": 185597,
+    "materials": [
+      "F00_000_Hair_00_HAIR_02",
+      "F00_000_Hair_00_HAIR_02(_ShadeTexture)"
+    ],
+    "bufferView": {
+      "index": 28,
+      "byteOffset": 8142364,
+      "byteLength": 185597
+    }
+  },
+  {
+    "imageIdx": 29,
+    "file": "work/textures/29_vrm_thumbnail.png",
+    "imageName": "Thumbnail",
+    "mime": "image/png",
+    "width": 2048,
+    "height": 2048,
+    "byteLength": 2622054,
+    "materials": [
+      "(vrm_thumbnail)"
+    ],
+    "bufferView": {
+      "index": 196,
+      "byteOffset": 12318656,
+      "byteLength": 2622054
+    }
+  }
+]
