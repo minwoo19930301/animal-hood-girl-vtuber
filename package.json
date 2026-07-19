@@ -1,0 +1,26 @@
+{
+  "name": "mingo-mate",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mingo the flamingo as a camera-tracked, toon-shaded 3D desktop mascot for macOS (always-on-top, transparent, click-through)",
+  "type": "module",
+  "main": "electron/main.mjs",
+  "scripts": {
+    "dev": "concurrently -k \"vite --port 5183 --strictPort\" \"VITE_DEV_SERVER=http://localhost:5183 electron .\"",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "start": "npm run build && electron .",
+    "shot": "node scripts/screenshot.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.35",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.1",
+    "concurrently": "^10.0.3",
+    "electron": "^43.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5"
+  }
+}
