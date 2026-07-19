@@ -20,6 +20,7 @@ import { TOON } from '../palette'
 import { Follower } from './springs'
 import { buildHood, type HoodRig } from './hood'
 import { buildFx, type FxRig } from './fx'
+import { buildSportsJacket } from './clothing'
 
 const { clamp } = THREE.MathUtils
 
@@ -266,6 +267,14 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
   VRMUtils.combineMorphs(vrm)
   VRMUtils.rotateVRM0(vrm) // VRM0(-Z 정면) → 계약 +Z 정면
   vrm.scene.traverse((o) => { o.frustumCulled = false })
+  // Do not reuse the donor's visible outfit. The new jacket is authored in
+  // this app and is attached to the live humanoid bones below.
+  vrm.scene.traverse((o) => {
+    const n = o.name.toLowerCase()
+    if (n.includes('athleticjacket') || n.includes('athleticjogger') || n.includes('athleticsneaker')) {
+      o.visible = false
+    }
+  })
   tuneMToon(vrm.materials)
   root.add(vrm.scene)
 
@@ -363,6 +372,7 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
   // for the fallback VRoid model, but do not stack it on top of the authored
   // VRM (the duplicate shell makes the beak/eye line look muddy).
   const hood = buildHood(crownH, hw, face)
+  buildSportsJacket(rig.chest, rig.armL.upper, rig.armR.upper)
   const fx = buildFx(crownH)
   fx.sweat.userData.baseY = fx.sweat.position.y
   if (S === -1) { // VRM1: 후드는 -Z 정면 프레임으로 빌드했으므로 π 뒤집기
