@@ -9,19 +9,35 @@
  * weight(0..1)는 AsymRamp로 레이트 제한 후 smoothstep 셰이핑 — 스냅 없음.
  * RETURNING 소스는 소실 직전 동결(frozen) 프레임이므로 "현재 포즈에서" idle로 귀환한다.
  */
-import { neutralFrame, type RigFrame, type WingPose } from '../contract'
+import { neutralFrame, type ArmPose, type BodyPose, type RigFrame } from '../contract'
 import { TIMING as T } from './constants'
 import { AsymRamp, clamp01, smoothstep01 } from './fade'
+import { copyDirInto } from './vec'
 
 export type TrackState = 'IDLE' | 'TRACKED' | 'RETURNING'
 
-function copyWingInto(dst: WingPose, src: WingPose): void {
+function copyArmInto(dst: ArmPose, src: ArmPose): void {
   dst.present = src.present
-  dst.raise = src.raise
-  dst.out = src.out
-  dst.curl = src.curl
+  copyDirInto(dst.upperDir, src.upperDir)
+  copyDirInto(dst.lowerDir, src.lowerDir)
+  copyDirInto(dst.palmNormal, src.palmNormal)
+  copyDirInto(dst.handDir, src.handDir)
+  for (let i = 0; i < 5; i++) dst.fingers[i] = src.fingers[i]
   dst.spread = src.spread
   dst.wave = src.wave
+}
+
+function copyBodyInto(dst: BodyPose, src: BodyPose): void {
+  dst.present = src.present
+  dst.shrugL = src.shrugL
+  dst.shrugR = src.shrugR
+  dst.lean.x = src.lean.x
+  dst.lean.z = src.lean.z
+  dst.twist = src.twist
+  dst.hipShift = src.hipShift
+  dst.legsPresent = src.legsPresent
+  dst.kneeL = src.kneeL
+  dst.kneeR = src.kneeR
 }
 
 /** structuredClone 금지(GC 압박) — 명시적 필드 복사 */
@@ -38,8 +54,9 @@ export function copyFrameInto(dst: RigFrame, src: RigFrame): void {
   dst.browR = src.browR
   dst.mouthOpen = src.mouthOpen
   dst.mouthSmile = src.mouthSmile
-  copyWingInto(dst.wingL, src.wingL)
-  copyWingInto(dst.wingR, src.wingR)
+  copyArmInto(dst.armL, src.armL)
+  copyArmInto(dst.armR, src.armR)
+  copyBodyInto(dst.body, src.body)
   dst.fx.heart = src.fx.heart
   dst.fx.happy = src.fx.happy
   dst.fx.sweat = src.fx.sweat
