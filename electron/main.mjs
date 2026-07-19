@@ -46,6 +46,12 @@ function createWindow() {
   if (devServer) win.loadURL(devServer + '/index.html')
   else win.loadFile(join(__dirname, '../dist/index.html'))
 
+  // backgroundThrottling:false면 hide 후에도 renderer의 visibilityState가 'visible'로
+  // 남아 visibilitychange가 발화하지 않는다 (Electron 문서화 동작).
+  // → hide/show를 명시적 IPC로 방송해 renderer가 렌더 루프·웹캠·MediaPipe를 멈추게 한다.
+  win.on('hide', () => { if (win && !win.isDestroyed()) win.webContents.send('mingo:visibility', false) })
+  win.on('show', () => { if (win && !win.isDestroyed()) win.webContents.send('mingo:visibility', true) })
+
   // 전역 커서 방송 (시선 추적 + 히트테스트용) — 30Hz
   cursorTimer = setInterval(() => {
     if (!win || win.isDestroyed() || !win.isVisible()) return

@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('mingo', {
   onCursor(cb) {
     ipcRenderer.on('mingo:cursor', (_e, p) => cb(p))
   },
+  onVisibility(cb) {
+    ipcRenderer.on('mingo:visibility', (_e, visible) => cb(visible))
+  },
   dragBy(dx, dy) {
     ipcRenderer.send('mingo:drag-by', dx, dy)
   },

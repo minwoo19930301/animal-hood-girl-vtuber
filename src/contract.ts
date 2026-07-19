@@ -118,6 +118,12 @@ export interface MingoBridge {
   setClickThrough(enabled: boolean): void
   /** 전역 커서 위치 구독 (스크린 좌표 + 윈도우 상대 좌표) */
   onCursor(cb: (p: { sx: number; sy: number; wx: number; wy: number; inWindow: boolean; winW: number; winH: number; screenW: number; screenH: number }) => void): void
+  /**
+   * 윈도우 hide/show 구독. backgroundThrottling:false 때문에 renderer의
+   * visibilitychange가 발화하지 않으므로 main 프로세스가 명시적으로 방송한다.
+   * (구버전 preload 호환을 위해 optional)
+   */
+  onVisibility?(cb: (visible: boolean) => void): void
   dragBy(dx: number, dy: number): void
   quit(): void
 }
