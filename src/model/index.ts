@@ -24,7 +24,7 @@ import { buildFx, type FxRig } from './fx'
 const { clamp } = THREE.MathUtils
 
 /** ★ 사용자 VRoid 모델 교체 지점: public/models/에 .vrm을 넣고 이 경로만 바꾼다 */
-const MODEL_URL = './models/placeholder.vrm'
+const MODEL_URL = './models/flamingo_motion.vrm'
 
 /** 머리 회전 분배: neck 40% + head 60% */
 const NECK_SHARE = 0.4
@@ -358,6 +358,10 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
         halfW: Math.max(Math.abs(faceBox.max.x - headWp.x), Math.abs(faceBox.min.x - headWp.x)),
       }
 
+  // The image-guided flamingo VRM already contains the pink hood, beak and
+  // hood-side eyes as skinned meshes. Keep the procedural hood rig available
+  // for the fallback VRoid model, but do not stack it on top of the authored
+  // VRM (the duplicate shell makes the beak/eye line look muddy).
   const hood = buildHood(crownH, hw, face)
   const fx = buildFx(crownH)
   fx.sweat.userData.baseY = fx.sweat.position.y
@@ -365,7 +369,8 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
     hood.pivot.rotation.y = Math.PI
     // fx.group은 hood.pivot의 자식이라 위 π를 상속한다 — 자체 회전을 더하면 2π(원위치)
   }
-  hood.pivot.add(fx.group)
+  hood.pivot.visible = false
+  headNode?.add(fx.group)
   headNode?.add(hood.pivot)
 
   // ---- 높이/히트메시 갱신 ----
