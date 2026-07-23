@@ -18,9 +18,9 @@ import {
 import type { MingoModel, RigFrame, WingPose } from '../contract'
 import { TOON } from '../palette'
 import { Follower } from './springs'
-import { buildHood, type HoodRig } from './hood'
 import { buildFx, type FxRig } from './fx'
-import { buildAccessories, type AccessoryRig } from './accessories'
+import { animalBuilder, type AvatarSlug } from './animals/registry'
+import type { AnimalCostumeRig } from './animals/types'
 
 const { clamp } = THREE.MathUtils
 
@@ -94,9 +94,8 @@ interface Rig {
   armR: ArmRig
   em: VRMExpressionManager | null
   has: Record<'blinkL' | 'blinkR' | 'blink' | 'aa' | 'happy' | 'relaxed' | 'sad' | 'surprised' | 'angry', boolean>
-  hood: HoodRig
+  animal: AnimalCostumeRig
   fx: FxRig
-  acc: AccessoryRig
 }
 
 /** MToon 순회 튜닝: 셰이드는 어둡게가 아니라 hue-shift, 셀 경계 크리스프, 아웃라인 강화 */
@@ -127,7 +126,7 @@ function tuneMToon(materials: THREE.Material[] | undefined) {
   }
 }
 
-export function createMingo(): MingoModel {
+export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
   const root = new THREE.Group()
 
   // ---- 고정 조명 (모델 모듈 소유 — 절대 안 움직임): TOON.lightDir + 낮은 Ambient ----
@@ -139,10 +138,10 @@ export function createMingo(): MingoModel {
   let rig: Rig | null = null
 
   // ---- 2차 모션 스프링 (후드가 고개 pitch/yaw를 지연 추종 → 출렁임) ----
-  const hoodP = new Follower(120, 9, 0.22)
-  const hoodY = new Follower(120, 9, 0.22)
-  const beakP = new Follower(75, 6.5, 0.30)
-  const beakY = new Follower(75, 6.5, 0.30)
+  const headP = new Follower(120, 9, 0.22)
+  const headY = new Follower(120, 9, 0.22)
+  const muzzleP = new Follower(75, 6.5, 0.30)
+  const muzzleY = new Follower(75, 6.5, 0.30)
 
   const api: MingoModel = {
     root,
@@ -207,17 +206,14 @@ export function createMingo(): MingoModel {
       applyArm(rig.armL, frame.wingL, t, breathLift)
       applyArm(rig.armR, frame.wingR, t, breathLift)
 
-      // ---- 후드 2차 모션 (고개 지연 추종) ----
-      const hp = hoodP.step(S * pitch, dt)
-      const hy = hoodY.step(yaw, dt)
-      rig.hood.shellPivot.rotation.set(hp * 0.35, hy * 0.28, 0)
-      const bp = beakP.step(S * pitch, dt)
-      const by = beakY.step(yaw, dt)
-      // 부리 pitch 오버슈트 0.55→0.32: 고개 숙임 때 부리 끝이 눈썹 아래로 안 내려오게
-      rig.hood.beakPivot.rotation.set(bp * 0.32, 0, -by * 0.30)
-
-      // ---- 드로스트링 2차 모션 (몸/고개 지연 추종 살랑임 — 액세서리 내부 스프링) ----
-      rig.acc.sway(S * pitch, yaw, breathAmp, dt)
+      // ---- 동물 헤드/주둥이 2차 모션 ----
+      const hp = headP.step(S * pitch, dt)
+      const hy = headY.step(yaw, dt)
+      rig.animal.headFollow.rotation.set(hp * 0.28, hy * 0.24, 0)
+      const mp = muzzleP.step(S * pitch, dt)
+      const my = muzzleY.step(yaw, dt)
+      rig.animal.muzzleFollow.rotation.set(mp * 0.18, 0, -my * 0.16)
+      rig.animal.update?.(S * pitch, yaw, breathAmp, dt)
 
       // ---- FX ----
       const fx = rig.fx
@@ -269,14 +265,14 @@ export function createMingo(): MingoModel {
     }
   }
 
-  api.ready = loadVRM(root, api)
+  api.ready = loadVRM(root, api, avatar)
     .then((r) => { rig = r })
     .catch((err) => { console.error('[mingo] VRM load failed — 모델 없이 idle', err) })
 
   return api
 }
 
-async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
+async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): Promise<Rig> {
   const loader = new GLTFLoader()
   loader.register((parser) => new VRMLoaderPlugin(parser))
   const gltf = await loader.loadAsync(MODEL_URL)
@@ -338,7 +334,7 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
   }
 
   const headNode = bone('head')
-  const rig: Omit<Rig, 'hood' | 'fx' | 'acc'> = {
+  const rig: Omit<Rig, 'animal' | 'fx'> = {
     vrm,
     S,
     neck: bone('neck'),
@@ -397,38 +393,34 @@ async function loadVRM(root: THREE.Group, api: MingoModel): Promise<Rig> {
         halfW: Math.max(Math.abs(faceBox.max.x - headWp.x), Math.abs(faceBox.min.x - headWp.x)),
       }
 
-  // avatar.vrm(리페인트 VRoid)에는 후드 지오메트리가 없으므로 프로시저럴
-  // 플라밍고 후드(hood.ts)를 항상 켠다 — 레퍼런스의 시그니처 액세서리
-  // (핑크 후드+부리+아이패치). 머리 바운딩 실측 스케일이라 모델 무관하게 맞는다.
-  // 프로시저럴 스포츠재킷(clothing.ts)은 구 플라밍고 모델 전용 하드코딩 치수 —
-  // avatar.vrm은 텍스처 리페인트(화이트 트랙탑+코랄 트림)로 의상을 표현하므로 중첩 금지.
-  const hood = buildHood(crownH, hw, face)
+  // 동물별 얼굴·헤드기어·의상은 같은 휴머노이드 리그 위에 독립 모듈로 얹는다.
+  const animal = animalBuilder(avatar)({
+    crownH,
+    halfW: hw,
+    face,
+    S,
+    bones: {
+      head: headNode,
+      chest: rig.chest,
+      upperArmL: rig.armL.upper,
+      upperArmR: rig.armR.upper,
+      upperLegL: bone('leftUpperLeg'),
+      upperLegR: bone('rightUpperLeg'),
+    },
+  })
   const fx = buildFx(crownH)
   fx.sweat.userData.baseY = fx.sweat.position.y
-  if (S === -1) { // VRM1: 후드는 -Z 정면 프레임으로 빌드했으므로 π 뒤집기
-    hood.pivot.rotation.y = Math.PI
-    // fx.group은 hood.pivot의 자식이라 위 π를 상속한다 — 자체 회전을 더하면 2π(원위치)
-  }
+  if (S === -1) fx.group.rotation.y = Math.PI
   headNode?.add(fx.group)
-  headNode?.add(hood.pivot)
-
-  // ---- 트랙재킷 액세서리 (손목밴드 + 후드 드로스트링) — 본 실측 자동 배치 ----
-  // rest 포즈 월드 행렬 기준으로 산출하므로 위 updateMatrixWorld(337행) 이후·포즈 적용 전 빌드
-  const acc = buildAccessories({
-    chest: rig.chest,
-    neck: rig.neck ?? headNode,
-    upperArmL: rig.armL.upper, upperArmR: rig.armR.upper,
-    lowerArmL: rig.armL.lower, lowerArmR: rig.armR.lower,
-    handL: rig.armL.hand, handR: rig.armR.hand,
-  }, S)
+  headNode?.add(animal.headRoot)
 
   // ---- 높이/히트메시 갱신 ----
   root.updateMatrixWorld(true)
   const full = new THREE.Box3().setFromObject(root)
   api.height = full.max.y
-  const hit: THREE.Object3D[] = [...hood.hitMeshes]
+  const hit: THREE.Object3D[] = [...animal.hitMeshes]
   vrm.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) hit.push(o) })
   api.hitMeshes = hit
 
-  return { ...rig, hood, fx, acc }
+  return { ...rig, animal, fx }
 }

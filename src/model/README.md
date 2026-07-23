@@ -1,4 +1,7 @@
-# src/model — VRM 휴머노이드 + 프로시저럴 플라밍고 후드
+# src/model — VRM 휴머노이드 + 교체형 동물 아바타
+
+> 현재 기본 경로는 `src/model/animals/registry.ts`의 곰·원숭이·거북이 팩이다.
+> 아래 플라밍고 후드 설명은 기존 `hood.ts` 구현과 새 캐릭터 제작 시 참고할 레거시 설계 기록이다.
 
 > 2026-07 룩 업데이트: avatar.vrm(리페인트 VRoid)에서 후드 상시 켬, AccessoryNeck(보타이)
 > 런타임 숨김, 드로스트링 슬림화(골드 링 제거·카라 기부 앵커), smile → closed-lip 리매핑.

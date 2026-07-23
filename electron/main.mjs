@@ -14,6 +14,13 @@ const WIN_H = 580
 let win = null
 let cursorTimer = null
 
+function switchAvatar(slug) {
+  if (!win || win.isDestroyed()) return
+  const script = `localStorage.setItem('mingo-avatar', ${JSON.stringify(slug)});` +
+    `const u=new URL(location.href);u.searchParams.set('avatar',${JSON.stringify(slug)});location.replace(u.toString())`
+  void win.webContents.executeJavaScript(script)
+}
+
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay()
 
@@ -79,6 +86,14 @@ app.whenReady().then(() => {
       label: 'MingoMate',
       submenu: [
         { label: 'Mingo 숨기기/보이기', accelerator: 'Cmd+Shift+M', click: () => { if (win) win.isVisible() ? win.hide() : win.show() } },
+        {
+          label: '캐릭터',
+          submenu: [
+            { label: '곰 (1)', accelerator: '1', click: () => switchAvatar('bear') },
+            { label: '원숭이 (2)', accelerator: '2', click: () => switchAvatar('monkey') },
+            { label: '거북이 (3)', accelerator: '3', click: () => switchAvatar('turtle') },
+          ],
+        },
         { role: 'reload' },
         { role: 'toggleDevTools' }, // 주의: 투명창은 detached 모드로만
         { type: 'separator' },

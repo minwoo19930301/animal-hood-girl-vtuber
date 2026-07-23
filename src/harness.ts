@@ -13,6 +13,7 @@ import * as THREE from 'three'
 import { createMingo } from './model/index'
 import { neutralFrame } from './contract'
 import { PALETTE } from './palette'
+import { isAvatarSlug } from './model/animals/registry'
 
 const q = new URLSearchParams(location.search)
 const num = (k: string, d = 0) => (q.has(k) ? parseFloat(q.get(k)!) : d)
@@ -27,7 +28,8 @@ renderer.setPixelRatio(1)
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(17, 1, 0.1, 100)
 
-const mingo = createMingo()
+const requestedAvatar = q.get('avatar')
+const mingo = createMingo(isAvatarSlug(requestedAvatar) ? requestedAvatar : 'bear')
 scene.add(mingo.root)
 if (mingo.ready) await mingo.ready // VRM 등 비동기 로드 대기 (모듈 TLA)
 

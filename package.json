@@ -2,7 +2,7 @@
   "name": "mingo-mate",
   "private": true,
   "version": "0.1.0",
-  "description": "Mingo the flamingo as a camera-tracked, toon-shaded 3D desktop mascot for macOS (always-on-top, transparent, click-through)",
+  "description": "Camera-tracked, toon-shaded 3D animal avatars for macOS (always-on-top, transparent, click-through)",
   "type": "module",
   "main": "electron/main.mjs",
   "scripts": {
