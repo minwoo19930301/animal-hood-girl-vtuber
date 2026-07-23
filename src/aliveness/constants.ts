@@ -57,11 +57,37 @@ export const TIMING = {
   STRETCH_PITCH_UP: 0.3,
   STRETCH_PITCH_DOWN: -0.1,
   STRETCH_LEN: 1.6,
-  /** 날개 들썩: raise 목표 / 길이(s) */
-  SHRUG_RAISE: 0.3,
+  /** 어깨 으쓱 (BodyPose.shrugL/R): 목표 강도 / 길이(s) */
+  SHRUG_AMT: 0.5,
   SHRUG_LEN: 0.6,
   /** 행복눈 ∪∪ 지속 (s) */
   HAPPY_LEN: 1.0,
+  /** 팔 앞으로 기지개(REACH): 왕복 길이(s) — 1s 뻗고 1s 복귀 (2초 이징 왕복) */
+  REACH_LEN: 2.0,
+  /** 기지개 시 손가락: curl 목표(거의 폄) / spread 목표 */
+  REACH_CURL: 0.05,
+  REACH_SPREAD: 0.55,
+
+  // ---- idle 팔 (ArmPose 방향벡터 — neutralArm 기반) ----
+  /** 호흡 sway: upperDir x(바깥쪽)/z(앞뒤) 성분 진폭 (재정규화 전 가산량) */
+  ARM_SWAY_X: 0.035,
+  ARM_SWAY_Z: 0.02,
+  /** 하완(lowerDir)은 상완 sway의 이 배율 */
+  ARM_SWAY_LOWER: 0.5,
+  /** 호흡에 실리는 손가락 curl 미세 변조 진폭 */
+  ARM_SWAY_FINGER: 0.03,
+  /** 미세 드리프트: 목표 오프셋 진폭(성분) / 재선정 간격(s) / 수렴 시간상수(s) */
+  ARM_DRIFT_AMP: 0.04,
+  ARM_DRIFT_GAP_MIN: 4,
+  ARM_DRIFT_GAP_MAX: 9,
+  ARM_DRIFT_TAU: 1.8,
+
+  // ---- idle 몸통 (BodyPose) ----
+  /** lean.x 미세 sway 진폭 (rad) — head sway와 같은 주기(SWAY_ROLL_PERIOD) */
+  BODY_LEAN_AMP: 0.02,
+  /** 체중 이동 sway: 진폭(-1..1) / 주기(s) */
+  HIP_SWAY_AMP: 0.06,
+  HIP_SWAY_PERIOD: 13,
 
   // ---- 트래킹 융합 ----
   /** 트래킹 획득 크로스페이드 (s) */

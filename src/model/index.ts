@@ -1,12 +1,19 @@
 /**
  * VRM 휴머노이드 모델 + 프로시저럴 플라밍고 후드 — 진입점.
- * createMingo(): MingoModel (계약: src/contract.ts)
+ * createMingo(): MingoModel (계약: src/contract.ts — v2 ArmPose/BodyPose)
  *
  * - 동기 생성 + `ready` 프라미스로 VRM 비동기 로드. 로드 전 apply()는 no-op.
  * - 리그는 정규화 본(normalized human bones)에만 쓴다: rest 회전이 항등이라
- *   모델(VRM0/VRM1)과 무관하게 축이 예측 가능. 부호는 S(±1)로 흡수:
- *   VRM0 원공간은 정면 -Z(S=+1), VRM1은 +Z(S=-1). rotateVRM0가 씬을 π 회전시켜
- *   두 경우 모두 월드 정면 = +Z (계약).
+ *   모델(VRM0/VRM1)과 무관하게 축이 예측 가능. 단순 오일러 채널(머리/몸통/다리)의
+ *   부호는 S(±1)로 흡수: VRM0 원공간은 정면 -Z(S=+1), VRM1은 +Z(S=-1). rotateVRM0가
+ *   씬을 π 회전시켜 두 경우 모두 월드 정면 = +Z (계약). 팔은 부호 가지치기 대신
+ *   armSolver가 리그 루트 월드 쿼터니언으로 좌표계를 통째로 흡수한다.
+ * - 팔: ArmPose 방향벡터(upperDir/lowerDir/palmNormal/handDir) → ArmSolver FK
+ *   (스윙-트위스트 롤 안정화 + 팔꿈치 힌지 + 손목 기저 + 클램프). 팔별 present로
+ *   neutralArm(idle)↔트래킹 크로스페이드 (스냅 금지).
+ * - 손가락: fingers[5] 개별 본 체인 (엄지 축 별도), spread → proximal 벌림.
+ * - BodyPose: shrug→어깨 리프트, lean/twist→spine/chest 분배, hipShift→hips 이동+롤,
+ *   knee→다리 (legsPresent 게이팅, 정강이 수직 유지 + hips y 보정으로 발 접지).
  * - 결정적: Math.random 없음, 2차 모션은 전부 dt 기반 스프링.
  */
 import * as THREE from 'three'
@@ -15,14 +22,16 @@ import {
   VRM, VRMLoaderPlugin, VRMUtils,
   type MToonMaterial, type VRMExpressionManager, type VRMHumanBoneName,
 } from '@pixiv/three-vrm'
-import type { MingoModel, RigFrame, WingPose } from '../contract'
+import type { MingoModel, RigFrame, ArmPose, Dir3 } from '../contract'
+import { neutralArm } from '../contract'
 import { TOON } from '../palette'
 import { Follower } from './springs'
+import { ArmSolver, armSolverSelfTest } from './armSolver'
 import { buildFx, type FxRig } from './fx'
 import { animalBuilder, type AvatarSlug } from './animals/registry'
 import type { AnimalCostumeRig } from './animals/types'
 
-const { clamp } = THREE.MathUtils
+const { clamp, lerp } = THREE.MathUtils
 
 /** ★ 사용자 VRoid 모델 교체 지점: public/models/에 .vrm을 넣고 이 경로만 바꾼다 */
 const MODEL_URL = './models/avatar.vrm'
@@ -39,19 +48,27 @@ const HEAD_SHARE = 0.6
  */
 export const EYE_SHARPEN = 0.15
 
-/** 팔 FK 포즈 튜닝 상수 (rad) — VRM T포즈 기준 upperArm z 회전으로 A포즈化 */
-export const ARM = {
-  idleDown: 1.12,      // present=0 차렷: 팔 내림 각 (T포즈→A포즈)
-  raiseSwing: 1.55,    // raise=1: 내림각에서 빼는 양 (수평 지나 위로)
-  outSwing: 0.80,      // out=1: 옆으로 벌리는 양
-  minDown: -0.85,      // 위 스윙 한계
-  shoulderRaise: 0.20, // raise 시 어깨 본 보조 리프트
-  elbowIdle: 0.35,     // 차렷 팔꿈치 살짝 전방 굽힘
-  waveAmp: 0.26,       // wave 어깨 사인 진동 진폭
-  waveHz: 9,           // wave 각속도
+/** 팔 크로스페이드/스무딩 + wave 오버레이 튜닝 */
+const PRESENT_TAU = 0.12 // present 크로스페이드 시정수 (s)
+const POSE_SMOOTH = 22   // 본 회전 slerp 속도 (1/s) — 트래킹 One Euro 위 미세 완충만
+const WAVE = { hz: 9, amp: 0.26, whip: 0.12 } as const
+
+/** BodyPose 적용 튜닝 상수 */
+export const BODY = {
+  spineShare: 0.45, chestShare: 0.35, upperChestShare: 0.20, // lean/twist 분배
+  shrugMax: 0.28,     // shrug=1 어깨 z 리프트 (rad)
+  raiseAssist: 0.15,  // 팔을 높이 들 때(upperDir.y>0) 어깨 보조 리프트 (rad)
+  // knee=1 허벅지 전방 회전 (rad) — 정강이는 수직 유지(발 접지).
+  // 트래킹 정규화(kneeFullRad 2.2 ≈ 126° 굽힘 = knee 1)와 스케일을 맞춰
+  // knee=0.5 ≈ 0.9rad(52°) 반스쿼트로 읽히게 1.8 (구 0.9는 하강이 신장의 2%로 미미)
+  kneeMax: 1.8,
+  hipShiftX: 0.06,    // hipShift=1 골반 x 이동 (다리 길이 비율)
+  hipRoll: 0.06,      // hipShift=1 골반 롤 (rad)
+  rate: 10,           // 바디 채널 스무딩 (1/s) — 하네스 스텝 입력 스냅 방지
+  legGateRate: 4,     // legsPresent 게이트 스무딩 (1/s)
 } as const
 
-/** 손가락 curl 관절별 회전량 — curl 하나로 전 관절 비례 (thumb은 축이 달라 별도) */
+/** 손가락 curl 관절별 회전량 — 손가락별 curl 값으로 전 관절 비례 (thumb은 축이 달라 별도) */
 export const FINGER_CURL = { proximal: 1.28, intermediate: 1.5, distal: 0.95 } as const
 export const THUMB_CURL = [0.36, 0.55, 0.70] as const // metacarpal, proximal, distal
 const SPREAD_MAX = 0.13
@@ -66,13 +83,23 @@ interface FingerRig {
   k: number
 }
 
+/** neutralArm(계약)에서 뽑아 캐시한 idle 목표 (매 프레임 할당 방지) */
+interface ArmNeutral {
+  u: THREE.Vector3
+  l: THREE.Vector3
+  pn: THREE.Vector3
+  hd: THREE.Vector3
+  fingers: number[]
+  spread: number
+}
+
 interface ArmRig {
-  /** Z축(팔 내리기/손가락 말기) 부호 = side·S (VRM0 왼팔 = +1) */
+  /** Z축(손가락 말기 등 오일러 채널) 부호 = side·S (VRM0 왼팔 = +1) */
   sign: number
   /**
-   * Y축(팔꿈치 굽힘/spread/엄지 curl) 부호 = side만 (S 미포함).
+   * Y축(spread/엄지 curl) 부호 = side만 (S 미포함).
    * Y축 회전은 VRM0↔VRM1 π-플립(Ry(π) 켤레변환)에 불변이라 S를 곱하면
-   * VRM1에서 방향이 반전된다 — 역관절 팔꿈치/히치하이커 엄지/교차 손가락.
+   * VRM1에서 방향이 반전된다 — 히치하이커 엄지/교차 손가락.
    */
   sideSign: number
   shoulder: Node3
@@ -81,6 +108,23 @@ interface ArmRig {
   hand: Node3
   fingers: FingerRig[]
   thumb: Node3[]
+  /** 방향벡터 FK 솔버 (팔 본 없으면 null) */
+  solver: ArmSolver | null
+  /** present 크로스페이드 상태 (지수 평활) */
+  pSm: number
+  neutral: ArmNeutral
+  // 블렌드 스크래치 (핫패스 할당 금지)
+  u: THREE.Vector3
+  l: THREE.Vector3
+  pn: THREE.Vector3
+  hd: THREE.Vector3
+}
+
+interface LegRig {
+  upper: Node3
+  lower: Node3
+  /** 허벅지 길이 (정규화 본 실측) — 무릎 굽힘 시 hips y 보정용 */
+  thigh: number
 }
 
 interface Rig {
@@ -88,8 +132,19 @@ interface Rig {
   S: number
   neck: Node3
   head: Node3
+  /** 몸통 최상단(upperChest ?? chest) — 호흡·드로스트링 앵커 (기존 규약 유지) */
   chest: Node3
+  /** lean/twist 분배용 개별 본 */
+  spine: Node3
+  chestMid: Node3
+  upperChestB: Node3
   rawChest: Node3
+  hips: Node3
+  hipsRest: THREE.Vector3
+  legL: LegRig
+  legR: LegRig
+  /** 다리 전체 길이 (hipShift 스케일 기준) */
+  legLen: number
   armL: ArmRig
   armR: ArmRig
   em: VRMExpressionManager | null
@@ -126,8 +181,48 @@ function tuneMToon(materials: THREE.Material[] | undefined) {
   }
 }
 
+// ---- 모듈 스크래치 (핫패스 할당 금지) ----
+const FRONT_Z = new THREE.Vector3(0, 0, 1)
+const _qWave = new THREE.Quaternion()
+
+/**
+ * 트래킹 방향(Dir3)과 idle 방향을 present로 성분 lerp 후 재정규화.
+ * 트래킹 값이 퇴화(영벡터)했거나 중간 블렌드가 붕괴하면 idle로 폴백.
+ */
+function blendDir(out: THREE.Vector3, idle: THREE.Vector3, d: Dir3, p: number): void {
+  out.set(d.x, d.y, d.z)
+  const l2 = out.lengthSq()
+  if (l2 < 1e-8) { out.copy(idle); return }
+  out.multiplyScalar(p / Math.sqrt(l2)).addScaledVector(idle, 1 - p)
+  if (out.lengthSq() < 1e-6) out.copy(idle)
+  else out.normalize()
+}
+
+interface BodySm {
+  leanX: number; leanZ: number; twist: number
+  shrugL: number; shrugR: number; hipShift: number
+  kneeL: number; kneeR: number; legGate: number
+}
+
+/**
+ * 몸통 오일러 채널: 로컬 = (−S·world_x, world_y, −S·world_z) — 정규화 본의
+ * VRM0 π-플립 켤레변환 규약 (머리 회전과 동일 계열, README 참조).
+ * world_x = lean.z(+앞 숙임), world_y = twist(+캐릭터 왼쪽), world_z = −lean.x(+왼쪽 기움).
+ */
+function torsoEuler(nd: Node3, S: number, sm: BodySm, share: number, extraX: number): void {
+  nd?.rotation.set(-S * sm.leanZ * share + extraX, sm.twist * share, S * sm.leanX * share)
+}
+
+let armSelfTestRan = false
+
 export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
   const root = new THREE.Group()
+
+  // ---- 임시 검증 (BRIEF v3): 하네스 미지원 동안 FK 솔버 수치 셀프테스트 1회 ----
+  if (!armSelfTestRan) {
+    armSelfTestRan = true
+    armSolverSelfTest()
+  }
 
   // ---- 고정 조명 (모델 모듈 소유 — 절대 안 움직임): TOON.lightDir + 낮은 Ambient ----
   const sun = new THREE.DirectionalLight(0xffffff, 1.25)
@@ -142,6 +237,13 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
   const headY = new Follower(120, 9, 0.22)
   const muzzleP = new Follower(75, 6.5, 0.30)
   const muzzleY = new Follower(75, 6.5, 0.30)
+
+  // ---- BodyPose 지수 평활 상태 (스냅 방지 — 트래킹 필터 위 얇은 완충) ----
+  const bodySm: BodySm = {
+    leanX: 0, leanZ: 0, twist: 0,
+    shrugL: 0, shrugR: 0, hipShift: 0,
+    kneeL: 0, kneeR: 0, legGate: 0,
+  }
 
   const api: MingoModel = {
     root,
@@ -196,15 +298,59 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         }
       }
 
-      // ---- 호흡: chest 미세 회전/스케일 + 어깨 들썩 ----
+      // ---- 호흡: raw chest 미세 스케일 + 어깨 들썩 (회전분은 아래 몸통 오일러에 합산) ----
       const breathAmp = Math.sin(frame.breath * Math.PI * 2)
-      rig.chest?.rotation.set(S * 0.012 * breathAmp, 0, 0)
       rig.rawChest?.scale.setScalar(1 + 0.006 * breathAmp)
       const breathLift = 0.02 * (0.5 + 0.5 * breathAmp)
 
-      // ---- 팔 = WingPose intents (FK 블렌드) ----
-      applyArm(rig.armL, frame.wingL, t, breathLift)
-      applyArm(rig.armR, frame.wingR, t, breathLift)
+      // ---- BodyPose: 채널 평활 ----
+      const body = frame.body
+      const kB = 1 - Math.exp(-dt * BODY.rate)
+      bodySm.leanX += (clamp(body.lean.x, -0.5, 0.5) - bodySm.leanX) * kB
+      bodySm.leanZ += (clamp(body.lean.z, -0.5, 0.5) - bodySm.leanZ) * kB
+      bodySm.twist += (clamp(body.twist, -0.7, 0.7) - bodySm.twist) * kB
+      bodySm.shrugL += (clamp(body.shrugL, 0, 1) - bodySm.shrugL) * kB
+      bodySm.shrugR += (clamp(body.shrugR, 0, 1) - bodySm.shrugR) * kB
+      bodySm.hipShift += (clamp(body.hipShift, -1, 1) - bodySm.hipShift) * kB
+      bodySm.kneeL += (clamp(body.kneeL, 0, 1) - bodySm.kneeL) * kB
+      bodySm.kneeR += (clamp(body.kneeR, 0, 1) - bodySm.kneeR) * kB
+      bodySm.legGate += (clamp(body.legsPresent, 0, 1) - bodySm.legGate) * (1 - Math.exp(-dt * BODY.legGateRate))
+
+      // ---- lean/twist → spine/chest/upperChest 분배 (+호흡 회전은 최상단 본에) ----
+      const breathX = S * 0.012 * breathAmp
+      torsoEuler(rig.spine, S, bodySm, BODY.spineShare, 0)
+      if (rig.upperChestB) {
+        torsoEuler(rig.chestMid, S, bodySm, BODY.chestShare, 0)
+        torsoEuler(rig.upperChestB, S, bodySm, BODY.upperChestShare, breathX)
+      } else {
+        torsoEuler(rig.chestMid, S, bodySm, BODY.chestShare + BODY.upperChestShare, breathX)
+      }
+
+      // ---- 다리: knee 굽힘 (legsPresent 게이팅) — 허벅지 전방·정강이 수직 유지로
+      //      발바닥 접지를 지오메트리로 보장하고, 짧아진 다리만큼 hips y를 내린다 ----
+      const gate = bodySm.legGate
+      const aL = bodySm.kneeL * BODY.kneeMax * gate
+      const aR = bodySm.kneeR * BODY.kneeMax * gate
+      rig.legL.upper?.rotation.set(S * aL, 0, 0)
+      rig.legL.lower?.rotation.set(-S * aL, 0, 0)
+      rig.legR.upper?.rotation.set(S * aR, 0, 0)
+      rig.legR.lower?.rotation.set(-S * aR, 0, 0)
+      const drop = (rig.legL.thigh * (1 - Math.cos(aL)) + rig.legR.thigh * (1 - Math.cos(aR))) / 2
+
+      // ---- hipShift: 골반 x 이동 + 미세 롤 (+무릎 굽힘 y 보정) ----
+      if (rig.hips) {
+        const shiftW = bodySm.hipShift * BODY.hipShiftX * rig.legLen // 월드 +x = 캐릭터 왼쪽
+        rig.hips.position.set(rig.hipsRest.x - S * shiftW, rig.hipsRest.y - drop, rig.hipsRest.z)
+        rig.hips.rotation.set(0, 0, -S * bodySm.hipShift * BODY.hipRoll)
+      }
+
+      // ---- 팔 = ArmPose 방향벡터 FK (어깨 리프트: 호흡 + shrug + 팔들기 보조) ----
+      const liftL = breathLift + bodySm.shrugL * BODY.shrugMax
+        + Math.max(0, frame.armL.upperDir.y) * BODY.raiseAssist * rig.armL.pSm
+      const liftR = breathLift + bodySm.shrugR * BODY.shrugMax
+        + Math.max(0, frame.armR.upperDir.y) * BODY.raiseAssist * rig.armR.pSm
+      applyArm(rig.armL, frame.armL, dt, t, liftL)
+      applyArm(rig.armR, frame.armR, dt, t, liftR)
 
       // ---- 동물 헤드/주둥이 2차 모션 ----
       const hp = headP.step(S * pitch, dt)
@@ -234,34 +380,48 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
     },
   }
 
-  function applyArm(a: ArmRig, w: WingPose, t: number, breathLift: number) {
-    const s = a.sign        // Z축 성분용 (side·S)
-    const sd = a.sideSign   // Y축 성분용 (side만 — S 불변축)
-    const p = clamp(w.present, 0, 1)
-    const raise = clamp(w.raise, 0, 1) * p
-    const out = clamp(w.out, 0, 1) * p
+  /**
+   * ArmPose 한 팔 적용: present 크로스페이드(neutralArm↔트래킹) → wave 오버레이 →
+   * FK 솔브 → 손가락 5개 개별 체인. 스크래치 전부 ArmRig 필드 재사용 (할당 0).
+   */
+  function applyArm(a: ArmRig, w: ArmPose, dt: number, t: number, lift: number) {
+    a.shoulder?.rotation.set(0, 0, -a.sign * lift)
+
+    // present 크로스페이드 (트래킹 히스테리시스 위 얇은 완충 — 스냅 금지)
+    a.pSm += (clamp(w.present, 0, 1) - a.pSm) * (1 - Math.exp(-dt / PRESENT_TAU))
+    const p = a.pSm
+
+    blendDir(a.u, a.neutral.u, w.upperDir, p)
+    blendDir(a.l, a.neutral.l, w.lowerDir, p)
+    blendDir(a.pn, a.neutral.pn, w.palmNormal, p)
+    blendDir(a.hd, a.neutral.hd, w.handDir, p)
+
+    // wave (aliveness/idle 전용 채널): 캐릭터 z(전방)축 둘레 진자 스윙 + 전완 위상차 휩
     const wv = clamp(w.wave, 0, 1)
-    let down = ARM.idleDown - raise * ARM.raiseSwing - out * ARM.outSwing
-    down = Math.max(down, ARM.minDown)
-    if (wv > 0) down += Math.sin(t * ARM.waveHz) * ARM.waveAmp * wv
-    a.upper?.rotation.set(0, 0, s * down)
-    const bend =
-      ARM.elbowIdle * (1 - Math.max(raise, out) * 0.65) +
-      raise * 0.12 +
-      (wv > 0 ? Math.sin(t * ARM.waveHz + 1.1) * 0.12 * wv : 0)
-    a.lower?.rotation.set(0, -sd * bend, 0)
-    a.shoulder?.rotation.set(0, 0, -s * (raise * ARM.shoulderRaise + breathLift))
-    a.hand?.rotation.set(0, 0, s * 0.05)
-    // 손가락: curl은 present와 무관하게 항상 반영 (주먹 intent 단독 사용 가능)
-    const curl = clamp(w.curl, 0, 1)
-    const spread = clamp(w.spread, 0, 1)
-    for (const f of a.fingers) {
-      f.prox?.rotation.set(0, -sd * spread * SPREAD_MAX * f.k, s * curl * FINGER_CURL.proximal)
-      f.inter?.rotation.set(0, 0, s * curl * FINGER_CURL.intermediate)
-      f.dist?.rotation.set(0, 0, s * curl * FINGER_CURL.distal)
+    if (wv > 1e-3) {
+      const swing = Math.sin(t * WAVE.hz) * WAVE.amp * wv
+      _qWave.setFromAxisAngle(FRONT_Z, swing)
+      a.u.applyQuaternion(_qWave)
+      _qWave.setFromAxisAngle(FRONT_Z, swing + Math.sin(t * WAVE.hz + 1.1) * WAVE.whip * wv)
+      a.l.applyQuaternion(_qWave)
+      a.hd.applyQuaternion(_qWave)
+      a.pn.applyQuaternion(_qWave)
     }
+
+    a.solver?.solve(a.u, a.l, a.pn, a.hd, 1 - Math.exp(-dt * POSE_SMOOTH))
+
+    // ---- 손가락 개별: fingers = [엄지, 검지, 중지, 약지, 새끼] 0..1 ----
+    const spread = lerp(a.neutral.spread, clamp(w.spread, 0, 1), p)
+    for (let i = 0; i < a.fingers.length; i++) {
+      const f = a.fingers[i]
+      const curl = lerp(a.neutral.fingers[i + 1], clamp(w.fingers[i + 1], 0, 1), p)
+      f.prox?.rotation.set(0, -a.sideSign * spread * SPREAD_MAX * f.k, a.sign * curl * FINGER_CURL.proximal)
+      f.inter?.rotation.set(0, 0, a.sign * curl * FINGER_CURL.intermediate)
+      f.dist?.rotation.set(0, 0, a.sign * curl * FINGER_CURL.distal)
+    }
+    const thumbCurl = lerp(a.neutral.fingers[0], clamp(w.fingers[0], 0, 1), p)
     for (let i = 0; i < a.thumb.length; i++) {
-      a.thumb[i]?.rotation.set(0, sd * curl * THUMB_CURL[i], 0)
+      a.thumb[i]?.rotation.set(0, a.sideSign * thumbCurl * THUMB_CURL[i], 0)
     }
   }
 
@@ -317,6 +477,8 @@ async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): 
       dist: bone(`${side}${f}Distal` as VRMHumanBoneName),
       k: fingerK[i],
     }))
+    const nA = neutralArm(sideSign as 1 | -1)
+    const d3 = (v: Dir3) => new THREE.Vector3(v.x, v.y, v.z).normalize()
     return {
       sign,
       sideSign,
@@ -330,17 +492,46 @@ async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): 
         bone(`${side}ThumbProximal` as VRMHumanBoneName),
         bone(`${side}ThumbDistal` as VRMHumanBoneName),
       ],
+      solver: null, // 아래에서 rest 실측 후 생성
+      pSm: 0,
+      neutral: {
+        u: d3(nA.upperDir), l: d3(nA.lowerDir), pn: d3(nA.palmNormal), hd: d3(nA.handDir),
+        fingers: [...nA.fingers], spread: nA.spread,
+      },
+      u: new THREE.Vector3(), l: new THREE.Vector3(), pn: new THREE.Vector3(), hd: new THREE.Vector3(),
     }
   }
 
+  // ---- 다리 리그 + 실측 길이 (BodyPose knee/hipShift용) ----
+  function legRig(side: 'left' | 'right'): LegRig {
+    const upper = bone(`${side}UpperLeg` as VRMHumanBoneName)
+    const lower = bone(`${side}LowerLeg` as VRMHumanBoneName)
+    return { upper, lower, thigh: lower ? lower.position.length() : 0 }
+  }
+
   const headNode = bone('head')
+  const hipsNode = bone('hips')
+  const legL = legRig('left')
+  const legR = legRig('right')
+  const footL = bone('leftFoot')
+  const shin = footL ? footL.position.length() : 0
+  const legLen = Math.max(legL.thigh + shin, 1e-3)
+
   const rig: Omit<Rig, 'animal' | 'fx'> = {
     vrm,
     S,
     neck: bone('neck'),
     head: headNode,
     chest: bone('upperChest') ?? bone('chest'),
+    spine: bone('spine'),
+    chestMid: bone('chest'),
+    upperChestB: bone('upperChest'),
     rawChest: H.getRawBoneNode('chest'),
+    hips: hipsNode,
+    hipsRest: hipsNode ? hipsNode.position.clone() : new THREE.Vector3(),
+    legL,
+    legR,
+    legLen,
     armL: armRig('left'),
     armR: armRig('right'),
     em: vrm.expressionManager ?? null,
@@ -359,6 +550,26 @@ async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): 
 
   // ---- 머리 바운딩 실측 → 후드 자동 스케일 ----
   root.updateMatrixWorld(true)
+
+  // ---- 팔 FK 솔버 생성 (rest 상태·updateMatrixWorld 이후) ----
+  // 리그 루트 월드 쿼터니언 하나로 VRM0/1 좌표 차이를 흡수 — armSolver.ts 참조.
+  // stopAt = 팔이 매달린 몸통 본: 트래킹 팔 방향은 어깨라인 기저(몸통 기준)이므로
+  // 몸통 lean/twist에 팔이 같이 실리도록 몸통 회전은 보상하지 않는다.
+  {
+    const rigRootQ = H.normalizedHumanBonesRoot.getWorldQuaternion(new THREE.Quaternion())
+    const mkSolver = (a: ArmRig): ArmSolver | null => {
+      if (!a.upper || !a.lower || !a.hand) return null
+      const stopAt = (a.shoulder ?? a.upper).parent
+      if (!stopAt) return null
+      return new ArmSolver({
+        upper: a.upper, lower: a.lower, hand: a.hand,
+        middleProx: a.fingers[1].prox, indexProx: a.fingers[0].prox, littleProx: a.fingers[3].prox,
+      }, stopAt, rigRootQ)
+    }
+    rig.armL.solver = mkSolver(rig.armL)
+    rig.armR.solver = mkSolver(rig.armR)
+  }
+
   const box = new THREE.Box3().setFromObject(vrm.scene)
   const headY = headNode ? headNode.getWorldPosition(new THREE.Vector3()).y : box.max.y * 0.85
   const crownH = Math.max(0.1, box.max.y - headY)

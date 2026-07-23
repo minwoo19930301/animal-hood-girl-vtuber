@@ -17,20 +17,51 @@ export interface HeadPose {
   roll: number  // -0.5..+0.5
 }
 
-/** 새 날개는 사람 손가락 5개가 아니라 "의도(intent)"로 구동한다. */
-export interface WingPose {
-  /** 이 손이 카메라에 보이는 정도 0..1 (없으면 0 → idle 포즈로 복귀) */
+/** 정규화 방향벡터 (캐릭터 몸통 기준: x=캐릭터 왼쪽+, y=위+, z=앞(카메라)+) */
+export interface Dir3 { x: number; y: number; z: number }
+
+/**
+ * 팔 자세 v2 — "의도"가 아니라 골격 트래킹의 기하학적 사실.
+ * 트래킹이 캐릭터 공간 방향벡터를 내면 모델이 자기 rest pose 기준으로 FK 솔브한다.
+ * 모든 방향은 정규화, 좌우는 캐릭터 기준(거울 매핑은 트래킹 담당).
+ */
+export interface ArmPose {
+  /** 이 팔의 트래킹 신뢰도 0..1 (0 → idle 포즈로 크로스페이드) */
   present: number
-  /** 날개를 위로 드는 정도 0..1 (어깨 기준) */
-  raise: number
-  /** 몸통에서 옆으로 벌리는 정도 0..1 */
-  out: number
-  /** 깃털 손가락 3개의 말림 0(펴짐)..1(주먹) */
-  curl: number
-  /** 깃털 손가락 벌림 0..1 */
+  /** 상완 방향: 어깨→팔꿈치. 예) 차렷 {0,-1,0}, 옆으로 T {±1,0,0}, 앞으로 나란히 {0,0,1} */
+  upperDir: Dir3
+  /** 하완 방향: 팔꿈치→손목 (팔꿈치 굽힘은 upperDir와의 각으로 모델이 계산) */
+  lowerDir: Dir3
+  /** 손바닥 법선 (손등 반대쪽). 예) 손바닥 카메라향 {0,0,1}, 바닥향 {0,-1,0} */
+  palmNormal: Dir3
+  /** 손 방향: 손목→중지 MCP (palmNormal과 직교 기저를 이룸) */
+  handDir: Dir3
+  /** 손가락 개별 말림 [엄지, 검지, 중지, 약지, 새끼] 0(펴짐)..1(완전 접힘) */
+  fingers: [number, number, number, number, number]
+  /** 검지~새끼 벌림 0..1 */
   spread: number
-  /** 흔들기(인사) 진동 위상 구동 0..1 — 지속적 좌우 웨이브 강도 */
+  /** 인사 웨이브 강도 0..1 (aliveness/idle 전용 — 트래킹 중엔 0) */
   wave: number
+}
+
+/** 상체·하체 골격 (Pose Landmarker 33점 기반) */
+export interface BodyPose {
+  /** 상체 트래킹 신뢰도 0..1 */
+  present: number
+  /** 어깨 으쓱 0..1 (캐릭터 기준 좌/우) */
+  shrugL: number
+  shrugR: number
+  /** 상체 기울기: x=옆으로(+캐릭터왼쪽), z=앞뒤(+앞) — 라디안, 소량 */
+  lean: { x: number; z: number }
+  /** 상체 y축 비틀림 라디안 (+캐릭터 왼쪽으로 돌음) */
+  twist: number
+  /** 체중 이동 -1(캐릭터오른발)..+1(캐릭터왼발) */
+  hipShift: number
+  /** 다리 가시성 0..1 (웹캠 상반신샷이면 0 → 모델은 idle 스탠스 유지) */
+  legsPresent: number
+  /** 무릎 굽힘 0..1 (legsPresent>0 일 때만 유효) */
+  kneeL: number
+  kneeR: number
 }
 
 export interface FxState {
@@ -51,17 +82,43 @@ export interface RigFrame {
   blinkR: number
   browL: number  // -1(찌푸림)..+1(치켜올림)
   browR: number
-  mouthOpen: number  // 0..1 (부리 벌림)
+  mouthOpen: number  // 0..1 (입 벌림)
   mouthSmile: number // -1..1
-  wingL: WingPose
-  wingR: WingPose
+  armL: ArmPose
+  armR: ArmPose
+  body: BodyPose
   fx: FxState
-  /** 호흡 위상 0..1 (aliveness가 채움; 모델은 가슴 fluff 스케일 등에 사용) */
+  /** 호흡 위상 0..1 (aliveness가 채움; 모델은 가슴 스케일 등에 사용) */
   breath: number
 }
 
+/** 차렷 자세 팔 (idle 기본): 팔 아래로, 살짝 바깥, 손바닥 몸쪽, 손가락 릴랙스 */
+export function neutralArm(side: 1 | -1): ArmPose {
+  return {
+    present: 0,
+    upperDir: { x: side * 0.17, y: -0.98, z: 0.02 },
+    lowerDir: { x: side * 0.12, y: -0.97, z: 0.20 },
+    palmNormal: { x: -side * 0.9, y: 0, z: -0.44 },
+    handDir: { x: side * 0.1, y: -0.98, z: 0.18 },
+    fingers: [0.35, 0.3, 0.3, 0.32, 0.35],
+    spread: 0.15,
+    wave: 0,
+  }
+}
+
+export function neutralBody(): BodyPose {
+  return {
+    present: 0,
+    shrugL: 0, shrugR: 0,
+    lean: { x: 0, z: 0 },
+    twist: 0,
+    hipShift: 0,
+    legsPresent: 0,
+    kneeL: 0, kneeR: 0,
+  }
+}
+
 export function neutralFrame(): RigFrame {
-  const wing = (): WingPose => ({ present: 0, raise: 0, out: 0, curl: 0.35, spread: 0.2, wave: 0 })
   return {
     tracked: 0,
     head: { pitch: 0, yaw: 0, roll: 0 },
@@ -69,7 +126,8 @@ export function neutralFrame(): RigFrame {
     blinkL: 0, blinkR: 0,
     browL: 0, browR: 0,
     mouthOpen: 0, mouthSmile: 0.15,
-    wingL: wing(), wingR: wing(),
+    armL: neutralArm(1), armR: neutralArm(-1),
+    body: neutralBody(),
     fx: { heart: false, happy: false, sweat: false, anger: false },
     breath: 0,
   }

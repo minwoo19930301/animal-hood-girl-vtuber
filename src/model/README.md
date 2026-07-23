@@ -30,6 +30,7 @@ VRM 비동기 로드 — 로드 전 `apply()`는 no-op, 로드 후 `height`/`hit
 | 파일 | 역할 |
 |---|---|
 | `index.ts` | VRM 로드(GLTFLoader+VRMLoaderPlugin), MToon 튜닝, 리그 캡처, `apply()` 전체 배선 |
+| `armSolver.ts` | 계약 v2 ArmPose 방향벡터 → 정규화 본 FK 솔버 (스윙-트위스트 롤 안정화, 팔꿈치 힌지, 손목 기저+클램프) + `armSolverSelfTest()` |
 | `hood.ts` | 프로시저럴 플라밍고 후드 (셸+안감+부리+눈+속눈썹+눈물점), `HOOD_COL` 색상 |
 | `fx.ts` | FX 빌보드: 하트 2개(눈앞)·땀방울(관자놀이)·분노 십자(후드 이마) |
 | `materials.ts` | 후드용 2톤 hue-shift 툰 ShaderMaterial + inverted-hull 아웃라인(`addOutline`) |
@@ -81,25 +82,53 @@ pivot (정규화 head 본에 어태치; VRM1이면 y π 플립)
   smile>0→**closed-lip 리매핑**: `relaxed`(VRoid Fun, 입꼬리 상승)×0.8 주 채널 +
   `happy`(Joy, jaw-open 포함)는 min(×0.5, **0.12 캡**) — 다문 입꼬리 미소(레퍼런스).
   smile<0→`sad`×0.4, fx.happy→`happy` 1.0(이벤트만 풀 Joy), browRaise>0→`surprised`×0.3.
-- **호흡**: 정규화 chest 회전 x ±0.012·sin + raw chest 균일 스케일 ±0.6% + 어깨 들썩 0.02.
+- **호흡**: raw chest 균일 스케일 ±0.6% + 어깨 들썩 0.02 + 몸통 최상단 본 회전 x ±0.012·sin
+  (lean/twist 오일러에 합산 — 아래 BodyPose).
 - **FX**: visible 토글 + t 기반 펄스/바운스 (하트 스케일 ±10%, 땀 y 바운스, 분노 ±6%).
 - 매 프레임 끝에 `vrm.update(dt)` (정규화→raw 복사·expression·lookAt·스프링본).
 
-## 팔 포즈 튜닝 상수 (`index.ts` export)
+## 팔 = ArmPose 방향벡터 FK (계약 v2, `armSolver.ts`)
 
-`ARM` (rad): `idleDown 1.12`(T포즈→차렷 A포즈; **VRM은 T포즈라 이 값이 0이면 팔벌림 잔재**),
-`raiseSwing 1.55`, `outSwing 0.80`, `minDown −0.85`(위 스윙 한계), `shoulderRaise 0.20`,
-`elbowIdle 0.35`, `waveAmp 0.26`, `waveHz 9`.
+트래킹이 캐릭터 공간 방향벡터(upperDir/lowerDir/palmNormal/handDir)를 내면 모델이
+rest pose 기준 FK 솔브 — "raise/out 의도" 방식(v1 `ARM` 상수)은 폐기.
 
-- present=0 → 차렷(idle), raise/out은 present로 게이트.
-- **curl/spread는 present와 무관하게 항상 적용** (주먹 intent 단독 사용:
-  `wingCurlR=1`만으로 오른손 주먹). `FINGER_CURL`(proximal 1.28/intermediate 1.5/
-  distal 0.95, rotation.z)과 `THUMB_CURL`(0.36/0.55/0.70, **rotation.y — 엄지는 축이 다름**)로
-  손가락 본 15개/손 전부 비례 회전. spread는 proximal rotation.y ±0.13·계수(검지 +1…소지 −1).
-- wave: 어깨 z 사인 진동 + 팔꿈치 위상차(+1.1rad) 휩 — t 기반이라 결정적.
+- **좌표 흡수**: S 부호 가지치기 대신 리그 루트(normalizedHumanBonesRoot) 월드
+  쿼터니언⁻¹(charToRig) 하나로 VRM0/1 차이를 통째로 흡수. rest 방향(상완/하완/손/손바닥
+  기저·팔꿈치 힌지축)은 로드 시 1회, 정규화 본 **위치**에서 실측.
+- **upperArm**: swing(setFromUnitVectors) + 힌지축(u×l) 정렬 트위스트 — 스윙-트위스트
+  분해로 롤이 팔꿈치 힌지에 종속돼 팔을 앞으로 들어도 겨드랑이가 안 뒤틀린다.
+  팔이 곧으면(sin<0.1) lastHinge 히스테리시스 유지.
+- **lowerArm**: 순수 힌지(자체 롤 0 — 전완 비틀림은 손목 담당).
+- **hand**: (handDir, palmNormal) 직교 기저 → 손목 회전, 전완축 스윙-트위스트 분해 후
+  굽힘 ±80° / 비틀림 ±90° 클램프 (`WRIST_BEND_MAX`/`WRIST_TWIST_MAX`).
+- **몸통 기준 해석**: 부모 워크는 팔이 매달린 몸통 본 직전까지 — 트래킹의 어깨라인
+  기저(몸통 기준) 사실이므로 몸통 lean/twist에 팔이 같이 실린다.
+- **present 크로스페이드**: 팔별 pSm(시정수 0.12s)로 `neutralArm`(계약 idle)↔트래킹을
+  성분 lerp+재정규화, 본 회전은 slerp 22/s 완충 — 스냅 없음.
+- **손가락 개별**: `fingers[5]`([엄지,검지,중지,약지,새끼] 0..1) → 손가락별 본 체인
+  비례 회전. `FINGER_CURL`(proximal 1.28/intermediate 1.5/distal 0.95, rotation.z),
+  `THUMB_CURL`(0.36/0.55/0.70, **rotation.y — 엄지는 축이 다름**), spread는 proximal
+  rotation.y ±0.13·계수(검지 +1…소지 −1).
+- **wave**(idle 전용 채널): 캐릭터 z축 둘레 방향벡터 진자 스윙 + 전완 위상차(+1.1rad)
+  휩 — t 기반이라 결정적.
+- 핫패스 할당 0 — 쿼터니언/벡터 스크래치 전부 인스턴스/모듈 필드 재사용.
 
-## 검증 (BRIEF v2의 7샷)
+## BodyPose (`BODY` 상수, `index.ts`)
 
-`npm run shot -- harness.html shots/v2-*.png "..."` — front/face/pitch/yaw/blink-mouth/
-arms/fx 전부 확인 완료. 대용량 VRM 로드 때문에 Chrome `--virtual-time-budget=8000`이
-간헐적으로 빈 스크린샷(≈4KB)을 만든다 — 재시도하거나 버짓을 늘리면 해결.
+- shrugL/R → shoulder 본 z 리프트(≤0.28rad) + 팔 높이 들기 보조(`raiseAssist`).
+- lean/twist → spine 0.45 / chest 0.35 / upperChest 0.20 분배
+  (upperChest 없으면 chest 0.55). 로컬 = (−S·world_x, world_y, −S·world_z) 규약.
+- hipShift → hips x 이동(다리 길이×0.06) + 미세 롤(0.06rad).
+- knee → 허벅지 전방 회전(≤1.8rad — 트래킹 kneeFullRad 2.2와 스케일 정합, knee=0.5≈52° 반스쿼트)·정강이 수직 유지(발바닥 접지 지오메트리 보장),
+  짧아진 만큼 hips y 하강 보정. **legsPresent 게이팅**(4/s 평활) — 상반신샷이면 idle 스탠스.
+- 채널 전체 10/s 지수 평활 — 하네스 스텝 입력에도 스냅 없음.
+- 손목밴드는 정규화 hand 본 자식이라 솔버 손목 회전을 그대로 상속(별도 배선 없음).
+
+## 검증 (BRIEF v3)
+
+하네스가 계약 v2 파라미터를 아직 지원하지 않아, `armSolverSelfTest()`(armSolver.ts)가
+합성 본 체인(VRM1형/VRM0형 π 플립/몸통 twist/손목 클램프)으로 수치 검증하고 콘솔에
+PASS/FAIL을 남긴다 (createMingo 1회 호출). 스크린샷 샷 리스트(armL=fwd/side/up,
+palmL, fingersL, shrug/lean/twist/knee)는 통합 후 판정관이 수행.
+구버전 메모: 대용량 VRM 로드 때문에 Chrome `--virtual-time-budget=8000`이 간헐적으로
+빈 스크린샷(≈4KB)을 만든다 — 재시도하거나 버짓을 늘리면 해결.
