@@ -17,7 +17,8 @@
  *   fingersL/fingersR = 1,0,0,0,1 손가락 개별 curl 콤마 5값 [엄지,검지,중지,약지,새끼]
  *   spreadL/spreadR = 0..1        손가락 벌림
  *   shrug= lean= leanZ= twist= hipShift= knee=   BodyPose 채널
- *   legsPresent (지정 시 1; knee 지정만으로도 켜짐)
+ *   kneeL=/kneeR= 로 좌우 무릎을 따로 검증할 수 있음 (knee= 공통 폴백)
+ *   legsPresent (지정 시 1; knee/kneeL/kneeR 지정만으로도 켜짐)
  */
 import * as THREE from 'three'
 import { createMingo } from './model/index'
@@ -184,11 +185,14 @@ f.body.lean.x = num('lean')
 f.body.lean.z = num('leanZ')
 f.body.twist = num('twist')
 f.body.hipShift = Math.max(-1, Math.min(1, num('hipShift')))
-f.body.kneeL = f.body.kneeR = Math.max(0, Math.min(1, num('knee')))
-f.body.legsPresent = q.has('legsPresent') || q.has('knee') ? 1 : 0
+const commonKnee = Math.max(0, Math.min(1, num('knee')))
+f.body.kneeL = Math.max(0, Math.min(1, num('kneeL', commonKnee)))
+f.body.kneeR = Math.max(0, Math.min(1, num('kneeR', commonKnee)))
+const hasKnee = q.has('knee') || q.has('kneeL') || q.has('kneeR')
+f.body.legsPresent = q.has('legsPresent') || hasKnee ? 1 : 0
 f.body.present =
   q.has('shrug') || q.has('lean') || q.has('leanZ') || q.has('twist') ||
-  q.has('hipShift') || q.has('knee') || q.has('legsPresent') ? 1 : 0
+  q.has('hipShift') || hasKnee || q.has('legsPresent') ? 1 : 0
 
 f.fx.heart = flag('heart')
 f.fx.happy = flag('happy')

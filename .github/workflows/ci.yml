@@ -21,3 +21,10 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+      - name: Rebuild and audit the 12-avatar pack
+        run: |
+          npm run avatars:build -- \
+            --work-root "$RUNNER_TEMP/avatar-pack-work" \
+            --output-root "$RUNNER_TEMP/avatar-pack-models"
+          npm run avatars:audit -- \
+            --work-root "$RUNNER_TEMP/avatar-pack-work"

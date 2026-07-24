@@ -2,10 +2,17 @@
 // 리서치 검증된 레시피: transparent + frame:false + type:'panel' + screen-saver level
 // + visibleOnFullScreen + setIgnoreMouseEvents(forward) + 렌더러 히트테스트 토글
 import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu } from 'electron'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const avatarCatalog = JSON.parse(
+  readFileSync(join(__dirname, '../shared/avatar-catalog.json'), 'utf8'),
+)
+if (!Array.isArray(avatarCatalog) || avatarCatalog.length !== 12) {
+  throw new Error('shared/avatar-catalog.json must contain exactly 12 avatars')
+}
 
 const WIN_W = 420
 const WIN_H = 580
@@ -88,11 +95,11 @@ app.whenReady().then(() => {
         { label: 'Mingo 숨기기/보이기', accelerator: 'Cmd+Shift+M', click: () => { if (win) win.isVisible() ? win.hide() : win.show() } },
         {
           label: '캐릭터',
-          submenu: [
-            { label: '곰 (1)', accelerator: '1', click: () => switchAvatar('bear') },
-            { label: '원숭이 (2)', accelerator: '2', click: () => switchAvatar('monkey') },
-            { label: '거북이 (3)', accelerator: '3', click: () => switchAvatar('turtle') },
-          ],
+          submenu: avatarCatalog.map((entry) => ({
+            label: `${entry.label} (${entry.key})`,
+            accelerator: /^[0-9]$/.test(entry.key) ? entry.key : undefined,
+            click: () => switchAvatar(entry.slug),
+          })),
         },
         { role: 'reload' },
         { role: 'toggleDevTools' }, // 주의: 투명창은 detached 모드로만

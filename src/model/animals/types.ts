@@ -1,15 +1,35 @@
 import type * as THREE from 'three'
 import type { FaceBounds } from '../hood'
 
-export type AvatarSlug = 'bear' | 'monkey' | 'turtle'
+export type AvatarSlug =
+  | 'bear'
+  | 'monkey'
+  | 'turtle'
+  | 'rabbit'
+  | 'fox'
+  | 'panda'
+  | 'penguin'
+  | 'owl'
+  | 'lion'
+  | 'tiger'
+  | 'elephant'
+  | 'giraffe'
 
 export interface AnimalBones {
   head: THREE.Object3D | null
   chest: THREE.Object3D | null
+  /** Optional lower-body anchors used by modular wardrobes. */
+  hips?: THREE.Object3D | null
   upperArmL: THREE.Object3D | null
   upperArmR: THREE.Object3D | null
   upperLegL: THREE.Object3D | null
   upperLegR: THREE.Object3D | null
+  lowerLegL?: THREE.Object3D | null
+  lowerLegR?: THREE.Object3D | null
+  footL?: THREE.Object3D | null
+  footR?: THREE.Object3D | null
+  handL?: THREE.Object3D | null
+  handR?: THREE.Object3D | null
 }
 
 export interface AnimalBuildContext {
@@ -34,4 +54,3 @@ export interface AnimalCostumeRig {
 }
 
 export type AnimalBuilder = (context: AnimalBuildContext) => AnimalCostumeRig
-

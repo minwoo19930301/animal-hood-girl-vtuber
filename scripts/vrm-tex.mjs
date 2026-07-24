@@ -8,7 +8,12 @@
 //   node scripts/vrm-tex.mjs rebuild <input.vrm> <output.vrm>
 //     -> replaces images that have work/edited/<imageIdx>.png with the edited
 //        bytes (appended to BIN, 4-byte aligned, new bufferView) and writes a
-//        new GLB. VRM extension JSON is preserved untouched.
+//        new GLB. VRM extension JSON is preserved unless a patch is supplied.
+//   node scripts/vrm-tex.mjs rebuild <input.vrm> <output.vrm>
+//     [--edited-dir <dir>] [--material-patch <patch.json>]
+//     -> the optional directory makes parallel/avatar-specific rebuilds safe.
+//        Every replacement PNG must have exactly the original image dimensions.
+//        A material patch may update VRM0 meta and materialProperties.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -125,6 +130,14 @@ function sanitize(name) {
   return String(name).replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'unnamed';
 }
 
+function readJsonFile(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (error) {
+    throw new Error(`cannot read JSON ${file}: ${error.message}`);
+  }
+}
+
 // ---------------- material -> image mapping ----------------
 
 function imageBytesOf(json, bin, image) {
@@ -230,29 +243,115 @@ function dump(inputPath) {
 
 // ---------------- rebuild ----------------
 
-function rebuild(inputPath, outputPath) {
+function normaliseMaterialRules(value) {
+  if (value === undefined || value === null) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'object') {
+    return Object.entries(value).map(([name, patch]) => ({ name, ...patch }));
+  }
+  throw new Error('material-patch.materials must be an array or object');
+}
+
+function applyMaterialPatch(json, patch, patchPath) {
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+    throw new Error(`${patchPath}: material patch must be a JSON object`);
+  }
+
+  const vrm0 = json.extensions?.VRM;
+  if (!vrm0) throw new Error(`${patchPath}: input does not contain extensions.VRM`);
+
+  const metaPatch = patch.meta ?? (patch.title !== undefined ? { title: patch.title } : null);
+  if (metaPatch) {
+    if (typeof metaPatch !== 'object' || Array.isArray(metaPatch)) {
+      throw new Error(`${patchPath}: meta must be an object`);
+    }
+    vrm0.meta ??= {};
+    Object.assign(vrm0.meta, metaPatch);
+  }
+
+  const rules = normaliseMaterialRules(patch.materials ?? patch.materialProperties);
+  const properties = vrm0.materialProperties ?? [];
+  let patched = 0;
+  for (const [ruleIndex, rule] of rules.entries()) {
+    if (!rule || typeof rule !== 'object') {
+      throw new Error(`${patchPath}: materials[${ruleIndex}] must be an object`);
+    }
+    const exactName = rule.name;
+    const contains = rule.match ?? rule.contains;
+    if (!exactName && !contains) {
+      throw new Error(`${patchPath}: materials[${ruleIndex}] needs "name" or "match"`);
+    }
+    const matches = properties.filter((material) => {
+      const name = String(material.name ?? '');
+      return exactName ? name === exactName : name.includes(String(contains));
+    });
+    if (matches.length === 0) {
+      throw new Error(`${patchPath}: material rule ${exactName ?? contains} matched nothing`);
+    }
+    for (const material of matches) {
+      for (const key of ['floatProperties', 'vectorProperties', 'textureProperties', 'keywordMap', 'tagMap']) {
+        if (rule[key] === undefined) continue;
+        if (!rule[key] || typeof rule[key] !== 'object' || Array.isArray(rule[key])) {
+          throw new Error(`${patchPath}: ${key} for ${material.name} must be an object`);
+        }
+        material[key] ??= {};
+        Object.assign(material[key], rule[key]);
+      }
+      if (rule.renderQueue !== undefined) material.renderQueue = rule.renderQueue;
+      if (rule.shader !== undefined) material.shader = rule.shader;
+      patched++;
+    }
+  }
+  return { materialRules: rules.length, materialMatches: patched, metaPatched: Boolean(metaPatch) };
+}
+
+function rebuild(inputPath, outputPath, {
+  editedDir = EDIT_DIR,
+  materialPatchPath = null,
+} = {}) {
   const buf = fs.readFileSync(inputPath);
   const { json, bin } = parseGLB(buf);
 
   let newBin = bin;
   let replaced = 0;
 
-  const edits = fs.existsSync(EDIT_DIR)
-    ? fs.readdirSync(EDIT_DIR).filter((f) => /^\d+\.png$/.test(f))
+  const edits = fs.existsSync(editedDir)
+    ? fs.readdirSync(editedDir).filter((f) => /^\d+\.png$/.test(f)).sort((a, b) => Number(a.slice(0, -4)) - Number(b.slice(0, -4)))
     : [];
 
-  for (const f of edits) {
+  // Validate every edit before changing the GLB. A failed rebuild must never
+  // leave a plausible-looking, partially edited avatar behind.
+  const validated = edits.map((f) => {
     const imgIdx = Number(f.replace('.png', ''));
     const image = (json.images ?? [])[imgIdx];
     if (!image) {
-      console.warn(`edited/${f}: no image at index ${imgIdx}, skipped`);
-      continue;
+      throw new Error(`${path.join(editedDir, f)}: no image at index ${imgIdx}`);
     }
-    const pngBytes = fs.readFileSync(path.join(EDIT_DIR, f));
+    const originalBytes = imageBytesOf(json, bin, image);
+    if (!originalBytes) {
+      throw new Error(`${path.join(editedDir, f)}: original image ${imgIdx} is not embedded`);
+    }
+    const pngPath = path.join(editedDir, f);
+    const pngBytes = fs.readFileSync(pngPath);
     if (sniffMime(pngBytes) !== 'image/png') {
-      console.warn(`edited/${f}: not a PNG, skipped`);
-      continue;
+      throw new Error(`${pngPath}: replacement is not a PNG`);
     }
+    const originalMime = image.mimeType ?? sniffMime(originalBytes);
+    const originalSize = imageSize(originalBytes, originalMime);
+    const editedSize = imageSize(pngBytes, 'image/png');
+    if (!originalSize.width || !originalSize.height) {
+      throw new Error(`${pngPath}: cannot determine original image ${imgIdx} dimensions`);
+    }
+    if (editedSize.width !== originalSize.width || editedSize.height !== originalSize.height) {
+      throw new Error(
+        `${pngPath}: ${editedSize.width}x${editedSize.height} does not match original image ${imgIdx} `
+        + `${originalSize.width}x${originalSize.height}`,
+      );
+    }
+    return { f, imgIdx, image, pngBytes, editedSize };
+  });
+
+  for (const { f, imgIdx, image, pngBytes, editedSize } of validated) {
     // 4-byte align current end, then append
     const pad = align4(newBin.length);
     const offset = newBin.length + pad;
@@ -263,27 +362,58 @@ function rebuild(inputPath, outputPath) {
     image.bufferView = bvIndex;
     image.mimeType = 'image/png';
     replaced++;
-    const { width, height } = pngSize(pngBytes);
-    console.log(`replaced image ${imgIdx} <- edited/${f} (${width}x${height}, ${pngBytes.length} bytes, bufferView ${bvIndex} @ ${offset})`);
+    console.log(
+      `replaced image ${imgIdx} <- ${path.join(editedDir, f)} `
+      + `(${editedSize.width}x${editedSize.height}, ${pngBytes.length} bytes, bufferView ${bvIndex} @ ${offset})`,
+    );
+  }
+
+  let patchResult = null;
+  if (materialPatchPath) {
+    patchResult = applyMaterialPatch(json, readJsonFile(materialPatchPath), materialPatchPath);
+    console.log(
+      `patched VRM0 metadata/materials <- ${materialPatchPath} `
+      + `(${patchResult.materialMatches} material match(es))`,
+    );
   }
 
   // update buffer byteLength (writeGLB pads BIN chunk; padding is allowed to
   // exceed buffer.byteLength per spec, so record the unpadded length)
   if (json.buffers?.[0]) json.buffers[0].byteLength = newBin.length;
 
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   const total = writeGLB(json, newBin, outputPath);
   console.log(`\nwrote ${outputPath} (${total} bytes, ${replaced} image(s) replaced)`);
 }
 
 // ---------------- main ----------------
 
-const [mode, arg1, arg2] = process.argv.slice(2);
+function optionValue(args, name) {
+  const index = args.indexOf(name);
+  if (index < 0) return null;
+  const value = args[index + 1];
+  if (!value || value.startsWith('--')) throw new Error(`${name} requires a value`);
+  return value;
+}
+
+const args = process.argv.slice(2);
+const [mode, arg1, arg2] = args;
 
 if (mode === 'dump' && arg1) {
   dump(path.resolve(arg1));
 } else if (mode === 'rebuild' && arg1 && arg2) {
-  rebuild(path.resolve(arg1), path.resolve(arg2));
+  const editedDirArg = optionValue(args.slice(3), '--edited-dir');
+  const materialPatchArg = optionValue(args.slice(3), '--material-patch');
+  rebuild(path.resolve(arg1), path.resolve(arg2), {
+    editedDir: editedDirArg ? path.resolve(editedDirArg) : EDIT_DIR,
+    materialPatchPath: materialPatchArg ? path.resolve(materialPatchArg) : null,
+  });
 } else {
-  console.error('usage:\n  node scripts/vrm-tex.mjs dump <input.vrm>\n  node scripts/vrm-tex.mjs rebuild <input.vrm> <output.vrm>');
+  console.error(
+    'usage:\n'
+    + '  node scripts/vrm-tex.mjs dump <input.vrm>\n'
+    + '  node scripts/vrm-tex.mjs rebuild <input.vrm> <output.vrm> '
+    + '[--edited-dir <dir>] [--material-patch <patch.json>]',
+  );
   process.exit(1);
 }

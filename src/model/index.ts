@@ -28,25 +28,25 @@ import { TOON } from '../palette'
 import { Follower } from './springs'
 import { ArmSolver, armSolverSelfTest } from './armSolver'
 import { buildFx, type FxRig } from './fx'
-import { animalBuilder, type AvatarSlug } from './animals/registry'
+import {
+  animalBuilder,
+  avatarDefinition,
+  type AvatarDefinition,
+  type AvatarSlug,
+} from './animals/registry'
 import type { AnimalCostumeRig } from './animals/types'
 
 const { clamp, lerp } = THREE.MathUtils
-
-/** ★ 사용자 VRoid 모델 교체 지점: public/models/에 .vrm을 넣고 이 경로만 바꾼다 */
-const MODEL_URL = './models/avatar.vrm'
 
 /** 머리 회전 분배: neck 40% + head 60% */
 const NECK_SHARE = 0.4
 const HEAD_SHARE = 0.6
 
 /**
- * 눈매 강화 바이어스 (0~1): `angry` 표정(VRoid 프리셋 — 아래 눈꺼풀 리프트 + 눈썹
- * 미세 각도)을 상시 소량 적용해 눈을 살짝 가늘게 — 레퍼런스(refs/target-human.png)의
- * 어른스럽고 또렷한 눈매. blink 가중치가 클 땐 (1 - blink)로 자동 감쇠해
- * 눈꺼풀 이중 변형(과닫힘)을 막는다. 0 = 끔. 권장 0.1~0.2 (과하면 사나워짐).
+ * 눈매 강화는 캐릭터별 catalog 값(안전 범위 0.06..0.20)을 사용한다. `angry`
+ * 표정의 아래 눈꺼풀 리프트를 소량 섞고, blink 중에는 자동 감쇠해 눈꺼풀
+ * 이중 변형을 막는다.
  */
-export const EYE_SHARPEN = 0.15
 
 /** 팔 크로스페이드/스무딩 + wave 오버레이 튜닝 */
 const PRESENT_TAU = 0.12 // present 크로스페이드 시정수 (s)
@@ -216,6 +216,7 @@ function torsoEuler(nd: Node3, S: number, sm: BodySm, share: number, extraX: num
 let armSelfTestRan = false
 
 export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
+  const definition = avatarDefinition(avatar)
   const root = new THREE.Group()
 
   // ---- 임시 검증 (BRIEF v3): 하네스 미지원 동안 FK 솔버 수치 셀프테스트 1회 ----
@@ -280,9 +281,9 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         } else if (has.blink) {
           em.setValue('blink', Math.max(blL, blR))
         }
-        // ---- 눈매 강화: angry를 상시 소량 적용해 눈을 살짝 가늘게 (EYE_SHARPEN 주석 참조).
+        // ---- 눈매 강화: angry를 캐릭터별 소량 적용해 눈을 살짝 가늘게.
         //      blink가 진행 중일 땐 (1 - max(blink))로 감쇠 — 감은 눈에 겹치지 않게.
-        if (has.angry) em.setValue('angry', EYE_SHARPEN * (1 - Math.max(blL, blR)))
+        if (has.angry) em.setValue('angry', definition.eyeSharpen * (1 - Math.max(blL, blR)))
         if (has.aa) em.setValue('aa', clamp(frame.mouthOpen, 0, 1))
         const smile = clamp(frame.mouthSmile, -1, 1)
         const sm = Math.max(0, smile)
@@ -425,17 +426,21 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
     }
   }
 
-  api.ready = loadVRM(root, api, avatar)
+  api.ready = loadVRM(root, api, definition)
     .then((r) => { rig = r })
     .catch((err) => { console.error('[mingo] VRM load failed — 모델 없이 idle', err) })
 
   return api
 }
 
-async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): Promise<Rig> {
+async function loadVRM(
+  root: THREE.Group,
+  api: MingoModel,
+  definition: AvatarDefinition,
+): Promise<Rig> {
   const loader = new GLTFLoader()
   loader.register((parser) => new VRMLoaderPlugin(parser))
-  const gltf = await loader.loadAsync(MODEL_URL)
+  const gltf = await loader.loadAsync(definition.modelUrl)
   const vrm = gltf.userData.vrm as VRM
 
   VRMUtils.removeUnnecessaryVertices(gltf.scene)
@@ -443,20 +448,19 @@ async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): 
   VRMUtils.combineMorphs(vrm)
   VRMUtils.rotateVRM0(vrm) // VRM0(-Z 정면) → 계약 +Z 정면
   vrm.scene.traverse((o) => { o.frustumCulled = false })
-  // Do not reuse the donor's visible outfit. The new jacket is authored in
-  // this app and is attached to the live humanoid bones below.
-  // AccessoryNeck(교복 보타이)도 숨김 — 레퍼런스 트랙탑 룩에 리본이 남으면
-  // 교복으로 읽힌다 (원본 VRM은 불변, 런타임 가시성만 끔).
+  // Donor school topology and donor hair are replaced by the catalog-selected
+  // bone-attached wardrobe/hair silhouette. Hide material primitives (not the
+  // whole skinned mesh) so face/body/hand primitives in sibling slots survive.
+  const hiddenMaterials = definition.hiddenMaterials.map((pattern) => pattern.toLowerCase())
   vrm.scene.traverse((o) => {
-    const n = o.name.toLowerCase()
-    const mats = (o as THREE.Mesh).isMesh
-      ? [(o as THREE.Mesh).material].flat().map((m) => (m?.name ?? '').toLowerCase())
-      : []
-    if (
-      n.includes('athleticjacket') || n.includes('athleticjogger') || n.includes('athleticsneaker') ||
-      n.includes('accessoryneck') || mats.some((m) => m.includes('accessoryneck'))
-    ) {
-      o.visible = false
+    const mesh = o as THREE.Mesh
+    if (!mesh.isMesh) return
+    const materials = [mesh.material].flat().filter(Boolean)
+    for (const material of materials) {
+      const name = material.name.toLowerCase()
+      if (hiddenMaterials.some((pattern) => name.includes(pattern))) {
+        material.visible = false
+      }
     }
   })
   tuneMToon(vrm.materials)
@@ -605,7 +609,7 @@ async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): 
       }
 
   // 동물별 얼굴·헤드기어·의상은 같은 휴머노이드 리그 위에 독립 모듈로 얹는다.
-  const animal = animalBuilder(avatar)({
+  const animal = animalBuilder(definition.slug)({
     crownH,
     halfW: hw,
     face,
@@ -613,10 +617,17 @@ async function loadVRM(root: THREE.Group, api: MingoModel, avatar: AvatarSlug): 
     bones: {
       head: headNode,
       chest: rig.chest,
+      hips: rig.hips,
       upperArmL: rig.armL.upper,
       upperArmR: rig.armR.upper,
-      upperLegL: bone('leftUpperLeg'),
-      upperLegR: bone('rightUpperLeg'),
+      upperLegL: rig.legL.upper,
+      upperLegR: rig.legR.upper,
+      lowerLegL: rig.legL.lower,
+      lowerLegR: rig.legR.lower,
+      footL: bone('leftFoot'),
+      footR: bone('rightFoot'),
+      handL: rig.armL.hand,
+      handR: rig.armR.hand,
     },
   })
   const fx = buildFx(crownH)

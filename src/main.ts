@@ -3,7 +3,7 @@ import { createMingo } from './model/index'
 import { createTracker } from './tracking/index'
 import { createAliveness } from './aliveness/index'
 import { neutralFrame, type CursorInfo } from './contract'
-import { isAvatarSlug, type AvatarSlug } from './model/animals/registry'
+import { AVATAR_KEYS, isAvatarSlug, type AvatarSlug } from './model/animals/registry'
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement
 const video = document.getElementById('cam') as HTMLVideoElement
@@ -23,7 +23,7 @@ const scene = new THREE.Scene()
 // 좁은 FOV(준직교) — 2D 일러처럼 읽히는 핵심 (리서치: 원근 왜곡 제거)
 const camera = new THREE.PerspectiveCamera(17, 1, 0.1, 100)
 
-const avatarKeys: Record<string, AvatarSlug> = { '1': 'bear', '2': 'monkey', '3': 'turtle' }
+const avatarKeys: Readonly<Record<string, AvatarSlug>> = AVATAR_KEYS
 const requestedAvatar = new URLSearchParams(location.search).get('avatar')
 const storedAvatar = localStorage.getItem('mingo-avatar')
 const avatar: AvatarSlug = isAvatarSlug(requestedAvatar)
@@ -33,8 +33,8 @@ localStorage.setItem('mingo-avatar', avatar)
 const mingo = createMingo(avatar)
 scene.add(mingo.root)
 
-// 빠른 캐릭터 전환: 1 곰 / 2 원숭이 / 3 거북이. 리로드 시 카메라 스트림도
-// 정상 재초기화되며 선택값은 로컬에만 저장된다.
+// 빠른 캐릭터 전환: catalog의 1..9, 0, -, = 키. 리로드 시 카메라
+// 스트림도 정상 재초기화되며 선택값은 로컬에만 저장된다.
 window.addEventListener('keydown', (event) => {
   const next = avatarKeys[event.key]
   if (!next || next === avatar) return

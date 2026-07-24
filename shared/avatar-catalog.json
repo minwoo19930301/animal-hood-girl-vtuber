@@ -1,0 +1,365 @@
+[
+  {
+    "slug": "bear",
+    "label": "곰",
+    "key": "1",
+    "modelUrl": "./models/bear.vrm",
+    "eyeSharpen": 0.38,
+    "hairStyle": "chestnut-shoulder-bob-curtain-fringe",
+    "outfitStyle": "forest-varsity-camp",
+    "skinTone": "#F2C8AE",
+    "iris": {
+      "dark": "#4A2108",
+      "mid": "#C06B22",
+      "light": "#FFD58A"
+    },
+    "hair": {
+      "base": "#6B412C",
+      "shade": "#3B241D",
+      "accent": "#B97A52"
+    },
+    "palette": {
+      "primary": "#8D6142",
+      "shade": "#65402D",
+      "secondary": "#D9B896",
+      "accent": "#6B4830",
+      "dark": "#33221A"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "monkey",
+    "label": "원숭이",
+    "key": "2",
+    "modelUrl": "./models/monkey.vrm",
+    "eyeSharpen": 0.64,
+    "hairStyle": "copper-high-ponytail-forehead-curl",
+    "outfitStyle": "ochre-parkour-street",
+    "skinTone": "#D6A078",
+    "iris": {
+      "dark": "#063F32",
+      "mid": "#19A979",
+      "light": "#B8FFD4"
+    },
+    "hair": {
+      "base": "#7A4026",
+      "shade": "#432117",
+      "accent": "#D77B3E"
+    },
+    "palette": {
+      "primary": "#A9764C",
+      "shade": "#7A4A2E",
+      "secondary": "#F1D9BE",
+      "accent": "#8A5A34",
+      "dark": "#3B2A1C"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "turtle",
+    "label": "거북이",
+    "key": "3",
+    "modelUrl": "./models/turtle.vrm",
+    "eyeSharpen": 0.75,
+    "hairStyle": "blue-black-blunt-chin-bob-teal-underlayer",
+    "outfitStyle": "teal-techwear-expedition",
+    "skinTone": "#EAC2A7",
+    "iris": {
+      "dark": "#043F69",
+      "mid": "#10C7E5",
+      "light": "#C9FAFF"
+    },
+    "hair": {
+      "base": "#18232B",
+      "shade": "#090F14",
+      "accent": "#24AFA4"
+    },
+    "palette": {
+      "primary": "#7FB069",
+      "shade": "#4F7C48",
+      "secondary": "#DCEBC4",
+      "accent": "#5B7C4A",
+      "dark": "#31431F"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH",
+      "F00_000_HairBack_00_HAIR"
+    ]
+  },
+  {
+    "slug": "rabbit",
+    "label": "토끼",
+    "key": "4",
+    "modelUrl": "./models/rabbit.vrm",
+    "eyeSharpen": 0.48,
+    "hairStyle": "ash-lavender-long-twin-ribbon-tails",
+    "outfitStyle": "ivory-ballet-athleisure",
+    "skinTone": "#F5D2C0",
+    "iris": {
+      "dark": "#6A294F",
+      "mid": "#C85C8D",
+      "light": "#FFD2E4"
+    },
+    "hair": {
+      "base": "#B7A8C0",
+      "shade": "#71677D",
+      "accent": "#E7DDF0"
+    },
+    "palette": {
+      "primary": "#F5F0EA",
+      "shade": "#D8CEC3",
+      "secondary": "#FFFFFF",
+      "accent": "#F5A9B8",
+      "dark": "#3A3335"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "fox",
+    "label": "여우",
+    "key": "5",
+    "modelUrl": "./models/fox.vrm",
+    "eyeSharpen": 0.82,
+    "hairStyle": "burnt-copper-layered-wolf-cut",
+    "outfitStyle": "rust-moto-tailored",
+    "skinTone": "#E9B08C",
+    "iris": {
+      "dark": "#174A35",
+      "mid": "#4FA46C",
+      "light": "#D2F0A8"
+    },
+    "hair": {
+      "base": "#A84423",
+      "shade": "#552117",
+      "accent": "#F08B46"
+    },
+    "palette": {
+      "primary": "#E8833A",
+      "shade": "#B85A26",
+      "secondary": "#FFF4E3",
+      "accent": "#C9622B",
+      "dark": "#3B2A20"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "panda",
+    "label": "판다",
+    "key": "6",
+    "modelUrl": "./models/panda.vrm",
+    "eyeSharpen": 0.32,
+    "hairStyle": "ink-black-low-space-buns-blunt-bangs",
+    "outfitStyle": "monochrome-lounge-tailoring",
+    "skinTone": "#F1C7AD",
+    "iris": {
+      "dark": "#3B1F3E",
+      "mid": "#8B568C",
+      "light": "#EBCFEA"
+    },
+    "hair": {
+      "base": "#222126",
+      "shade": "#09090C",
+      "accent": "#5B5865"
+    },
+    "palette": {
+      "primary": "#F7F4EF",
+      "shade": "#D6D1CB",
+      "secondary": "#FFFFFF",
+      "accent": "#2E2B2C",
+      "dark": "#2E2B2C"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH",
+      "F00_000_HairBack_00_HAIR"
+    ]
+  },
+  {
+    "slug": "penguin",
+    "label": "펭귄",
+    "key": "7",
+    "modelUrl": "./models/penguin.vrm",
+    "eyeSharpen": 0.62,
+    "hairStyle": "midnight-asymmetric-crop-ice-undercut",
+    "outfitStyle": "navy-snowboard-mod",
+    "skinTone": "#DDB08E",
+    "iris": {
+      "dark": "#101D4C",
+      "mid": "#6CBFEA",
+      "light": "#E5FAFF"
+    },
+    "hair": {
+      "base": "#172335",
+      "shade": "#090E18",
+      "accent": "#65C7DD"
+    },
+    "palette": {
+      "primary": "#31394A",
+      "shade": "#1E2532",
+      "secondary": "#F6F8FA",
+      "accent": "#F5B940",
+      "dark": "#20242E"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH",
+      "F00_000_HairBack_00_HAIR"
+    ]
+  },
+  {
+    "slug": "owl",
+    "label": "부엉이",
+    "key": "8",
+    "modelUrl": "./models/owl.vrm",
+    "eyeSharpen": 0.7,
+    "hairStyle": "cocoa-braided-crown-long-low-braid",
+    "outfitStyle": "nocturne-academia-cape",
+    "skinTone": "#C9906D",
+    "iris": {
+      "dark": "#5B2408",
+      "mid": "#E07318",
+      "light": "#FFE0A0"
+    },
+    "hair": {
+      "base": "#5A3826",
+      "shade": "#2B1A14",
+      "accent": "#A36D47"
+    },
+    "palette": {
+      "primary": "#8C6849",
+      "shade": "#65482F",
+      "secondary": "#E8D5B8",
+      "accent": "#F0B429",
+      "dark": "#33261B"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "lion",
+    "label": "사자",
+    "key": "9",
+    "modelUrl": "./models/lion.vrm",
+    "eyeSharpen": 0.8,
+    "hairStyle": "honey-gold-voluminous-shoulder-mane",
+    "outfitStyle": "sun-gold-regimental-street",
+    "skinTone": "#C8875D",
+    "iris": {
+      "dark": "#4D480B",
+      "mid": "#A9A529",
+      "light": "#F3E985"
+    },
+    "hair": {
+      "base": "#B96C2C",
+      "shade": "#6C351D",
+      "accent": "#F0B657"
+    },
+    "palette": {
+      "primary": "#EBB755",
+      "shade": "#C8872E",
+      "secondary": "#FFE9BC",
+      "accent": "#B5722E",
+      "dark": "#4A331C"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "tiger",
+    "label": "호랑이",
+    "key": "0",
+    "modelUrl": "./models/tiger.vrm",
+    "eyeSharpen": 0.88,
+    "hairStyle": "amber-high-braided-pony-black-lowlights",
+    "outfitStyle": "orange-combat-racer",
+    "skinTone": "#E5AF7F",
+    "iris": {
+      "dark": "#123D6B",
+      "mid": "#2D78C4",
+      "light": "#B7DDFF"
+    },
+    "hair": {
+      "base": "#C05A2A",
+      "shade": "#2B211E",
+      "accent": "#F39A49"
+    },
+    "palette": {
+      "primary": "#EE8A3C",
+      "shade": "#C65F26",
+      "secondary": "#FFF1DC",
+      "accent": "#2E2620",
+      "dark": "#2E2620"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "elephant",
+    "label": "코끼리",
+    "key": "-",
+    "modelUrl": "./models/elephant.vrm",
+    "eyeSharpen": 0.44,
+    "hairStyle": "smoky-blue-low-pony-side-swept-fringe",
+    "outfitStyle": "slate-utility-soft-armor",
+    "skinTone": "#9E6B4D",
+    "iris": {
+      "dark": "#25255C",
+      "mid": "#626CC4",
+      "light": "#D4D8FF"
+    },
+    "hair": {
+      "base": "#586477",
+      "shade": "#2B3240",
+      "accent": "#AAB7CA"
+    },
+    "palette": {
+      "primary": "#9BA8BC",
+      "shade": "#6F7B91",
+      "secondary": "#C9D3E0",
+      "accent": "#F0A7B4",
+      "dark": "#3D4350"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  },
+  {
+    "slug": "giraffe",
+    "label": "기린",
+    "key": "=",
+    "modelUrl": "./models/giraffe.vrm",
+    "eyeSharpen": 0.58,
+    "hairStyle": "caramel-high-bubble-pony-sunlit-tips",
+    "outfitStyle": "saffron-safari-prep",
+    "skinTone": "#F0C6A7",
+    "iris": {
+      "dark": "#3A3310",
+      "mid": "#718A32",
+      "light": "#E8E39A"
+    },
+    "hair": {
+      "base": "#9B6235",
+      "shade": "#51321F",
+      "accent": "#D9A35C"
+    },
+    "palette": {
+      "primary": "#F2C94C",
+      "shade": "#D79F2C",
+      "secondary": "#FFF3CE",
+      "accent": "#C98A3B",
+      "dark": "#4A371C"
+    },
+    "hiddenMaterials": [
+      "F00_001_01_AccessoryNeck_01_CLOTH"
+    ]
+  }
+]

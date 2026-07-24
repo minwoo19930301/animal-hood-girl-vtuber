@@ -3,3 +3,7 @@ dist/
 *.log
 .DS_Store
 shots/
+
+# Deterministic avatar-pack build intermediates. Regenerate with
+# `npm run avatars:build`; keep the finished public/models/*.vrm files tracked.
+work/avatar-pack/

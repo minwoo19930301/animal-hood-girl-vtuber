@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "build": "vite build",
     "start": "npm run build && electron .",
-    "shot": "node scripts/screenshot.mjs"
+    "shot": "node scripts/screenshot.mjs",
+    "avatars:build": "node scripts/build-avatar-pack.mjs",
+    "avatars:audit": "node scripts/audit-avatar-pack.mjs",
+    "avatars:shots": "node scripts/render-avatar-matrix.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.35",
