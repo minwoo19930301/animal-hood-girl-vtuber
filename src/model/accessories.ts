@@ -114,10 +114,10 @@ function buildWristband(hand: THREE.Object3D, lowerArm: THREE.Object3D, col: Acc
  * 드로스트링 한 가닥: 앵커 피벗(스프링 회전 대상) 아래로 드리우는 코랄 튜브 +
  * 끝에 골드 링·네이비 팁. 좌표는 전부 피벗 로컬(빌드 프레임: 정면 -Z).
  */
-function buildString(side: -1 | 1, hw: number, col: AccessoryColors): StringRig {
+function buildString(side: -1 | 1, hw: number, col: AccessoryColors, cordScale: number): StringRig {
   const pivot = new THREE.Group()
   pivot.name = side < 0 ? 'drawstringL' : 'drawstringR'
-  const L = hw * 1.12       // 끈 길이 (카라 기부→가슴 중단)
+  const L = hw * 1.12 * cordScale // 끈 길이 (카라 기부→가슴 중단, 배율은 종별 오버라이드)
   const r = hw * 0.045      // 끈 반지름 — 가는 코드 (서스펜더처럼 읽히지 않게)
 
   // 거의 수직으로 드리우며 끝이 살짝 안으로 — 카라에서 늘어진 얇은 끈
@@ -156,11 +156,15 @@ function buildString(side: -1 | 1, hw: number, col: AccessoryColors): StringRig 
 /**
  * 액세서리 빌드 + 본 어태치. rest 포즈(updateMatrixWorld 완료) 상태에서 호출할 것.
  * S: index.ts와 동일 부호 (VRM0=+1, VRM1=-1) — 드로스트링 루트 π 플립용.
+ * cordScale: 드로스트링 코드 길이 배율 (기본 1 = 기존 룩 불변). 의상 가슴 장식
+ * (예: panda 레드 보타이)과 코드가 겹치는 종이 짧게 오버라이드하는 용도 — 길이만
+ * 바뀌고 앵커/색/팁 구조는 동일하다.
  */
 export function buildAccessories(
   bones: AccessoryBones,
   S: number,
   colors: AccessoryColors = DEFAULT_ACC_COLORS,
+  cordScale = 1,
 ): AccessoryRig {
   // ---- 손목밴드 2개 (hand 로컬 계산이라 S 불필요) ----
   if (bones.handL && bones.lowerArmL) buildWristband(bones.handL, bones.lowerArmL, colors)
@@ -182,7 +186,7 @@ export function buildAccessories(
       root.name = 'hoodStrings'
       if (S === -1) root.rotation.y = Math.PI // VRM1: hood.pivot과 동일 플립
       for (const side of [-1, 1] as const) {
-        const st = buildString(side, hw, colors)
+        const st = buildString(side, hw, colors, cordScale)
         // 본 어깨 반폭(hw)은 스타일라이즈 모델에서 몸통 깊이보다 훨씬 작다 —
         // 앞뒤(z)는 hw 대비 큰 계수로 가슴 겉옷 표면 앞까지 밀어낸다
         st.pivot.position.set(

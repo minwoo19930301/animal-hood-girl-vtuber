@@ -3,9 +3,10 @@
  *
  * DESIGN-PACK-V3.md 장식 계약 (전부 개구부 밖 셸 면 위):
  * - 셸/안감: 모스그린/크림
- * - 장식: 셸 위 다크그린 육각 플레이트 디스크들(납작 디스크 7개, 후상부 중심),
- *   뒤통수 하단 작은 꼬리 놉. 전부 azimuth ≈ π(후면) 근방 — SHELL_AP 콘(정면
- *   반각 ax 0.98/ayUp 0.52) 반대편이라 개구부 침범 없음.
+ * - 장식: 셸 위 다크그린 육각 플레이트 디스크들(납작 디스크 — 후상부 로제트 7 +
+ *   정면 판독용 소형 3), 뒤통수 하단 작은 꼬리 놉. 후면 로제트는 azimuth ≈ π로
+ *   개구부 반대편, 정면 소형 판 3개는 림 상단/상측 셸 면 — SHELL_AP 콘(정면
+ *   반각 ax 0.98/ayUp 0.52) 밖 검증 좌표만 사용해 개구부 침범 없음.
  * - 액세서리: 손목밴드+드로스트링 (bandBase 크림 / stripe·cord 틸 / tip 다크그린)
  */
 import * as THREE from 'three'
@@ -49,6 +50,12 @@ const PLATES: ReadonlyArray<{ az: number; el: number; roll: number; s: number }>
   { az: Math.PI + 0.75, el: 0.80, roll: 0.12, s: 0.82 },
   { az: Math.PI - 0.72, el: 0.18, roll: 0.28, s: 0.92 }, // 하부 좌우
   { az: Math.PI + 0.72, el: 0.18, roll: 0.52, s: 0.92 },
+  // 정면 판독용 소형 플레이트 (판정 P1: 정면이 민무늬 그린 돔) — 림 상단 셸 면
+  // 중앙 1 + 정면 상측 좌우 2. 개구부 콘 검증: 콘축 이격 θ 각각 ≈1.22/1.50 rad,
+  // 해당 φ 콘 경계 ≈0.58/0.74 + 판 각반경(≤0.2) 대비 마진 ≥0.45 rad.
+  { az: 0, el: 1.02, roll: 0.40, s: 0.56 },              // 림 상단 중앙
+  { az: -1.32, el: 0.58, roll: 0.22, s: 0.72 },          // 정면 상측 좌우
+  { az: 1.32, el: 0.58, roll: 0.48, s: 0.72 },
 ]
 
 export function buildTurtle(ctx: AnimalBuildContext): AnimalCostumeRig {

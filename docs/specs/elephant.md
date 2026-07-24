@@ -30,7 +30,10 @@ secondary `#C9D3E0` / accent `#F0A7B4` / dark `#3D4350`, 셰이드 `#6F7B91`.
   radial 0.97) — 측면 낮게, SHELL_AP 콘 밖. anchor > twist(rotation.y side·0.50
   정적 3/4 각) > flap(동적) 계층 분리. hitMeshes 등록.
 - **코 (분절 tapered 튜브)**: muzzleAnchor **자식** — rotation은 index.ts
-  muzzleP/muzzleY 스프링이 매 프레임 덮어쓰므로 직접 세팅 금지. 경로
+  muzzleP/muzzleY 스프링이 매 프레임 덮어쓰므로 직접 세팅 금지. 코 전체는
+  앵커 자식의 **셸 표면 오프셋 루트** (position (0, 0.03, −0.07)·crownH, 방사
+  바깥 노멀 근사) 아래 — 앵커가 셸 표면보다 안쪽(0.78rz)이라 pitch 0.4에서
+  스프링이 코를 젖히면 분절이 셸에 파묻히던 문제 해소 (판정 라운드). 경로
   (0,0.08,0.14)→(0,0.02,−0.12)→(0,−0.085,−0.27)→(0,−0.19,−0.325)→
   (0,−0.315,−0.345)·crownH, 반지름 0.150→0.062 테이퍼. 다크 슬레이트
   `0x8794A9/0x5C6880` 크리스 링 3개(컨트롤 포인트 위, 탄젠트 정렬)로 분절감.
@@ -54,7 +57,7 @@ secondary `#C9D3E0` / accent `#F0A7B4` / dark `#3D4350`, 셰이드 `#6F7B91`.
 |---|---|
 | `elephant-face.png` | 부채 귀 핑크 이너·분절 코 선명, 얼굴 개구부 침범 0 |
 | `elephant-front.png` | 전신 팔레트 조화 (슬레이트 베스트·그레이 스커트와 후드) |
-| `elephant-pitch.png` | pitch 0.4에서 개구부 상단 무결, 눈썹~턱 가림 없음 |
+| `elephant-pitch.png` | pitch 0.4에서 개구부 상단 무결, 눈썹~턱 가림 없음, 코 분절이 셸 위에 얹힘(파묻힘 0) |
 | `elephant-orbit.png` | orbit 1.2에서 헤어/VRM 관통 없음, 코 드리움 측면 확인 |
 | `elephant-blink.png` | blink+mouth 표정 무결, 손목밴드·드로스트링 정상 부착 |
 | `elephant-pitchdown.png` | (추가 안전샷) pitch −0.35에서 코 팁이 눈썹 위 유지 |

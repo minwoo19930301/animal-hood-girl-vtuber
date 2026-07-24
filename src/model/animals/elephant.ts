@@ -81,6 +81,14 @@ function buildEar(base: HoodBase, crownH: number, side: -1 | 1): THREE.Group {
  */
 function buildTrunk(muzzle: THREE.Group, crownH: number, hit: THREE.Mesh[]): void {
   const s = crownH
+  // 셸 표면 오프셋 루트 (판정 P2 반영): muzzleFollow 앵커는 셸 표면보다 안쪽
+  // (0.78rz)이라 pitch 0.4에서 스프링이 코를 젖히면 분절 튜브가 셸에 파묻혔다.
+  // 코 밑동 전체를 방사 바깥(+Y·-Z, 앵커 위치의 표면 노멀 근사)으로 밀어
+  // 젖힘 시에도 튜브·크리스 링이 셸 위에 얹힌다. muzzleFollow 자식 구조 유지 —
+  // position 오프셋만, rotation 세팅 금지 (필수 함정 4).
+  const root = new THREE.Group()
+  root.position.set(0, 0.03 * s, -0.07 * s)
+  muzzle.add(root)
   const pts = [
     new THREE.Vector3(0, 0.08 * s, 0.14 * s),    // 셸 안쪽 밑동 (이음새 은폐)
     new THREE.Vector3(0, 0.02 * s, -0.12 * s),   // 림 위 통과 — 아치를 낮춰 정면 가독
@@ -91,7 +99,7 @@ function buildTrunk(muzzle: THREE.Group, crownH: number, hit: THREE.Mesh[]): voi
   const radii = [0.150 * s, 0.128 * s, 0.118 * s, 0.094 * s, 0.062 * s]
   const trunk = new THREE.Mesh(taperedTube(pts, radii, { seg: 28 }), toonMat(COL.shell, COL.shellShade))
   addOutline(trunk, s * 0.022, PALETTE.nightPurple)
-  muzzle.add(trunk)
+  root.add(trunk)
   hit.push(trunk)
 
   // 분절 크리스 링 3개 — 컨트롤 포인트 위 (CatmullRom은 컨트롤 포인트를 통과),
@@ -104,7 +112,7 @@ function buildTrunk(muzzle: THREE.Group, crownH: number, hit: THREE.Mesh[]): voi
     const tanDir = pts[i + 1].clone().sub(pts[i - 1]).normalize()
     ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tanDir)
     ring.position.copy(pts[i])
-    muzzle.add(ring)
+    root.add(ring)
   }
   ringAt(1, 0.128 * s)
   ringAt(2, 0.118 * s)
@@ -119,7 +127,7 @@ function buildTrunk(muzzle: THREE.Group, crownH: number, hit: THREE.Mesh[]): voi
   const nose = new THREE.Mesh(unitSphereLo(), toonMat(COL.lining, COL.liningShade))
   nose.scale.set(0.034 * s, 0.030 * s, 0.026 * s)
   nose.position.copy(pts[4]).add(new THREE.Vector3(0, -0.050 * s, -0.030 * s)) // 팁 표면 아래-앞
-  muzzle.add(tip, nose)
+  root.add(tip, nose)
 }
 
 export function buildElephant(ctx: AnimalBuildContext): AnimalCostumeRig {

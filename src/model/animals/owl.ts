@@ -57,9 +57,11 @@ export function buildOwl(ctx: AnimalBuildContext): AnimalCostumeRig {
 
   // ---- 셸 눈 2개 — 플라밍고 눈판 기법, 부엉이답게 크고 동그랗게 ----
   // 앰버 링(뒤판) + 검정 동공 + 흰 하이라이트 대·소. 좌표는 검증값 ±0.54/0.30.
+  // radial 0.955 인셋 (판정 P2: 기본 0.99에선 orbit에서 눈판이 셸 실루엣 밖으로
+  // 떠 보였다 — 표면 오프셋을 절반 이하로 줄여 셸에 심긴 디스크로)
   const Re = H * 0.15
   for (const side of [-1, 1] as const) {
-    const g = surfacePoint(base, side * 0.54, 0.30)
+    const g = surfacePoint(base, side * 0.54, 0.30, 0.955)
     // 앰버 링 (동공 둘레로 넓게 피핑 → 부엉이 눈의 링)
     const ring = new THREE.Mesh(unitSphereLo(), toonMat(DECOR.ring, DECOR.ringShade))
     ring.scale.set(Re * 1.5, Re * 1.5, Re * 0.24)

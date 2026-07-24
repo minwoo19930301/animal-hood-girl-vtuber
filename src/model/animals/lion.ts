@@ -40,7 +40,8 @@ const COL: HoodColors = {
 const DECOR = {
   honey: 0xf7d180, honeyShade: 0xd9a54a,  // 갈기 안쪽 겹 (셸보다 밝은 허니)
   amber: 0xc8872e, amberShade: 0x9c6220,  // 갈기 바깥 겹 (셸보다 다크한 앰버)
-  earIn: 0xb5722e, earInShade: 0x8a5520,  // 귀 이너 (안감 앰버 페어)
+  // 귀 이너: 페탈 허니/앰버와 톤이 겹쳐 묻혔다(판정 P2) — 다크브라운으로 대비 확보
+  earIn: 0x8a5520, earInShade: 0x663d15,
   nose: 0x6b4423, noseShade: 0x4a2f16,    // 갈색 코
 } as const
 
@@ -179,15 +180,16 @@ export function buildLion(ctx: AnimalBuildContext): AnimalCostumeRig {
     const anchor = rimAnchor(base, side * 0.82, 0.30)
     anchor.rotation.x += 0.35 // 디스크 면을 앞쪽으로 살짝만 — 돔 볼륨 유지
     const R = H * 0.26
-    const lift = H * 0.16 // 갈기 페탈 층 사이로 밀어 올림
+    const lift = H * 0.20 // 갈기 페탈 층 사이로 밀어 올림 (판정 반영: 0.16→0.20 상향)
     const dome = new THREE.Mesh(unitSphereLo(), toonMat(COL.shell, COL.shellShade))
     dome.scale.set(R, R * 0.95, R * 0.62)
     dome.position.z = lift
     addOutline(dome, H * 0.022, PALETTE.nightPurple)
     anchor.add(dome)
+    // 이너 반경 축소(0.55→0.42) + 다크브라운 — 골든 돔 안 대비 디스크 (판정 P2)
     const innerDisc = new THREE.Mesh(unitSphereLo(), toonMat(DECOR.earIn, DECOR.earInShade))
-    innerDisc.scale.set(R * 0.55, R * 0.52, R * 0.16)
-    innerDisc.position.z = lift + R * 0.52
+    innerDisc.scale.set(R * 0.42, R * 0.40, R * 0.16)
+    innerDisc.position.z = lift + R * 0.54
     anchor.add(innerDisc)
     base.hitMeshes.push(dome)
   }

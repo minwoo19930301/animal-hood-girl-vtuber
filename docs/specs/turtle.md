@@ -22,11 +22,14 @@
 
 - **셸/안감**: 모스그린 `0x7FB069/0x4F7C48` / 크림 `0xDCEBC4/0xAFC590` (hoodKit
   buildHoodBase, SHELL_AP/LINING_AP 공통 개구부 — 얼굴 침범 0).
-- **등껍질 플레이트**: 다크그린 `0x4C7038/0x30491F` 납작 육각 실린더 디스크 7개
-  (r=0.26·crownH·s, h=0.05·crownH, 아웃라인 nightPurple). 후상부 로제트 —
+- **등껍질 플레이트**: 다크그린 `0x4C7038/0x30491F` 납작 육각 실린더 디스크 10개
+  (r=0.26·crownH·s, h=0.05·crownH, 아웃라인 nightPurple). 후상부 로제트 7 —
   중심판 (az π, el 0.50) + 정수리 쪽 (π, 1.05) + 하단 (π, −0.06) + 상부 좌우
-  (π±0.75, 0.80) + 하부 좌우 (π±0.72, 0.18). 전부 surfacePoint 앵커(radial 1.0),
-  roll은 결정적 고정값. 개구부 콘 반대편(후면)이라 침범 불가.
+  (π±0.75, 0.80) + 하부 좌우 (π±0.72, 0.18) — 개구부 콘 반대편(후면)이라 침범 불가.
+  정면 판독용 소형 3 (판정 라운드: 정면이 민무늬 그린 돔이었음) — 림 상단 중앙
+  (az 0, el 1.02, s 0.56) + 정면 상측 좌우 (az ±1.32, el 0.58, s 0.72). 개구부
+  콘축 이격 θ ≈1.22/1.50 rad vs 해당 φ 콘 경계 ≈0.58/0.74 — 판 각반경(≤0.2)
+  감안 마진 ≥0.45 rad. 전부 surfacePoint 앵커(radial 1.0), roll은 결정적 고정값.
 - **꼬리 놉**: 셸색 taperedTube (radii 0.11→0.026·crownH), surfacePoint(π, −0.48, 0.97)
   앵커에서 바깥(+Z)·아래로 훅. 뒷모습에서 명확히 돌출 확인됨.
 - **muzzleFollow**: 빈 앵커 유지 (거북이는 주둥이 장식 없음 — index.ts 스프링 무해).
@@ -41,7 +44,7 @@ update에서 acc.sway (Follower 스프링, 결정적).
 
 | 샷 | 쿼리 | 통과 기준 |
 |---|---|---|
-| face | `avatar=turtle&cam=face&bg=1` | 개구부 침범 0, 액세서리 부착 |
+| face | `avatar=turtle&cam=face&bg=1` | 개구부 침범 0, 액세서리 부착, 정면 플레이트 3개로 등껍질 모티프 판독 |
 | front | `avatar=turtle&bg=1` | 팔레트-의상 조화, 전신 실루엣 |
 | pitch | `avatar=turtle&pitch=0.4&bg=1` | 상단 림이 눈썹 위 유지 |
 | orbit | `avatar=turtle&orbit=1.2&bg=1` | 측면 플레이트·헤어 관통 없음 |

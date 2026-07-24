@@ -84,14 +84,16 @@ function buildEar(base: HoodBase, side: -1 | 1, crownH: number): void {
   // 크림 이너: 앞면 경사(slope≈0.218)에 평행하게 기울인 납작 콘 플라크,
   // 메인 콘 전면에서 균일 ~0.017L 돌출. 높이 밴드는 돔 교차선(~0.10L, 이 아래는
   // 콘이 돔에 파묻혀 플라크가 돔 밖으로 새어 보인다 — 디버그로 실측)과
-  // 다크 팁 하단(0.26L) 사이로 한정.
+  // 다크 팁 하단 사이로 한정. 판정 P2 반영: 밴드를 [0.44, 0.60]·earH로 클램프
+  // (하단 마진 0.07L 확보) — 돔 교차선이 살짝 기울어도 좌우 노출 폭이 동일하다
+  // (기존 0.47±0.105는 하단 마진 0.025L뿐이라 미세 요에도 좌우 비대칭 슬리버 발생).
   const inner = new THREE.Mesh(
-    new THREE.ConeGeometry(earR * 0.52, earH * 0.21, 24),
+    new THREE.ConeGeometry(earR * 0.52, earH * 0.16, 24),
     toonMat(COL.lining, COL.liningShade),
   )
   inner.scale.set(1, 1, 0.16)
   inner.rotation.x = 0.22
-  inner.position.set(0, baseY + earH * 0.47, -0.072 * L)
+  inner.position.set(0, baseY + earH * 0.52, -0.072 * L)
   pivot.add(inner)
 
   base.shellPivot.add(pivot)
@@ -103,7 +105,9 @@ function buildEar(base: HoodBase, side: -1 | 1, crownH: number): void {
  */
 function buildBrowTuft(base: HoodBase, side: -1 | 1, crownH: number): void {
   const L = crownH
-  const anchor = surfacePoint(base, side * 0.36, 0.56, 0.985)
+  // 판정 P2 반영: az ±0.36→±0.30 + radial 0.965 인셋 — orbit에서 터프트가
+  // 셸 실루엣 밖으로 삐치지 않게 안쪽으로 이동 (개구부 콘축 이격 θ≈0.83 유지)
+  const anchor = surfacePoint(base, side * 0.30, 0.56, 0.965)
   // surfacePoint 로컬 +X는 항상 월드 -X(캐릭터-왼쪽) — hood.ts 눈물점(-side*x) 선례.
   // 캐릭터-바깥 방향의 로컬 x 부호는 -side.
   const out = -side
@@ -114,9 +118,9 @@ function buildBrowTuft(base: HoodBase, side: -1 | 1, crownH: number): void {
       g: lobes[i],
       // 가닥끼리 겹치게 좁은 간격 → 개별 꽃잎이 아니라 한 덩어리 털 뭉치로 읽힘
       p: [out * k * 0.048 * L, -0.03 * L, k * 0.004 * L] as [number, number, number],
-      // 표면에서 살짝만 들리고(x축 0.30) 위-바깥으로 벌어지는 부채꼴
-      // (z축 회전: 안쪽 가닥 거의 수직 → 바깥 가닥 크게 눕는다)
-      r: [0.30, 0, -out * (0.25 + k * 0.45)] as [number, number, number],
+      // 표면에서 살짝만 들리고(x축 0.24) 위-바깥으로 벌어지는 부채꼴
+      // (z축 회전: 안쪽 가닥 거의 수직 → 바깥 가닥 크게 눕는다 — 벌어짐도 소폭 축소)
+      r: [0.24, 0, -out * (0.22 + k * 0.38)] as [number, number, number],
     })),
   )
   lobes.forEach((g) => g.dispose())

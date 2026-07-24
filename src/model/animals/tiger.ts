@@ -10,7 +10,10 @@
  * 스트라이프 밀착 기법: 앵커 탄젠트 평면에 직선을 놓으면 끝이 구 표면 위로 뜬다
  * (탄젠트 현 vs 호). taperedTube 폴리라인을 yz-평면 호 y=ρ·sinφ, z=ρ(cosφ−1)로
  * 안쪽으로 구부려 셸 곡률을 따라가게 하고, scaleY로 단면을 방사 방향 납작하게,
- * radial 0.995로 표면 밀착시킨다 (ρ는 평균 반경 ×0.92 — 뜨느니 살짝 잠기게).
+ * radial 0.985로 표면 밀착시킨다 (ρ는 평균 반경 ×0.92 — 뜨느니 살짝 잠기게).
+ * 판정 라운드 반영: 재질은 unlitMat 플랫 웜블랙(토온 림 하이라이트가 각진
+ * 회색 스페큘러로 읽혔음), 끝은 라운드 테이퍼(단검/발톱 금지), 단면 납작(0.30)
+ * + radial 인셋으로 pitch 0.4 실루엣 돌출 방지. 아웃라인 없음(마킹은 프린트 룩).
  * 배치 각은 전부 SHELL_AP 콘 검증: 개구부 축과의 각 − 장식 각반경 > 콘 경계
  * (상측 대각 경계 ≈0.65, 수평 측면 0.98 — 플라밍고 눈 검증값 ±0.54/0.30 참조).
  */
@@ -18,7 +21,7 @@ import * as THREE from 'three'
 import { PALETTE } from '../../palette'
 import type { AnimalBuildContext, AnimalCostumeRig } from './types'
 import {
-  buildHoodBase, muzzleAnchor, surfacePoint, toonMat, addOutline,
+  buildHoodBase, muzzleAnchor, surfacePoint, toonMat, unlitMat, addOutline,
   taperedTube, unitSphereLo, type HoodBase, type HoodColors,
 } from './hoodKit'
 import { egg } from '../geo'
@@ -29,9 +32,8 @@ const COL: HoodColors = {
   shell: 0xee8a3c, shellShade: 0xc65f26,
   lining: 0xfff1dc, liningShade: 0xdcc4a4,
 }
-/** 스트라이프: 카탈로그 dark(웜 블랙) — 셰이드는 명도만 더 낮춘 웜 니어블랙 */
+/** 스트라이프: 카탈로그 dark(웜 블랙) — unlit 플랫 (셰이드/림 없음, 프린트 마킹 룩) */
 const STRIPE = 0x2e2620
-const STRIPE_SH = 0x1c1712
 /** 귀 이너 화이트 = 안감 페어 재사용 */
 const INNER = 0xfff1dc
 const INNER_SH = 0xdcc4a4
@@ -53,24 +55,25 @@ const ACC: AccessoryColors = {
  * curve: 탄젠트 평면 내 C-커브 가로 휨 (양 끝이 +x 쪽으로 훅) — 좌우 쌍은 부호 반전.
  */
 function addStripe(
-  base: HoodBase, L: number, az: number, el: number, rotZ: number,
+  base: HoodBase, _L: number, az: number, el: number, rotZ: number,
   len: number, wid: number, curve: number, rho: number,
 ): void {
-  const anchor = surfacePoint(base, az, el, 0.995)
-  const N = 7
+  const anchor = surfacePoint(base, az, el, 0.985) // 인셋 — 실루엣 돌출 방지
+  const N = 9
   const pts: THREE.Vector3[] = []
   for (let i = 0; i < N; i++) {
     const k = (i / (N - 1)) * 2 - 1 // -1..1
     const phi = (k * len * 0.5) / rho
     pts.push(new THREE.Vector3(curve * k * k, rho * Math.sin(phi), rho * (Math.cos(phi) - 1)))
   }
+  // 끝 라운드 테이퍼(로젠지 단면) — 뾰족 단검/발톱 실루엣 금지 (판정 P1 반영)
   const m = new THREE.Mesh(
-    taperedTube(pts, [wid * 0.22, wid, wid * 0.22], { seg: 18, radial: 10, scaleY: 0.40 }),
-    toonMat(STRIPE, STRIPE_SH),
+    taperedTube(pts, [wid * 0.55, wid * 0.95, wid, wid * 0.95, wid * 0.55],
+      { seg: 28, radial: 12, scaleY: 0.30 }),
+    unlitMat(STRIPE), // 플랫 웜블랙 — 토온 림의 회색 스페큘러 제거
   )
   m.rotation.z = rotZ // 탄젠트 평면 내 방향 (0 = 세로, π/2 = 가로)
-  addOutline(m, L * 0.010, PALETTE.nightPurple) // 얇게 — 스트라이프가 떠 보이지 않게
-  anchor.add(m)
+  anchor.add(m) // 아웃라인 없음 — 셸 위 프린트 마킹으로 읽히게
 }
 
 /** 둥근 귀: 방사→정면 블렌드로 기울인 디스크 (오렌지 겉 + 화이트 이너) */
@@ -102,10 +105,10 @@ export function buildTiger(ctx: AnimalBuildContext): AnimalCostumeRig {
   // ---- 스트라이프: 좌우 대칭 4쌍 (az/el/기울기/길이/폭/휨 — 전부 콘 경계 밖 검증) ----
   // 정면 정체성: P1(이마 밴드, 코 좌우)·P2(볼 옆) 두 쌍이 정면 샷에서 바로 보인다
   const LAYOUT: ReadonlyArray<readonly [number, number, number, number, number, number]> = [
-    [0.45, 0.86, 0.28, 0.42, 0.056, 0.04],  // P1 이마 밴드 八자 (림 오버행 위, 코 좌우)
-    [1.30, 0.30, 0.25, 0.42, 0.056, 0.05],  // P2 볼 옆 세로 (측면 림 바깥)
-    [1.62, 0.72, -0.15, 0.55, 0.058, 0.06], // P3 상측면
-    [2.35, 0.42, 0.10, 0.50, 0.052, 0.05],  // P4 뒤통수
+    [0.45, 0.86, 0.28, 0.44, 0.068, 0.04],  // P1 이마 밴드 八자 (림 오버행 위, 코 좌우)
+    [1.30, 0.30, 0.25, 0.42, 0.066, 0.05],  // P2 볼 옆 세로 (측면 림 바깥)
+    [1.62, 0.72, -0.15, 0.55, 0.070, 0.06], // P3 상측면
+    [2.35, 0.42, 0.10, 0.50, 0.062, 0.05],  // P4 뒤통수
   ]
   for (const [az, el, rz, len, wid, curve] of LAYOUT) {
     for (const side of [-1, 1] as const) {
@@ -114,7 +117,7 @@ export function buildTiger(ctx: AnimalBuildContext): AnimalCostumeRig {
   }
   // 정수리 1개 — 코 위 이마 중앙에서 정수리로 넘어가는 세로 자오선 스트라이프 (센터 마킹).
   // 하단 팁 el≈0.59 > 콘 상단 경계 0.52 검증 — 코 바로 위에서 시작해 콧등 라인으로 읽힌다
-  addStripe(base, L, 0, 0.92, 0, 0.50 * L, 0.062 * L, 0, rho)
+  addStripe(base, L, 0, 0.92, 0, 0.52 * L, 0.075 * L, 0, rho)
 
   // ---- 둥근 귀 ×2 (대형 파츠 → 히트메시) ----
   for (const side of [-1, 1] as const) base.hitMeshes.push(addEar(base, L, side))
