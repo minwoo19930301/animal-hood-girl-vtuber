@@ -123,3 +123,26 @@ npm run avatars:shots -- --only bear,tiger,giraffe
 7. `work/avatar-pack/`은 생성 중간물이므로 커밋하지 않는다. CI는 임시 디렉터리에 비교용
    모델과 매니페스트를 생성하고 커밋된 `public/models/`의 해시를 감사한다. 이 감사가
    실패하면 카탈로그·생성기·완성 VRM 중 하나가 뒤처진 상태다.
+
+## v3 갱신 (2026-07-25) — 이 섹션이 위 내용과 충돌하면 이 섹션이 정본
+
+플라밍고 방식을 12종 동물로 일반화한 팩 v3 완료. 코덱스식 프로시저럴 헤어/워드로브
+(cosplay/hair/wardrobe.ts)는 **삭제**됐다 — 원본 VRM 옷·헤어 메시를 살리고 텍스처 수술로
+바꾸는 것이 정본. 상세 설계·판정 기록: docs/DESIGN-PACK-V3.md, docs/DECOR-BRIEF.md.
+
+새 아바타 추가 절차 (v3):
+1. `shared/avatar-catalog.json` 엔트리 (slug/label/key/modelUrl/eyeSharpen/iris/hair/palette)
+2. `scripts/lib/outfit-designs.mjs` 엔트리 (의상 컬러 블로킹+motif+socks+hairCut+hairpin)
+3. `src/model/animals/<slug>.ts` 빌더 — `hoodKit.buildHoodBase()`+`surfacePoint()` 장식
+   (개구부 콘 밖 규칙, DECOR-BRIEF 함정 목록 준수) + `buildAccessories(bones, S, colors)`
+4. `node scripts/build-avatar-pack.mjs --only <slug>` → audit → `npm run avatars:shots`
+5. `docs/specs/<slug>.md` 계약 기록
+
+핵심 함정 (v3에서 실제로 밟은 것):
+- **헤어 틴트 material patch는 HAIR_02(헤어핀)에 곱하면 안 된다** — 헤어핀은 텍스처
+  치환+화이트 틴트 (다크 틴트 곱해지면 핀이 검정 붕괴).
+- 헤어 길이 컷: img25 하단 알파 컷 + 페더 22px + 컬럼 지터 + 팁 재음영 (bear 799 /
+  fox 737 / turtle 666 / penguin 512). 앞머리도 비례 단축됨(구조적).
+- QA 씬 포즈는 도너 리깅 한계 안으로 (body-legs knee ≤0.3): 스커트 스키닝·소매
+  백페이스는 도너 유래 공통 한계 (DESIGN-PACK-V3 "알려진 한계").
+- 워크트리 병렬 개발: node_modules 심링크 + VITE_CACHE_DIR 분리 + PORT/CDP_PORT 분리.

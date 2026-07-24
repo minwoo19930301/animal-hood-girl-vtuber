@@ -63,12 +63,14 @@ const SCENES = Object.freeze([
       bg: '1',
       t: '1.35',
       armL: 'fwd',
-      elbowL: '0.78',
+      // elbowL/R: 0.78/0.68 → 0.55/0.50 — 도너 소매 리깅 한계 안으로 완화해
+      // 검은 소매 백페이스 링 노출을 최소화 (손가락 포즈 판독성은 유지).
+      elbowL: '0.55',
       palmL: 'front',
       fingersL: '0.1,0.88,0.22,0.72,0.36',
       spreadL: '0.78',
       armR: 'fwd',
-      elbowR: '0.68',
+      elbowR: '0.50',
       palmR: 'front',
       fingersR: '0.84,0.16,0.74,0.28,0.62',
       spreadR: '0.62',
@@ -80,9 +82,11 @@ const SCENES = Object.freeze([
       cam: 'full',
       bg: '1',
       t: '1.5',
-      kneeL: '0.68',
+      // kneeL 0.68→0.30, hipShift 0.32→0.18 — 도너 스커트 리깅 한계 안으로 완화.
+      // 스커트 밑단이 힙 크레스트 아래를 유지하고 손 관통이 사라지는 범위.
+      kneeL: '0.30',
       kneeR: '0.14',
-      hipShift: '0.32',
+      hipShift: '0.18',
       twist: '-0.12',
       lean: '0.06',
     },

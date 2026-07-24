@@ -37,7 +37,9 @@ export const OUTFIT_DESIGNS = Object.freeze({
     vest: '#BC8532', vestShade: '#96682A', collar: '#F1D9BE', trim: '#F1D9BE',
     cuff: '#F1D9BE', hem: '#F1D9BE', zipper: '#6D2338', placket: '#F3F1EC', sleeves: null,
     skirt: '#6D2338', skirtStripe: '#BC8532', skirtDots: null,
-    shoes: '#F3EFE7', shoesSole: null, bow: '#6D2338', hairpin: '#F1D9BE',
+    // hairpin: img28은 헤어 액센트 스트랜드도 샘플한다 — 크림(#F1D9BE) 대신
+    // 카탈로그 hair.accent 코퍼로 클램프(와인레드 표류 지적, 셰이드는 램프 자동).
+    shoes: '#F3EFE7', shoesSole: null, bow: '#6D2338', hairpin: '#D77B3E',
     wristband: '#8A5A34', motif: null,
     socks: '#3B2A1C', hairCut: null,
   },
@@ -93,7 +95,8 @@ export const OUTFIT_DESIGNS = Object.freeze({
     vest: '#EBB755', vestShade: '#C8872E', collar: '#22304E', trim: '#22304E',
     cuff: '#22304E', hem: '#22304E', zipper: '#C8872E', placket: '#F3F1EC', sleeves: null,
     skirt: '#22304E', skirtStripe: '#EBB755', skirtDots: null,
-    shoes: '#6B4526', shoesSole: null, bow: '#22304E', hairpin: '#22304E',
+    // hairpin: 네이비(#22304E)는 허니골드 헤어 위에서 검정으로 읽혀 골드로 변경.
+    shoes: '#6B4526', shoesSole: null, bow: '#22304E', hairpin: '#F0B657',
     wristband: '#B5722E', motif: { type: 'regimentalCollar', color: '#EBB755' },
     socks: '#4A331C', hairCut: null,
   },
@@ -101,7 +104,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     vest: '#EE8A3C', vestShade: '#C65F26', collar: '#2E2620', trim: '#2E2620',
     cuff: '#2E2620', hem: '#2E2620', zipper: '#2E2620', placket: '#F3F1EC', sleeves: null,
     skirt: '#26211D', skirtStripe: '#EE8A3C', skirtDots: null,
-    shoes: '#26211D', shoesSole: null, bow: '#2E2620', hairpin: '#2E2620',
+    shoes: '#26211D', shoesSole: null, bow: '#2E2620', hairpin: '#F39A49',
     wristband: '#2E2620', motif: { type: 'bibPanel', color: '#FFF1DC' },
     socks: '#2E2620', hairCut: null,
   },

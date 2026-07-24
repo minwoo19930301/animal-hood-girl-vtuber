@@ -119,6 +119,11 @@ const DEFAULT_STYLES = [
   },
 ];
 
+// 헤어 틴트 곱셈 감쇠 보상 (스펙 대비 렌더가 어두운 슬러그만, styleFor에서 적용).
+const HAIR_TINT_COMPENSATION = Object.freeze({
+  rabbit: '#C8BCD2', // 스펙 #B7A8C0 → 스트랜드 곱으로 슬레이트 렌더, 상향 보상
+});
+
 // The closed-mouth lip paint lives in the face albedo (image 11), while image
 // 0 is the mouth interior used by the open-mouth blend shapes. These profiles
 // deliberately alter silhouette as well as colour so the twelve faces do not
@@ -295,11 +300,17 @@ function styleFor(entry, index) {
       ? [entry.palette.primary, entry.palette.secondary, entry.palette.accent]
       : base.outfit;
   const hairOverride = paletteValue(entry, ['hair', 'hairColors'], base.hair);
-  const hair = Array.isArray(hairOverride) && hairOverride.length >= 2
+  let hair = Array.isArray(hairOverride) && hairOverride.length >= 2
     ? hairOverride
     : hairOverride && typeof hairOverride === 'object' && hairOverride.base && hairOverride.shade
       ? [hairOverride.base, hairOverride.shade]
       : base.hair;
+  // MToon _Color는 그레이스케일 스트랜드(img25, 최대 휘도 <1)에 곱해지므로 렌더는
+  // 스펙 hex보다 한 단계 어둡다. 카탈로그 스펙은 그대로 두고 밝은 헤어에서 감쇠가
+  // 두드러지는 슬러그만 여기서 틴트를 상향 보상한다(rabbit 애시라벤더 #B7A8C0가
+  // 슬레이트로 렌더되던 지적 → #C8BCD2).
+  const tintCompensation = HAIR_TINT_COMPENSATION[entry.slug];
+  if (tintCompensation) hair = [tintCompensation, hair[1]];
   const sharpen = Number(entry.eyeSharpen);
   const eye = Number.isFinite(sharpen)
     ? {
@@ -663,6 +674,8 @@ async function editBodySkin(bytes, style) {
   const sockZoneTop = canvas.height * 0.7300; // 1495/2048 — 삭스 상단 에지(1555)보다 위
   const sockStripLeft = canvas.width * 0.2417; // 495/2048
   const sockStripRight = canvas.width * 0.7578; // 1552/2048
+  // 발등/뒤꿈치/발목 로브 상단 (중앙 존, 본-웨이트 UV 실측: 풋 본 정점 V 1152~1645).
+  const footSockZoneTop = canvas.height * 0.5615; // 1150/2048
   // avatar.vrm 유래 페인트 좌표 (placeholder↔avatar img15 픽셀 diff 실측):
   // 팔 스트립 x<=455 / x>=1465, 소매 화이트 y<945, 손목 밴드 코랄 y952~1000.
   const armStripLimit = { left: canvas.width * 0.2222, right: canvas.width * 0.7154 };
@@ -713,7 +726,15 @@ async function editBodySkin(bytes, style) {
       // 니삭스: 다리 스트립의 무채색(그레이) 픽셀만 재염색. 채도가 있는 피부와
       // 안티에일리어스 경계 픽셀은 건드리지 않아 원본 삭스 실루엣이 그대로 남는다.
       const inSockZone = y >= sockZoneTop && (x <= sockStripLeft || x >= sockStripRight);
-      if (inSockZone && saturation < 0.32 && lightness > 0.04 && lightness < 0.72) {
+      // 발등/뒤꿈치/발목: 풋 본에 가중된 정점은 중앙 존 y1150~1650의 다크그레이
+      // 로브(#382F31 계열)를 샘플한다. 스트립만 재염색하면 이 로브가 아래 중화
+      // 휴리스틱에 걸려 피부색이 되어 삭스와 로퍼 사이 맨살 밴드가 노출된다
+      // (monkey/fox 지적). 도너/플라밍고처럼 삭스색으로 이어 신발 안까지 연속시킨다.
+      // lightness<0.46 게이트가 속옷 연블루 에지(#98A1B9, l≈0.66)를 보호한다.
+      const inFootSockZone = y >= footSockZoneTop
+        && x > sockStripLeft && x < sockStripRight
+        && lightness < 0.46;
+      if ((inSockZone || inFootSockZone) && saturation < 0.32 && lightness > 0.04 && lightness < 0.72) {
         const sockLightness = clamp(socksHsl[2] + (lightness - 0.21) * 0.35, 0.03, 0.97);
         const [r, g, b] = hslRgb(socksHsl[0], socksHsl[1], sockLightness);
         data[offset] = Math.round(r);
@@ -954,6 +975,14 @@ async function editTops(bytes, style) {
       // 플래킷 상부 (중앙 세로 스트립 y296~690).
       if (y >= 296 && y < 690 && x >= 795 && x <= 1205) {
         if (value > 0.12) paintHsv(offset, placketTarget, shirtValue(placketTarget, value), 0.92);
+        continue;
+      }
+      // 카라 안감/그림자 라이트블루 밴드 (실측 #5277CE 계열, y296~600 x612~1408):
+      // 카라 마스크(y<300) 밖에 남아 목선 위 가는 하늘색 라인으로 렌더되던 부분
+      // (bear 지적). 블루 우세 픽셀만 카라색으로 재도색해 소매 화이트/배경은 보존.
+      if (y < 600 && x >= 600 && x <= 1420
+        && data[offset + 2] > data[offset] + 20 && data[offset + 2] > 128) {
+        paintHsv(offset, collarTarget, shirtValue(collarTarget, value), 0.92);
         continue;
       }
       // 셔츠 소매 2장 (상단 좌/우): 기본은 원본 화이트 유지, 지정 시 재염색.
@@ -1223,7 +1252,12 @@ async function editSkirt(bytes, style) {
   return pngBuffer(canvas);
 }
 
-// 신발(21): 명도 이단(밝은 밑창/어두운 본체) 유지, 디자인 색으로 연결.
+// 신발(21): 도너 휘도 '곱' 대신 밴드 치환. 도너 로퍼는 전부 다크브라운
+// (실측 v 0.10~0.32, v>0.5 픽셀 0개 — 기존 밝은 밑창 분기(v>0.54)는 사문)이라
+// 휘도 곱은 화이트 로퍼(#F3EFE7 등)를 미드그레이로 끌어내렸다. 도너 명도 대역을
+// 타깃 명도 램프(0.78~1.00x)로 정규화하고, 홈/옆면 셰이드는 타깃 hue의 채도를
+// 보강해 칠한다 — monkey 화이트+라이트그레이 셰이드, giraffe 웜 크림 셰이드
+// (#D8CDB2 근사)가 무채색 그레이로 읽히지 않게 하는 핵심.
 async function editShoes(bytes, style) {
   const design = style.design;
   const canvas = await canvasFrom(bytes);
@@ -1231,24 +1265,22 @@ async function editShoes(bytes, style) {
   const image = context.getImageData(0, 0, canvas.width, canvas.height);
   const data = image.data;
   const mainTarget = hsvOf(design.shoes);
-  const soleTarget = design.shoesSole
-    ? hsvOf(design.shoesSole)
-    : [mainTarget[0], mainTarget[1] * 0.85, clamp(mainTarget[2] + 0.16, 0, 0.98)];
+  const soleTarget = design.shoesSole ? hsvOf(design.shoesSole) : null;
   for (let offset = 0; offset < data.length; offset += 4) {
     if (data[offset + 3] === 0) continue;
     const [, , value] = rgbHsv(data[offset], data[offset + 1], data[offset + 2]);
-    const strength = smoothstep(0.03, 0.05, value) * 0.95;
-    if (strength < 0.01) continue;
-    const target = value > 0.54 ? soleTarget : mainTarget;
-    const normalised = clamp((value - 0.08) / 0.37);
+    if (value < 0.055) continue; // 컬링/봉제 검정 유지
+    // 도너 명도 정규화: 홈(0.13)≈0, 발등/스트랩·안창(0.27~0.32)≈1.
+    const t = clamp((value - 0.11) / 0.20);
+    const target = soleTarget && value > 0.24 ? soleTarget : mainTarget;
     const [r, g, b] = hsvRgb(
       target[0],
-      target[1],
-      clamp(target[2] * (0.55 + 0.55 * normalised), 0.02, 0.98),
+      clamp(target[1] * (1 + 0.7 * (1 - t)), 0, 0.95),
+      clamp(target[2] * (0.78 + 0.22 * t), 0.02, 0.98),
     );
-    data[offset] = Math.round(mix(data[offset], r, strength));
-    data[offset + 1] = Math.round(mix(data[offset + 1], g, strength));
-    data[offset + 2] = Math.round(mix(data[offset + 2], b, strength));
+    data[offset] = Math.round(r);
+    data[offset + 1] = Math.round(g);
+    data[offset + 2] = Math.round(b);
   }
   context.putImageData(image, 0, 0);
   return pngBuffer(canvas);
@@ -1276,7 +1308,11 @@ async function editBow(bytes, style) {
   return pngBuffer(canvas);
 }
 
-// 헤어핀(28): 시안 막대 + 네이비 홈 → 디자인 색으로 (알파/홈 음영 유지).
+// 헤어핀/액센트 스트랜드(28): 도너(밝은 시안 막대 실측 v≈0.93 / 네이비 홈 v≈0.42)를
+// accent 램프로 '치환'한다 — 밝은 면=hairpin 원색, 홈=hairpin 셰이드(명도 0.62x,
+// 채도 소폭 강화). 도너 명도/채도 스케일 곱을 버려 hue·명도 표류를 막는다.
+// HAIR_02 머티리얼 틴트는 materialPatch에서 화이트로 고정한다 — 헤어 _Color 곱이
+// 재염색된 핀을 거의 검정으로 렌더하던 원인(penguin/lion/tiger/elephant 지적).
 async function editHairpin(bytes, style) {
   const canvas = await canvasFrom(bytes);
   const context = canvas.getContext('2d');
@@ -1285,11 +1321,12 @@ async function editHairpin(bytes, style) {
   const target = hsvOf(style.design.hairpin);
   for (let offset = 0; offset < data.length; offset += 4) {
     if (data[offset + 3] === 0) continue;
-    const [, saturation, value] = rgbHsv(data[offset], data[offset + 1], data[offset + 2]);
+    const [, , value] = rgbHsv(data[offset], data[offset + 1], data[offset + 2]);
+    const t = smoothstep(0.40, 0.90, value); // 홈(0.42) -> 밝은 막대(0.93)
     const [r, g, b] = hsvRgb(
       target[0],
-      target[1] * clamp(saturation * 1.5 + 0.15),
-      clamp(target[2] * (0.45 + 0.62 * value), 0.02, 0.99),
+      clamp(target[1] * (1 + 0.10 * (1 - t)), 0, 1),
+      clamp(target[2] * (0.62 + 0.38 * t), 0.02, 0.99),
     );
     data[offset] = Math.round(r);
     data[offset + 1] = Math.round(g);
@@ -1309,12 +1346,19 @@ function materialPatch(entry, style) {
     _Color: vectorColour(hairColour),
     _ShadeColor: vectorColour(hairShade),
   };
+  // HAIR_02(img28 헤어핀/액센트 스트랜드)는 editHairpin이 텍스처를 accent 원색으로
+  // 직접 치환하므로 틴트를 도너와 같은 화이트로 고정한다(work/NOTES.md 틴트표).
+  // 헤어 _Color를 곱하면 accent x 다크 헤어 = 거의 검정으로 붕괴한다.
+  const whiteTint = {
+    _Color: [1, 1, 1, 1],
+    _ShadeColor: [1, 1, 1, 1],
+  };
   return {
     meta: { title: entry.title },
     materials: [
       { match: 'HairBack', vectorProperties },
       { match: 'HAIR_01', vectorProperties },
-      { match: 'HAIR_02', vectorProperties },
+      { match: 'HAIR_02', vectorProperties: whiteTint },
     ],
   };
 }
