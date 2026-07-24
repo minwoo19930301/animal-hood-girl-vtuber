@@ -14,10 +14,19 @@ import {
   sha256,
   sniffImageMime,
 } from './lib/avatar-pack-common.mjs';
+import { getOutfitDesign } from './lib/outfit-designs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const REQUIRED_COUNT = 12;
-const EDITED_IMAGE_INDICES = [0, 5, 7, 8, 9, 11, 15, 17, 19, 20, 21];
+const EDITED_IMAGE_INDICES = [0, 5, 7, 8, 9, 11, 15, 17, 19, 20, 21, 28];
+// 헤어 길이 컷(img25)은 design.hairCut이 있는 슬러그만 편집한다 — 편집 인덱스는
+// 전 슬러그 동일이 아니라 슬러그별로 검증한다 (build-avatar-pack.mjs와 같은 규칙).
+const HAIR_IMAGE_INDEX = 25;
+
+function expectedImageIndicesFor(entry) {
+  const design = getOutfitDesign(entry);
+  if (design.hairCut == null) return EDITED_IMAGE_INDICES;
+  return [...EDITED_IMAGE_INDICES, HAIR_IMAGE_INDEX].sort((a, b) => a - b);
+}
 
 function parseArgs(argv) {
   const options = {
@@ -108,6 +117,24 @@ function auditAppliedMaterialPatch(modelJson, patch, slug) {
   }
 }
 
+// authored 엔트리(손작업 VRM, 예: flamingo → avatar.vrm)는 파이프라인 재생성 대상이
+// 아니므로 존재 + GLB/VRM 구조 검증만 한다.
+function auditAuthoredAvatar(entry, options) {
+  const modelFile = path.basename(String(entry.modelUrl ?? `${entry.slug}.vrm`));
+  const modelPath = path.join(options.outputRoot, modelFile);
+  if (!fs.existsSync(modelPath)) throw new Error(`${entry.slug}: missing authored model ${modelPath}`);
+  const modelBytes = fs.readFileSync(modelPath);
+  const model = parseGlb(modelBytes, modelPath);
+  vrmRigParts(model.json, entry.slug);
+  return {
+    slug: entry.slug,
+    title: entry.title,
+    authored: true,
+    modelHash: sha256(modelBytes),
+    bytes: modelBytes.length,
+  };
+}
+
 function auditAvatar(entry, options, sourceGlb, sourceRig) {
   const modelPath = path.join(options.outputRoot, `${entry.slug}.vrm`);
   const workDir = path.join(options.workRoot, entry.slug);
@@ -135,8 +162,9 @@ function auditAvatar(entry, options, sourceGlb, sourceRig) {
     throw new Error(`${entry.slug}: meta title "${title}" != catalog title "${entry.title}"`);
   }
 
+  const expectedIndices = expectedImageIndicesFor(entry);
   const textureHashes = [];
-  for (const imageIndex of EDITED_IMAGE_INDICES) {
+  for (const imageIndex of expectedIndices) {
     const editedPath = path.join(editedDir, `${imageIndex}.png`);
     if (!fs.existsSync(editedPath)) throw new Error(`${entry.slug}: missing edited/${imageIndex}.png`);
     const editedBytes = fs.readFileSync(editedPath);
@@ -181,8 +209,16 @@ function auditAvatar(entry, options, sourceGlb, sourceRig) {
     throw new Error(`${entry.slug}: manifest model hash is stale`);
   }
   const manifestIndices = [...(manifest.editedImageIndices ?? [])].sort((a, b) => a - b);
-  if (JSON.stringify(manifestIndices) !== JSON.stringify(EDITED_IMAGE_INDICES)) {
-    throw new Error(`${entry.slug}: manifest editedImageIndices is incomplete`);
+  if (JSON.stringify(manifestIndices) !== JSON.stringify(expectedIndices)) {
+    throw new Error(`${entry.slug}: manifest editedImageIndices does not match the design`);
+  }
+  // hairCut이 없는 슬러그의 img25는 무편집이어야 한다 — 베이스 바이트와 동일 검증.
+  if (!expectedIndices.includes(HAIR_IMAGE_INDEX)) {
+    const sourceHair = embeddedImageBytes(sourceGlb, HAIR_IMAGE_INDEX, 'base VRM');
+    const outputHair = embeddedImageBytes(model, HAIR_IMAGE_INDEX, entry.slug);
+    if (sha256(sourceHair) !== sha256(outputHair)) {
+      throw new Error(`${entry.slug}: image ${HAIR_IMAGE_INDEX} was edited but design.hairCut is null`);
+    }
   }
   return {
     slug: entry.slug,
@@ -206,29 +242,33 @@ function assertUnique(rows, field, label) {
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const entries = loadAvatarCatalog(options.catalog);
-  if (entries.length !== REQUIRED_COUNT) {
-    throw new Error(`avatar catalog must contain exactly ${REQUIRED_COUNT} entries; found ${entries.length}`);
-  }
+  if (entries.length === 0) throw new Error('avatar catalog is empty');
+  const generated = entries.filter((entry) => entry.authored !== true);
+  const authored = entries.filter((entry) => entry.authored === true);
+  if (generated.length === 0) throw new Error('avatar catalog has no generated (non-authored) entries');
   const sourcePath = resolveBaseModel(ROOT, options.source);
   const sourceBytes = fs.readFileSync(sourcePath);
   const sourceGlb = parseGlb(sourceBytes, sourcePath);
   const sourceRig = vrmRigParts(sourceGlb.json, 'base VRM');
-  const rows = entries.map((entry) => auditAvatar(entry, options, sourceGlb, sourceRig));
+  const generatedRows = generated.map((entry) => auditAvatar(entry, options, sourceGlb, sourceRig));
+  const authoredRows = authored.map((entry) => auditAuthoredAvatar(entry, options));
+  const rows = [...generatedRows, ...authoredRows];
 
   assertUnique(rows, 'modelHash', 'model hashes');
-  assertUnique(rows, 'textureFingerprint', 'edited texture bundles');
-  assertUnique(rows, 'irisHash', 'iris textures');
-  assertUnique(rows, 'outfitHash', 'top textures');
+  assertUnique(generatedRows, 'textureFingerprint', 'edited texture bundles');
+  assertUnique(generatedRows, 'irisHash', 'iris textures');
+  assertUnique(generatedRows, 'outfitHash', 'top textures');
 
   console.table(rows.map((row) => ({
     avatar: row.slug,
     title: row.title,
     MiB: (row.bytes / (1024 * 1024)).toFixed(1),
     model: row.modelHash.slice(0, 12),
-    textures: row.textureFingerprint.slice(0, 12),
+    textures: row.authored ? '(authored)' : row.textureFingerprint.slice(0, 12),
   })));
   console.log(
-    `avatar audit passed: ${rows.length}/${REQUIRED_COUNT} valid GLBs; `
+    `avatar audit passed: ${rows.length}/${entries.length} valid GLBs `
+    + `(${generatedRows.length} generated + ${authoredRows.length} authored); `
     + 'humanoid + expressions preserved; dimensions preserved; model/iris/outfit hashes unique',
   );
 }

@@ -628,6 +628,9 @@ async function loadVRM(
       footR: bone('rightFoot'),
       handL: rig.armL.hand,
       handR: rig.armR.hand,
+      neck: rig.neck,
+      lowerArmL: rig.armL.lower,
+      lowerArmR: rig.armR.lower,
     },
   })
   const fx = buildFx(crownH)

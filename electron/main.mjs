@@ -10,8 +10,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const avatarCatalog = JSON.parse(
   readFileSync(join(__dirname, '../shared/avatar-catalog.json'), 'utf8'),
 )
-if (!Array.isArray(avatarCatalog) || avatarCatalog.length !== 12) {
-  throw new Error('shared/avatar-catalog.json must contain exactly 12 avatars')
+// 팩 크기는 카탈로그가 결정한다 (v3: 12종 + 플라밍고 = 13)
+if (!Array.isArray(avatarCatalog) || avatarCatalog.length === 0) {
+  throw new Error('shared/avatar-catalog.json must contain at least one avatar')
 }
 
 const WIN_W = 420

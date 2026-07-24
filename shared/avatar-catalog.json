@@ -25,9 +25,7 @@
       "accent": "#6B4830",
       "dark": "#33221A"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "monkey",
@@ -55,9 +53,7 @@
       "accent": "#8A5A34",
       "dark": "#3B2A1C"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "turtle",
@@ -85,10 +81,7 @@
       "accent": "#5B7C4A",
       "dark": "#31431F"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH",
-      "F00_000_HairBack_00_HAIR"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "rabbit",
@@ -116,9 +109,7 @@
       "accent": "#F5A9B8",
       "dark": "#3A3335"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "fox",
@@ -146,9 +137,7 @@
       "accent": "#C9622B",
       "dark": "#3B2A20"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "panda",
@@ -176,10 +165,7 @@
       "accent": "#2E2B2C",
       "dark": "#2E2B2C"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH",
-      "F00_000_HairBack_00_HAIR"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "penguin",
@@ -207,10 +193,7 @@
       "accent": "#F5B940",
       "dark": "#20242E"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH",
-      "F00_000_HairBack_00_HAIR"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "owl",
@@ -238,9 +221,7 @@
       "accent": "#F0B429",
       "dark": "#33261B"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "lion",
@@ -268,9 +249,7 @@
       "accent": "#B5722E",
       "dark": "#4A331C"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "tiger",
@@ -298,9 +277,7 @@
       "accent": "#2E2620",
       "dark": "#2E2620"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "elephant",
@@ -328,9 +305,7 @@
       "accent": "#F0A7B4",
       "dark": "#3D4350"
     },
-    "hiddenMaterials": [
-      "F00_001_01_AccessoryNeck_01_CLOTH"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "giraffe",
@@ -357,6 +332,35 @@
       "secondary": "#FFF3CE",
       "accent": "#C98A3B",
       "dark": "#4A371C"
+    },
+    "hiddenMaterials": []
+  },
+  {
+    "slug": "flamingo",
+    "label": "플라밍고",
+    "key": "`",
+    "modelUrl": "./models/avatar.vrm",
+    "authored": true,
+    "eyeSharpen": 0.68,
+    "hairStyle": "shino-donor-navy-long-hair-untouched",
+    "outfitStyle": "shino-school-uniform-flamingo-hood",
+    "skinTone": "#F2C8AE",
+    "iris": {
+      "dark": "#221A29",
+      "mid": "#C44F7A",
+      "light": "#F2D94E"
+    },
+    "hair": {
+      "base": "#F2799E",
+      "shade": "#D6588A",
+      "accent": "#F78FA7"
+    },
+    "palette": {
+      "primary": "#F2799E",
+      "shade": "#D6588A",
+      "secondary": "#F78FA7",
+      "accent": "#F2D94E",
+      "dark": "#28202E"
     },
     "hiddenMaterials": [
       "F00_001_01_AccessoryNeck_01_CLOTH"

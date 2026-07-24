@@ -17,8 +17,8 @@ import { dirname, resolve, join } from 'node:path'
 
 const [page = 'harness.html', out = 'shots/shot.png', query = ''] = process.argv.slice(2)
 const [W, H] = (process.env.SIZE ?? '750x1000').split('x').map(Number)
-const PORT = 5199
-const CDP_PORT = 9333
+const PORT = Number(process.env.PORT ?? 5199)
+const CDP_PORT = Number(process.env.CDP_PORT ?? 9333)
 const READY_TIMEOUT_MS = 30000
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 

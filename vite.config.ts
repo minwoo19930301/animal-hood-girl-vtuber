@@ -9,6 +9,8 @@ export default defineConfig({
   root: 'src',
   base: './',
   publicDir: '../public',
+  // 워크트리 병렬 빌드: node_modules를 심링크 공유할 때 캐시 레이스 방지용 오버라이드
+  ...(process.env.VITE_CACHE_DIR ? { cacheDir: process.env.VITE_CACHE_DIR } : {}),
   server: { port: 5183, strictPort: true },
   build: {
     outDir: '../dist',

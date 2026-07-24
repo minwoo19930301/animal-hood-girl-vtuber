@@ -14,6 +14,7 @@ export type AvatarSlug =
   | 'tiger'
   | 'elephant'
   | 'giraffe'
+  | 'flamingo'
 
 export interface AnimalBones {
   head: THREE.Object3D | null
@@ -30,6 +31,10 @@ export interface AnimalBones {
   footR?: THREE.Object3D | null
   handL?: THREE.Object3D | null
   handR?: THREE.Object3D | null
+  /** 액세서리(손목밴드/드로스트링) 배치용 — accessories.ts AccessoryBones 참조 */
+  neck?: THREE.Object3D | null
+  lowerArmL?: THREE.Object3D | null
+  lowerArmR?: THREE.Object3D | null
 }
 
 export interface AnimalBuildContext {

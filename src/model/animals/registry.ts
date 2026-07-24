@@ -1,8 +1,29 @@
+/**
+ * 아바타 레지스트리 (Pack v3) — shared/avatar-catalog.json이 단일 소스.
+ * 팩 크기는 카탈로그 길이 기준 (12 하드코딩 금지): AvatarSlug 유니온의 모든
+ * 슬러그가 카탈로그에 정확히 1회씩 나타나야 한다. 미지의 추가 필드
+ * (authored, outfit 등 파이프라인 소유 필드)는 무시하고 통과시킨다.
+ *
+ * 빌더는 종별 후드 모듈 13개 (12종 = hoodKit 베이스 스텁, flamingo = hood.ts 래핑).
+ * hiddenMaterials는 카탈로그 값만 사용 — BASE_HIDDEN_MATERIALS 폐지. 진짜 VRoid
+ * 옷·헤어 메시를 살리고(스킨 웨이팅 메시 > 본 부착 강체), 팔레트 리페인트된
+ * 보타이(AccessoryNeck)도 이제 보여준다 (플라밍고만 카탈로그로 숨김).
+ */
 import catalogJson from '../../../shared/avatar-catalog.json'
 import type { AnimalBuilder, AvatarSlug } from './types'
-import { buildSpeciesCosplay, SPECIES_HEADS } from './cosplay'
-import { buildHairStyle, type HairStyle } from './hair'
-import { buildWardrobe, type WardrobeStyle } from './wardrobe'
+import { buildBear } from './bear'
+import { buildMonkey } from './monkey'
+import { buildTurtle } from './turtle'
+import { buildRabbit } from './rabbit'
+import { buildFox } from './fox'
+import { buildPanda } from './panda'
+import { buildPenguin } from './penguin'
+import { buildOwl } from './owl'
+import { buildLion } from './lion'
+import { buildTiger } from './tiger'
+import { buildElephant } from './elephant'
+import { buildGiraffe } from './giraffe'
+import { buildFlamingo } from './flamingo'
 
 export type { AvatarSlug } from './types'
 
@@ -33,8 +54,9 @@ export interface AvatarDefinition {
   modelUrl: string
   /** Expression weight, calibrated from the catalog's 0..1 art-direction score. */
   eyeSharpen: number
-  hairStyle: HairStyle
-  outfitStyle: WardrobeStyle
+  /** 서술 문자열 (아트 디렉션 기록) — 런타임은 소비하지 않는다 */
+  hairStyle: string
+  outfitStyle: string
   skinTone: string
   iris: CatalogColor3
   hair: CatalogHair
@@ -55,51 +77,26 @@ const SLUGS = [
   'tiger',
   'elephant',
   'giraffe',
+  'flamingo',
 ] as const satisfies readonly AvatarSlug[]
 
 const SLUG_SET = new Set<string>(SLUGS)
 
-const HAIR_BY_SLUG: Readonly<Record<AvatarSlug, HairStyle>> = {
-  bear: 'wavyBob',
-  monkey: 'highPony',
-  turtle: 'bluntBob',
-  rabbit: 'twinTails',
-  fox: 'wolfCut',
-  panda: 'doubleBuns',
-  penguin: 'pixieBob',
-  owl: 'braidedCrown',
-  lion: 'curlyShag',
-  tiger: 'braidedHighPony',
-  elephant: 'lowPony',
-  giraffe: 'bubblePony',
-}
-
-const OUTFIT_BY_SLUG: Readonly<Record<AvatarSlug, WardrobeStyle>> = {
-  bear: 'varsitySkort',
-  monkey: 'bomberCargo',
-  turtle: 'techUtility',
-  rabbit: 'cardiganSkort',
-  fox: 'motoLeggings',
-  panda: 'pandaCulottes',
-  penguin: 'sailorCulottes',
-  owl: 'scholarTrousers',
-  lion: 'royalWideLeg',
-  tiger: 'racerLayered',
-  elephant: 'utilityCoat',
-  giraffe: 'safariShorts',
-}
-
-const BASE_HIDDEN_MATERIALS = [
-  // The generated wardrobes fully replace the donor school topology.
-  'tops_01_cloth',
-  'bottoms_01_cloth',
-  'shoes_01_cloth',
-  'accessoryneck',
-  // Procedural hair provides twelve independent silhouettes.
-  'hairback_00_hair',
-  'hair_00_hair_01',
-  'hair_00_hair_02',
-] as const
+const BUILDERS: Readonly<Record<AvatarSlug, AnimalBuilder>> = Object.freeze({
+  bear: buildBear,
+  monkey: buildMonkey,
+  turtle: buildTurtle,
+  rabbit: buildRabbit,
+  fox: buildFox,
+  panda: buildPanda,
+  penguin: buildPenguin,
+  owl: buildOwl,
+  lion: buildLion,
+  tiger: buildTiger,
+  elephant: buildElephant,
+  giraffe: buildGiraffe,
+  flamingo: buildFlamingo,
+})
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -122,20 +119,12 @@ function parseColorObject(value: unknown, keys: readonly string[]): Record<strin
   return result
 }
 
-function asNumberColor(color: string): number {
-  return Number.parseInt(color.slice(1), 16)
-}
-
-function shadeColor(color: number, factor: number): number {
-  const r = Math.round(((color >> 16) & 0xff) * factor)
-  const g = Math.round(((color >> 8) & 0xff) * factor)
-  const b = Math.round((color & 0xff) * factor)
-  return (r << 16) | (g << 8) | b
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
 }
 
 function parseCatalog(raw: unknown): AvatarDefinition[] {
   if (!Array.isArray(raw)) throw new Error('[avatars] shared/avatar-catalog.json must be an array')
-  if (raw.length !== SLUGS.length) throw new Error(`[avatars] expected ${SLUGS.length} catalog entries, got ${raw.length}`)
 
   const seenSlugs = new Set<string>()
   const seenKeys = new Set<string>()
@@ -156,10 +145,11 @@ function parseCatalog(raw: unknown): AvatarDefinition[] {
       ['primary', 'shade', 'secondary', 'accent', 'dark'],
     ) as unknown as CatalogPalette
     const sharpnessScore = typeof value.eyeSharpen === 'number' ? value.eyeSharpen : 0.6
-    const catalogHidden = Array.isArray(value.hiddenMaterials)
+    const hiddenMaterials = Array.isArray(value.hiddenMaterials)
       ? value.hiddenMaterials.filter((item): item is string => typeof item === 'string')
       : []
 
+    // 그 외 필드(authored, outfit 등)는 빌드/audit 파이프라인 소유 — 여기서는 무시.
     return {
       slug,
       label: requiredString(value, 'label'),
@@ -167,25 +157,22 @@ function parseCatalog(raw: unknown): AvatarDefinition[] {
       modelUrl: requiredString(value, 'modelUrl'),
       // Fable5's proven safe expression range was roughly 0.08..0.20.  The
       // catalog value is an art-direction score, not a raw VRM expression.
-      eyeSharpen: THREEClamp(sharpnessScore * 0.22, 0.06, 0.20),
-      hairStyle: HAIR_BY_SLUG[slug],
-      outfitStyle: OUTFIT_BY_SLUG[slug],
+      eyeSharpen: clamp(sharpnessScore * 0.22, 0.06, 0.20),
+      hairStyle: requiredString(value, 'hairStyle'),
+      outfitStyle: requiredString(value, 'outfitStyle'),
       skinTone: requiredString(value, 'skinTone'),
       iris,
       hair,
       palette,
-      hiddenMaterials: [...new Set([...BASE_HIDDEN_MATERIALS, ...catalogHidden.map((x) => x.toLowerCase())])],
+      hiddenMaterials,
     }
   })
 
+  // 완전성: 유니온의 모든 슬러그가 존재 (중복은 위에서 차단 → 길이도 자동 일치)
   for (const slug of SLUGS) {
     if (!seenSlugs.has(slug)) throw new Error(`[avatars] missing catalog entry ${slug}`)
   }
   return result
-}
-
-function THREEClamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
 }
 
 export const AVATAR_CATALOG: readonly AvatarDefinition[] = parseCatalog(catalogJson)
@@ -201,61 +188,6 @@ export const AVATAR_KEYS: Readonly<Record<string, AvatarSlug>> = Object.freeze(
 const DEFINITIONS: Readonly<Record<AvatarSlug, AvatarDefinition>> = Object.freeze(
   Object.fromEntries(AVATAR_CATALOG.map((entry) => [entry.slug, entry])),
 ) as Readonly<Record<AvatarSlug, AvatarDefinition>>
-
-function makeBuilder(definition: AvatarDefinition): AnimalBuilder {
-  return (context) => {
-    const rig = buildSpeciesCosplay(context, SPECIES_HEADS[definition.slug])
-    const hairRig = buildHairStyle(
-      rig.headFollow,
-      context,
-      {
-        style: definition.hairStyle,
-        base: asNumberColor(definition.hair.base),
-        shade: asNumberColor(definition.hair.shade),
-        accent: asNumberColor(definition.hair.accent),
-      },
-      rig.hitMeshes,
-    )
-    const primary = asNumberColor(definition.palette.primary)
-    const secondary = asNumberColor(definition.palette.secondary)
-    buildWardrobe(
-      context,
-      {
-        style: definition.outfitStyle,
-        palette: {
-          primary,
-          primaryShade: asNumberColor(definition.palette.shade),
-          secondary,
-          secondaryShade: shadeColor(secondary, 0.78),
-          accent: asNumberColor(definition.palette.accent),
-          dark: asNumberColor(definition.palette.dark),
-          light: asNumberColor(definition.iris.light),
-        },
-      },
-      rig.hitMeshes,
-    )
-
-    const updateSpecies = rig.update
-    let elapsed = 0
-    rig.update = (pitchS, yaw, breath, dt) => {
-      updateSpecies?.(pitchS, yaw, breath, dt)
-      elapsed += THREEClamp(dt, 0, 0.05)
-      hairRig.secondary.forEach((part, index) => {
-        const phase = index * 0.73
-        part.rotation.x = -pitchS * (0.07 + index * 0.008)
-        part.rotation.z =
-          -yaw * (0.08 + index * 0.006) +
-          Math.sin(elapsed * (2.2 + index * 0.08) + phase) * 0.025 +
-          breath * 0.008
-      })
-    }
-    return rig
-  }
-}
-
-const BUILDERS: Readonly<Record<AvatarSlug, AnimalBuilder>> = Object.freeze(
-  Object.fromEntries(AVATAR_CATALOG.map((entry) => [entry.slug, makeBuilder(entry)])),
-) as Readonly<Record<AvatarSlug, AnimalBuilder>>
 
 export function isAvatarSlug(value: unknown): value is AvatarSlug {
   return typeof value === 'string' && SLUG_SET.has(value)

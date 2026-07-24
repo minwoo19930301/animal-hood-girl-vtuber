@@ -31,7 +31,6 @@ const VITE_BIN = path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
 // Do not replace the application's normal dist/ with a harness-only build.
 // Keeping this cache also makes --skip-build useful across iterative runs.
 const RENDER_DIST = path.join(ROOT, 'node_modules', '.cache', 'mingo-avatar-render-dist');
-const REQUIRED_AVATARS = 12;
 const READY_TIMEOUT_MS = 45_000;
 
 const SCENES = Object.freeze([
@@ -480,8 +479,9 @@ async function renderOne(cdp, url, output, size) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const catalog = loadAvatarCatalog(options.catalog);
-  if (catalog.length !== REQUIRED_AVATARS) {
-    throw new Error(`catalog must contain exactly ${REQUIRED_AVATARS} avatars; found ${catalog.length}`);
+  // Pack size is defined by the catalog itself (v3: 12 species + flamingo).
+  if (catalog.length === 0) {
+    throw new Error(`catalog must contain at least one avatar: ${options.catalog}`);
   }
   if (options.only?.size === 0) throw new Error('--only must name at least one avatar');
   if (options.scenes?.size === 0) throw new Error('--scenes must name at least one scene');
@@ -600,9 +600,9 @@ async function main() {
         assertSceneCapturesAreDistinct(jobs.filter((job) => job.scene.name === scene.name));
       }
     }
-    // A seven-image contact set makes visual comparison of all twelve designs
+    // A per-scene contact sheet makes visual comparison of the whole pack
     // practical while retaining the full-resolution per-avatar captures.
-    if (entries.length === REQUIRED_AVATARS) {
+    if (entries.length === catalog.length) {
       for (const scene of scenes) {
         const output = await writeContactSheet(
           jobs.filter((job) => job.scene.name === scene.name),
