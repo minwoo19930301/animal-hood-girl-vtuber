@@ -88,8 +88,9 @@ export function buildPanda(ctx: AnimalBuildContext): AnimalCostumeRig {
   const muzzleFollow = muzzleAnchor(base)
 
   // ---- 액세서리 (손목밴드+드로스트링) — flamingo.ts 배선과 동일 ----
-  // cordScale 0.62: 레드 코드가 레드 보타이 위를 가로지르는 레드-온-레드 겹침 방지
-  // (판정 P2) — 코드가 보타이 위에서 끝난다. 다른 종은 기본 1 (영향 0).
+  // cordScale 0.45: 레드 코드가 레드 보타이 위를 가로지르는 레드-온-레드 겹침 방지
+  // (판정 P2→재판정 P1). 0.62는 앵커가 카라 기부(보타이 위)라 코드 끝이 여전히
+  // 보타이 아래까지 내려왔다 — 0.45로 코드가 보타이 위에서 끝난다. 다른 종은 기본 1.
   const acc = buildAccessories(
     {
       chest: ctx.bones.chest ?? null,
@@ -103,7 +104,7 @@ export function buildPanda(ctx: AnimalBuildContext): AnimalCostumeRig {
     },
     ctx.S,
     ACC,
-    0.62,
+    0.45,
   )
 
   return {

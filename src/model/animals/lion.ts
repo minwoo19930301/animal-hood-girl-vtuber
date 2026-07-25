@@ -74,6 +74,10 @@ interface PetalLayer {
   width: number
   /** δ 위상 오프셋 (겹 사이 지그재그 스태거) */
   stagger: number
+  /** 인덱스 기반 lift 변주 진폭 (rad) — 페탈이 서로 다른 각도로 들려 층 두께 형성 */
+  liftVar?: number
+  /** 짝/홀 페탈 방사 스태거 (radial 계수 가감) — 측면 프로필에 앞뒤 겹 깊이 부여 */
+  zStagger?: number
 }
 
 /** 갈기 한 겹: 페탈 전부를 1지오메트리로 병합 → 드로우콜 1 + 아웃라인 1 */
@@ -86,7 +90,8 @@ function buildManeLayer(base: HoodBase, layer: PetalLayer): THREE.BufferGeometry
   const e = new THREE.Vector3()
   const dir = new THREE.Vector3()
   const tan = new THREE.Vector3()
-  const qLift = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), layer.lift)
+  const X_AXIS = new THREE.Vector3(1, 0, 0)
+  const qLift = new THREE.Quaternion()
   for (let i = 0; i < layer.count; i++) {
     const delta = -layer.deltaMax + (2 * layer.deltaMax * i) / (layer.count - 1) + layer.stagger
     const phi = -Math.PI / 2 + delta // δ=0 → 림 상단
@@ -98,18 +103,25 @@ function buildManeLayer(base: HoodBase, layer: PetalLayer): THREE.BufferGeometry
     const Zb = dir.clone()
     const Yb = tan.clone()
     const Xb = Yb.clone().cross(Zb)
+    // lift 인덱스 변주 (결정적 코사인) — 페탈마다 들림각이 달라 측면 프로필에서
+    // 갈기가 단일 평면 부채가 아니라 두께 있는 층으로 읽힌다 (판정 P2 반영).
+    // 변주는 항상 접선→방사 사이 (liftVar < lift ≤ π/2-여유) — 얼굴 쪽 금지 불변.
+    const lift = layer.lift + (layer.liftVar ?? 0) * Math.cos(i * 2.1 + 0.6)
+    qLift.setFromAxisAngle(X_AXIS, lift)
     const q = new THREE.Quaternion()
       .setFromRotationMatrix(new THREE.Matrix4().makeBasis(Xb, Yb, Zb))
       .multiply(qLift)
     const eul = new THREE.Euler().setFromQuaternion(q)
     // 크기 미세 변주 (결정적 — 인덱스 기반 코사인, Math.random 금지)
     const k = 1 + 0.10 * Math.cos(i * 2.4)
+    // 짝/홀 방사 스태거 — 밑동 반경을 번갈아 가감해 앞뒤 겹(셸에 가까운 겹/뜬 겹) 형성
+    const rad = 0.98 + (layer.zStagger ?? 0) * (i % 2 === 0 ? 1 : -0.55)
     items.push({
       g: lobe,
       p: [
-        base.C.x + dir.x * base.rx * 0.98,
-        base.C.y + dir.y * base.ry * 0.98,
-        base.C.z + dir.z * base.rz * 0.98,
+        base.C.x + dir.x * base.rx * rad,
+        base.C.y + dir.y * base.ry * rad,
+        base.C.z + dir.z * base.rz * rad,
       ],
       r: [eul.x, eul.y, eul.z],
       s: [k, k * (1 + 0.06 * Math.sin(i * 1.7)), k],
@@ -156,9 +168,13 @@ export function buildLion(ctx: AnimalBuildContext): AnimalCostumeRig {
   const H = ctx.crownH
 
   // ---- 갈기 페탈 링 2겹 — 안쪽 허니(림 가까이, 들림 큼) / 바깥 앰버(뒤로 볼륨) ----
+  // 재판정 P2: liftVar/zStagger — 바깥 겹 페탈이 전부 같은 들림·같은 반경이라
+  // 측면 갈기가 얇은 부채로 읽혔다. 들림각 ±0.15 변주 + 짝/홀 방사 스태거로
+  // 프로필에 층 두께 부여 (변주 하한 0.20 > 0 — 접선 아래(얼굴 쪽)로는 불가)
   const outerGeo = buildManeLayer(base, {
     count: 11, deltaMax: 2.05, margin: 0.34, lift: 0.35,
     len: H * 0.55, width: H * 0.30, stagger: 0,
+    liftVar: 0.15, zStagger: 0.030,
   })
   const outer = new THREE.Mesh(outerGeo, toonMat(DECOR.amber, DECOR.amberShade))
   addOutline(outer, H * 0.026, PALETTE.nightPurple)
