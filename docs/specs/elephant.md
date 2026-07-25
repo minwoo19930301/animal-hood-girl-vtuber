@@ -9,8 +9,9 @@
 
 | 항목 | 확정 값 |
 |---|---|
-| 헤어 | 스모키블루 틴트 base `#586477` / shade `#2B3240` / accent `#AAB7CA`. 컷 없음(롱) |
+| 헤어 | 허니 브라운 base `#9A6B3F` / shade `#4A2F1E` / accent `#C8A177` — v3.1(쿨 슬레이트 위 웜). 렌더 보상 틴트 `#B27F4E`. 컷 없음(롱) |
 | 홍채 | 라벤더블루 3단: `#25255C` / `#626CC4` / `#D4D8FF` |
+| 눈매(v3.1) | 길고 낮은 순한 눈: lift -7 / thick 1.0 / lower 0.45 / irisScale 1.02 / brow soft-straight(틸트 -1.5). 눈썹 틴트 헤어 동조. expressionBias relaxed 0.08 |
 | 눈매 | eyeSharpen 카탈로그 0.44 → registry 클램프(0.06..0.20) 적용 0.097 |
 | 피부 | `#9E6B4D` |
 

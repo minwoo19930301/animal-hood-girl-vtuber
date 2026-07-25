@@ -5,7 +5,11 @@
     "key": "1",
     "modelUrl": "./models/bear.vrm",
     "eyeSharpen": 0.38,
-    "hairStyle": "chestnut-shoulder-bob-curtain-fringe",
+    "expressionBias": {
+      "relaxed": 0.06
+    },
+    "hairStyle": "blue-black-shoulder-bob-curtain-fringe",
+    "hairIntent": "블루블랙 — 크림 의상과 대비, 차분 (v3 체스트넛 깔맞춤 해제)",
     "outfitStyle": "forest-varsity-camp",
     "skinTone": "#F2C8AE",
     "iris": {
@@ -14,9 +18,9 @@
       "light": "#FFD58A"
     },
     "hair": {
-      "base": "#6B412C",
-      "shade": "#3B241D",
-      "accent": "#B97A52"
+      "base": "#23283E",
+      "shade": "#07090D",
+      "accent": "#48507F"
     },
     "palette": {
       "primary": "#8D6142",
@@ -33,7 +37,8 @@
     "key": "2",
     "modelUrl": "./models/monkey.vrm",
     "eyeSharpen": 0.64,
-    "hairStyle": "copper-high-ponytail-forehead-curl",
+    "hairStyle": "cool-ash-brown-high-ponytail-forehead-curl",
+    "hairIntent": "쿨 애시브라운 — 오커/버건디와 분리 (v3 코퍼 해제)",
     "outfitStyle": "ochre-parkour-street",
     "skinTone": "#D6A078",
     "iris": {
@@ -42,9 +47,9 @@
       "light": "#B8FFD4"
     },
     "hair": {
-      "base": "#7A4026",
-      "shade": "#432117",
-      "accent": "#D77B3E"
+      "base": "#6E5F58",
+      "shade": "#302826",
+      "accent": "#A2938A"
     },
     "palette": {
       "primary": "#A9764C",
@@ -61,7 +66,11 @@
     "key": "3",
     "modelUrl": "./models/turtle.vrm",
     "eyeSharpen": 0.75,
-    "hairStyle": "blue-black-blunt-chin-bob-teal-underlayer",
+    "expressionBias": {
+      "relaxed": 0.1
+    },
+    "hairStyle": "rose-brown-blunt-chin-bob-warm-underlayer",
+    "hairIntent": "로즈 브라운 — 그린 의상 위 웜 포인트 (v3 블루블랙 해제)",
     "outfitStyle": "teal-techwear-expedition",
     "skinTone": "#EAC2A7",
     "iris": {
@@ -70,9 +79,9 @@
       "light": "#C9FAFF"
     },
     "hair": {
-      "base": "#18232B",
-      "shade": "#090F14",
-      "accent": "#24AFA4"
+      "base": "#8A5A55",
+      "shade": "#452A2A",
+      "accent": "#B8928D"
     },
     "palette": {
       "primary": "#7FB069",
@@ -89,7 +98,8 @@
     "key": "4",
     "modelUrl": "./models/rabbit.vrm",
     "eyeSharpen": 0.48,
-    "hairStyle": "ash-lavender-long-twin-ribbon-tails",
+    "hairStyle": "pale-gold-blonde-long-twin-ribbon-tails",
+    "hairIntent": "페일 골드 블론드 — 핑크와 크림 파스텔 (v3 애시라벤더 해제)",
     "outfitStyle": "ivory-ballet-athleisure",
     "skinTone": "#F5D2C0",
     "iris": {
@@ -98,9 +108,9 @@
       "light": "#FFD2E4"
     },
     "hair": {
-      "base": "#B7A8C0",
-      "shade": "#71677D",
-      "accent": "#E7DDF0"
+      "base": "#E8D3A4",
+      "shade": "#C9A97A",
+      "accent": "#F7F0DE"
     },
     "palette": {
       "primary": "#F5F0EA",
@@ -117,7 +127,11 @@
     "key": "5",
     "modelUrl": "./models/fox.vrm",
     "eyeSharpen": 0.82,
-    "hairStyle": "burnt-copper-layered-wolf-cut",
+    "expressionBias": {
+      "angry": 0.12
+    },
+    "hairStyle": "platinum-silver-layered-wolf-cut",
+    "hairIntent": "플래티넘 실버 — 러스트 후드와 강대비 (v3 번트코퍼 깔맞춤 해제)",
     "outfitStyle": "rust-moto-tailored",
     "skinTone": "#E9B08C",
     "iris": {
@@ -126,9 +140,9 @@
       "light": "#D2F0A8"
     },
     "hair": {
-      "base": "#A84423",
-      "shade": "#552117",
-      "accent": "#F08B46"
+      "base": "#D9DCE3",
+      "shade": "#98A3B3",
+      "accent": "#E8E9EE"
     },
     "palette": {
       "primary": "#E8833A",
@@ -145,7 +159,11 @@
     "key": "6",
     "modelUrl": "./models/panda.vrm",
     "eyeSharpen": 0.32,
-    "hairStyle": "ink-black-low-space-buns-blunt-bangs",
+    "expressionBias": {
+      "relaxed": 0.08
+    },
+    "hairStyle": "milk-tea-beige-low-space-buns-blunt-bangs",
+    "hairIntent": "밀크티 베이지 — 흑백 의상 위 웜 팝 (v3 잉크블랙 깔맞춤 해제)",
     "outfitStyle": "monochrome-lounge-tailoring",
     "skinTone": "#F1C7AD",
     "iris": {
@@ -154,9 +172,9 @@
       "light": "#EBCFEA"
     },
     "hair": {
-      "base": "#222126",
-      "shade": "#09090C",
-      "accent": "#5B5865"
+      "base": "#C7AD8E",
+      "shade": "#A9805C",
+      "accent": "#E9DFD2"
     },
     "palette": {
       "primary": "#F7F4EF",
@@ -173,7 +191,8 @@
     "key": "7",
     "modelUrl": "./models/penguin.vrm",
     "eyeSharpen": 0.62,
-    "hairStyle": "midnight-asymmetric-crop-ice-undercut",
+    "hairStyle": "chocolate-brown-asymmetric-crop-undercut",
+    "hairIntent": "초콜릿 브라운 — 네이비/옐로와 분리 (v3 미드나잇 깔맞춤 해제)",
     "outfitStyle": "navy-snowboard-mod",
     "skinTone": "#DDB08E",
     "iris": {
@@ -182,9 +201,9 @@
       "light": "#E5FAFF"
     },
     "hair": {
-      "base": "#172335",
-      "shade": "#090E18",
-      "accent": "#65C7DD"
+      "base": "#4A342A",
+      "shade": "#0D0907",
+      "accent": "#8B644F"
     },
     "palette": {
       "primary": "#31394A",
@@ -201,7 +220,8 @@
     "key": "8",
     "modelUrl": "./models/owl.vrm",
     "eyeSharpen": 0.7,
-    "hairStyle": "cocoa-braided-crown-long-low-braid",
+    "hairStyle": "dark-grey-ash-braided-crown-long-low-braid",
+    "hairIntent": "다크 그레이 애시 — 브라운 의상과 쿨 대비 (v3 코코아 깔맞춤 해제)",
     "outfitStyle": "nocturne-academia-cape",
     "skinTone": "#C9906D",
     "iris": {
@@ -210,9 +230,9 @@
       "light": "#FFE0A0"
     },
     "hair": {
-      "base": "#5A3826",
-      "shade": "#2B1A14",
-      "accent": "#A36D47"
+      "base": "#55565E",
+      "shade": "#202023",
+      "accent": "#878892"
     },
     "palette": {
       "primary": "#8C6849",
@@ -229,7 +249,11 @@
     "key": "9",
     "modelUrl": "./models/lion.vrm",
     "eyeSharpen": 0.8,
-    "hairStyle": "honey-gold-voluminous-shoulder-mane",
+    "expressionBias": {
+      "angry": 0.08
+    },
+    "hairStyle": "dark-burgundy-voluminous-shoulder-mane",
+    "hairIntent": "다크 버건디 — 골드 의상 위 딥 포인트 (v3 허니골드 깔맞춤 해제)",
     "outfitStyle": "sun-gold-regimental-street",
     "skinTone": "#C8875D",
     "iris": {
@@ -238,9 +262,9 @@
       "light": "#F3E985"
     },
     "hair": {
-      "base": "#B96C2C",
-      "shade": "#6C351D",
-      "accent": "#F0B657"
+      "base": "#58242C",
+      "shade": "#0E0608",
+      "accent": "#A0424D"
     },
     "palette": {
       "primary": "#EBB755",
@@ -257,7 +281,11 @@
     "key": "0",
     "modelUrl": "./models/tiger.vrm",
     "eyeSharpen": 0.88,
-    "hairStyle": "amber-high-braided-pony-black-lowlights",
+    "expressionBias": {
+      "angry": 0.15
+    },
+    "hairStyle": "jet-black-high-braided-pony-lowlights",
+    "hairIntent": "순흑 — 오렌지 후드와 아이코닉 대비 (v3 앰버 깔맞춤 해제)",
     "outfitStyle": "orange-combat-racer",
     "skinTone": "#E5AF7F",
     "iris": {
@@ -266,9 +294,9 @@
       "light": "#B7DDFF"
     },
     "hair": {
-      "base": "#C05A2A",
-      "shade": "#2B211E",
-      "accent": "#F39A49"
+      "base": "#1B1A1E",
+      "shade": "#0A090B",
+      "accent": "#4D4955"
     },
     "palette": {
       "primary": "#EE8A3C",
@@ -285,7 +313,11 @@
     "key": "-",
     "modelUrl": "./models/elephant.vrm",
     "eyeSharpen": 0.44,
-    "hairStyle": "smoky-blue-low-pony-side-swept-fringe",
+    "expressionBias": {
+      "relaxed": 0.08
+    },
+    "hairStyle": "honey-brown-low-pony-side-swept-fringe",
+    "hairIntent": "허니 브라운 — 쿨 슬레이트 위 웜 (v3 스모키블루 깔맞춤 해제)",
     "outfitStyle": "slate-utility-soft-armor",
     "skinTone": "#9E6B4D",
     "iris": {
@@ -294,9 +326,9 @@
       "light": "#D4D8FF"
     },
     "hair": {
-      "base": "#586477",
-      "shade": "#2B3240",
-      "accent": "#AAB7CA"
+      "base": "#9A6B3F",
+      "shade": "#4A2F1E",
+      "accent": "#C8A177"
     },
     "palette": {
       "primary": "#9BA8BC",
@@ -313,7 +345,8 @@
     "key": "=",
     "modelUrl": "./models/giraffe.vrm",
     "eyeSharpen": 0.58,
-    "hairStyle": "caramel-high-bubble-pony-sunlit-tips",
+    "hairStyle": "greige-high-bubble-pony-soft-tips",
+    "hairIntent": "그레이지 — 웜 새프런과 뉴트럴 대비 (v3 캐러멜 깔맞춤 해제)",
     "outfitStyle": "saffron-safari-prep",
     "skinTone": "#F0C6A7",
     "iris": {
@@ -322,9 +355,9 @@
       "light": "#E8E39A"
     },
     "hair": {
-      "base": "#9B6235",
-      "shade": "#51321F",
-      "accent": "#D9A35C"
+      "base": "#8D8378",
+      "shade": "#514944",
+      "accent": "#BCB6AF"
     },
     "palette": {
       "primary": "#F2C94C",

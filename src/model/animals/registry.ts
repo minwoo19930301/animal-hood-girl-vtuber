@@ -47,6 +47,12 @@ interface CatalogPalette {
   dark: string
 }
 
+/** v3.1 런타임 표정 바이어스 — eyeSharpen 대체가 아니라 소량 가산 (0..0.2). */
+export interface ExpressionBias {
+  relaxed?: number
+  angry?: number
+}
+
 export interface AvatarDefinition {
   slug: AvatarSlug
   label: string
@@ -54,6 +60,8 @@ export interface AvatarDefinition {
   modelUrl: string
   /** Expression weight, calibrated from the catalog's 0..1 art-direction score. */
   eyeSharpen: number
+  /** 슬러그별 상시 표정 바이어스 (DESIGN-PACK-V3.1 눈매 표 bias 열, 없으면 {}) */
+  expressionBias: ExpressionBias
   /** 서술 문자열 (아트 디렉션 기록) — 런타임은 소비하지 않는다 */
   hairStyle: string
   outfitStyle: string
@@ -145,6 +153,13 @@ function parseCatalog(raw: unknown): AvatarDefinition[] {
       ['primary', 'shade', 'secondary', 'accent', 'dark'],
     ) as unknown as CatalogPalette
     const sharpnessScore = typeof value.eyeSharpen === 'number' ? value.eyeSharpen : 0.6
+    const expressionBias: ExpressionBias = {}
+    if (isRecord(value.expressionBias)) {
+      for (const channel of ['relaxed', 'angry'] as const) {
+        const bias = value.expressionBias[channel]
+        if (typeof bias === 'number' && bias > 0) expressionBias[channel] = clamp(bias, 0, 0.2)
+      }
+    }
     const hiddenMaterials = Array.isArray(value.hiddenMaterials)
       ? value.hiddenMaterials.filter((item): item is string => typeof item === 'string')
       : []
@@ -158,6 +173,7 @@ function parseCatalog(raw: unknown): AvatarDefinition[] {
       // Fable5's proven safe expression range was roughly 0.08..0.20.  The
       // catalog value is an art-direction score, not a raw VRM expression.
       eyeSharpen: clamp(sharpnessScore * 0.22, 0.06, 0.20),
+      expressionBias,
       hairStyle: requiredString(value, 'hairStyle'),
       outfitStyle: requiredString(value, 'outfitStyle'),
       skinTone: requiredString(value, 'skinTone'),

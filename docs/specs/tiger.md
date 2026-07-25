@@ -10,8 +10,9 @@
 
 | 항목 | 실제 구현 |
 |---|---|
-| 헤어 | 앰버 틴트 base `#C05A2A` / shade `#2B211E` / accent `#F39A49`, 컷 없음(롱) |
+| 헤어 | 순흑 base `#1B1A1E` / shade `#0A090B` / accent `#4D4955` — v3.1(오렌지 후드와 아이코닉 대비). 컷 없음(롱) |
 | 홍채 | 코발트 3단 `#123D6B / #2D78C4 / #B7DDFF` |
+| 눈매(v3.1) | 가장 좁은 캣아이: lift +12 / thick 1.25 / lower 0.15 / irisScale 0.88 / highlight 0.78x / brow sharp-low(raise -3) / 바깥 속눈썹 강조. expressionBias angry 0.15 |
 | 표정 | eyeSharpen 카탈로그 0.88 → 런타임 클램프 ≈0.19 (샤프한 눈매) |
 | 상의 | 오렌지 몸판 `#EE8A3C`(셰이드 `#C65F26`), 화이트 가슴 빕 `#FFF1DC`, 카라·커프·밑단·지퍼 웜블랙 `#2E2620` |
 | 스커트 | 웜블랙 `#26211D` + 오렌지 밑단줄 `#EE8A3C` |

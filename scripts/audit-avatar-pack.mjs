@@ -15,17 +15,23 @@ import {
   sniffImageMime,
 } from './lib/avatar-pack-common.mjs';
 import { getOutfitDesign } from './lib/outfit-designs.mjs';
+import { getEyeProfile } from './lib/eye-profiles.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EDITED_IMAGE_INDICES = [0, 5, 7, 8, 9, 11, 15, 17, 19, 20, 21, 28];
-// 헤어 길이 컷(img25)은 design.hairCut이 있는 슬러그만 편집한다 — 편집 인덱스는
-// 전 슬러그 동일이 아니라 슬러그별로 검증한다 (build-avatar-pack.mjs와 같은 규칙).
+// 헤어 길이 컷(img25)은 design.hairCut이 있는 슬러그만, 눈 하이라이트(img10)는
+// eyeProfile.highlightScale !== 1 인 슬러그만 편집한다 — 편집 인덱스는 전 슬러그
+// 동일이 아니라 슬러그별로 검증한다 (build-avatar-pack.mjs와 같은 규칙).
 const HAIR_IMAGE_INDEX = 25;
+const HIGHLIGHT_IMAGE_INDEX = 10;
 
 function expectedImageIndicesFor(entry) {
   const design = getOutfitDesign(entry);
-  if (design.hairCut == null) return EDITED_IMAGE_INDICES;
-  return [...EDITED_IMAGE_INDICES, HAIR_IMAGE_INDEX].sort((a, b) => a - b);
+  const profile = getEyeProfile(entry.slug);
+  const indices = [...EDITED_IMAGE_INDICES];
+  if (design.hairCut != null) indices.push(HAIR_IMAGE_INDEX);
+  if (profile.highlightScale !== 1) indices.push(HIGHLIGHT_IMAGE_INDEX);
+  return indices.sort((a, b) => a - b);
 }
 
 function parseArgs(argv) {
@@ -110,7 +116,8 @@ function auditAppliedMaterialPatch(modelJson, patch, slug) {
       }
     }
   }
-  for (const token of ['HairBack', 'HAIR_01', 'HAIR_02']) {
+  // FaceBrow: v3.1 눈썹 틴트 헤어 동조 — img8은 그레이스케일, 색은 머티리얼 패치 소유.
+  for (const token of ['HairBack', 'HAIR_01', 'HAIR_02', 'FaceBrow']) {
     if (!rules.some((rule) => String(rule.name ?? rule.match ?? '').includes(token))) {
       throw new Error(`${slug}: material patch does not cover ${token}`);
     }
@@ -212,12 +219,18 @@ function auditAvatar(entry, options, sourceGlb, sourceRig) {
   if (JSON.stringify(manifestIndices) !== JSON.stringify(expectedIndices)) {
     throw new Error(`${entry.slug}: manifest editedImageIndices does not match the design`);
   }
-  // hairCut이 없는 슬러그의 img25는 무편집이어야 한다 — 베이스 바이트와 동일 검증.
-  if (!expectedIndices.includes(HAIR_IMAGE_INDEX)) {
-    const sourceHair = embeddedImageBytes(sourceGlb, HAIR_IMAGE_INDEX, 'base VRM');
-    const outputHair = embeddedImageBytes(model, HAIR_IMAGE_INDEX, entry.slug);
-    if (sha256(sourceHair) !== sha256(outputHair)) {
-      throw new Error(`${entry.slug}: image ${HAIR_IMAGE_INDEX} was edited but design.hairCut is null`);
+  // hairCut이 없는 슬러그의 img25, highlightScale 1.0 슬러그의 img10은 무편집이어야
+  // 한다 — 베이스 바이트와 동일 검증.
+  const untouchedRules = [
+    [HAIR_IMAGE_INDEX, 'design.hairCut is null'],
+    [HIGHLIGHT_IMAGE_INDEX, 'eyeProfile.highlightScale is 1'],
+  ];
+  for (const [imageIndex, reason] of untouchedRules) {
+    if (expectedIndices.includes(imageIndex)) continue;
+    const sourceBytes = embeddedImageBytes(sourceGlb, imageIndex, 'base VRM');
+    const outputBytes = embeddedImageBytes(model, imageIndex, entry.slug);
+    if (sha256(sourceBytes) !== sha256(outputBytes)) {
+      throw new Error(`${entry.slug}: image ${imageIndex} was edited but ${reason}`);
     }
   }
   return {
@@ -226,6 +239,7 @@ function auditAvatar(entry, options, sourceGlb, sourceRig) {
     modelHash,
     textureFingerprint: sha256(Buffer.from(JSON.stringify(textureHashes))),
     irisHash: textureHashes.find(([index]) => index === 9)[1],
+    eyelineHash: textureHashes.find(([index]) => index === 5)[1],
     outfitHash: textureHashes.find(([index]) => index === 17)[1],
     bytes: modelBytes.length,
   };
@@ -257,6 +271,7 @@ function main() {
   assertUnique(rows, 'modelHash', 'model hashes');
   assertUnique(generatedRows, 'textureFingerprint', 'edited texture bundles');
   assertUnique(generatedRows, 'irisHash', 'iris textures');
+  assertUnique(generatedRows, 'eyelineHash', 'eyeline textures');
   assertUnique(generatedRows, 'outfitHash', 'top textures');
 
   console.table(rows.map((row) => ({

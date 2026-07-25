@@ -8,8 +8,9 @@
 
 | 항목 | 실제 구현 |
 |---|---|
-| 헤어 | 블루블랙(#18232B) 틴트, 안쪽 레이어 청록 언더컬러. 현 빌드는 롱 스트레이트 — DESIGN-PACK-V3의 친 보브 컷(row 666)은 헤어 컷 파이프라인 단계 소유(미적용 시점에도 후드 계약은 불변). |
+| 헤어 | 로즈 브라운 base `#8A5A55` / shade `#452A2A` / accent `#B8928D` — v3.1(그린 의상 위 웜 포인트). 렌더 보상 틴트 `#9A6863`. 친 보브 컷 row 666. |
 | 홍채 | 시안 3단 램프 (카탈로그 iris dark/mid/light) |
+| 눈매(v3.1) | 나른한 반개 직선: lift 0 + drop 4px / thick 1.25 / lower 0.2 / irisScale 0.95 / brow straight-thin. 눈썹 틴트 헤어 동조. expressionBias relaxed 0.10 |
 | 표정 | eyeSharpen 카탈로그값 → registry 클램프(0.06..0.20). blink+mouth 무결 검증됨 |
 
 ## 의상 (고정 메시 리페인트 — 빌드 파이프라인 소유)

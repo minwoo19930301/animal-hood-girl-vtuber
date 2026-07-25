@@ -9,8 +9,9 @@ hoodKit 후드 + 장식이 정본.
 
 | 항목 | 실제 구현 |
 |---|---|
-| 헤어 | 미드나잇 네이비(#172335) 틴트, 귀선 크롭(컷 row 512 — DESIGN-PACK-V3 헤어 컷 레시피). |
+| 헤어 | 초콜릿 브라운 base `#4A342A` / shade `#0D0907` / accent `#8B644F` — v3.1(네이비/옐로와 분리). 귀선 크롭(컷 row 512 — DESIGN-PACK-V3 헤어 컷 레시피). |
 | 홍채 | 아이스블루 3단 램프 (카탈로그 iris dark/mid/light) |
+| 눈매(v3.1) | 시원한 직선 윗꺼풀: lift +3 / thick 1.15 / lower 0.25 / irisScale 0.97 / brow straight. 눈썹 틴트 헤어 동조. bias 없음 |
 | 표정 | eyeSharpen 카탈로그값 → registry 클램프(0.06..0.20). blink+mouth 무결 검증됨 |
 
 ## 의상 (고정 메시 리페인트 — 빌드 파이프라인 소유)

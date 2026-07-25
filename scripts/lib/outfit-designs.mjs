@@ -20,6 +20,8 @@
 //   hairCut     헤어 길이 컷 라인(img25 512x1024 기준 row, null=컷 없음 롱헤어 유지).
 //               DESIGN-PACK-V3 "헤어 길이" 표: bear 799(숄더) / fox 737(울프) /
 //               turtle 666(친 보브) / penguin 512(귀선 크롭).
+//               v3.1: rabbit 799(숄더랩, bear 레시피) — 롱헤어가 토끼 후드 셸
+//               후면을 관통하고 pitch에서 어깨 가닥이 돌출하던 결함 해소.
 //
 // motif.type: 'pawPatch' | 'hexPlates' | 'bibPanel' | 'argyleBand' | 'roundPatches'
 //             | 'regimentalCollar'  — 전부 UV 심을 넘지 않는 몸판 중앙부/카라 밴드 안.
@@ -57,7 +59,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#D8A0A8', skirtStripe: '#FFFFFF', skirtDots: '#FFFFFF',
     shoes: '#E4849E', shoesSole: null, bow: '#F5A9B8', hairpin: '#F5A9B8',
     wristband: '#F5A9B8', motif: null,
-    socks: '#F2F3F7', hairCut: null,
+    socks: '#F2F3F7', hairCut: 799,
   },
   fox: {
     vest: '#B5502A', vestShade: '#8C3B1E', collar: '#F7EBD3', trim: '#F7EBD3',

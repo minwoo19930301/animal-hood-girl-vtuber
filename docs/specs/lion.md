@@ -8,8 +8,9 @@ docs/DESIGN-PACK-V3.md 12종 표, 빌더 `src/model/animals/lion.ts`.
 
 | 항목 | 실제 값 |
 |---|---|
-| 헤어 | 허니골드 틴트 base `#B96C2C` / shade `#6C351D` / accent `#F0B657`. 컷 없음(롱 유지). |
+| 헤어 | 다크 버건디 base `#58242C` / shade `#0E0608` / accent `#A0424D` — v3.1(골드 의상 위 딥 포인트). 컷 없음(롱 유지). |
 | 홍채 | 골드카키 3단 램프 `#4D480B / #A9A529 / #F3E985` |
+| 눈매(v3.1) | 대담한 굵은 라인: lift +6 / thick 1.35 / lower 0.35 / irisScale 1.0 / brow thick-arch. 눈썹 틴트 헤어 동조. expressionBias angry 0.08 |
 | 눈매 | eyeSharpen 카탈로그 0.8 → 런타임 클램프 0.176 |
 | 상의 | 골드 베스트 + 네이비 레지멘털 카라·커프·밑단 + 골드 지퍼 (UV 영역 마스크 컬러 블로킹) |
 | 하의/신발 | 네이비 플리츠 스커트(골드 밑단 줄) / 브라운 로퍼 + 다크 니삭스 |

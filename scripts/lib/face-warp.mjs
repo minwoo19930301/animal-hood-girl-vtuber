@@ -63,13 +63,13 @@ export const LOCKED_MATERIAL_PATTERN = /eyeiris|eyehighlight|eyewhite|eyeextra/i
  */
 export const FACE_WARP_PROFILES = Object.freeze({
   // 라운드 (볼 통통, 턱 짧게)
-  bear: { cheek: +0.005, chinLen: -0.04, width: +0.025 },
-  panda: { cheek: +0.005, chinLen: -0.04, width: +0.025 },
-  rabbit: { cheek: +0.005, chinLen: -0.04, width: +0.025 },
+  bear: { cheek: +0.006, chinLen: -0.045, width: +0.035 },
+  panda: { cheek: +0.006, chinLen: -0.045, width: +0.035 },
+  rabbit: { cheek: +0.006, chinLen: -0.045, width: +0.035 },
   // 샤프 (턱선 좁게, 턱 살짝 길게)
-  fox: { jawWidth: -0.03, chinLen: +0.03, cheek: -0.002 },
-  tiger: { jawWidth: -0.03, chinLen: +0.03, cheek: -0.002 },
-  lion: { jawWidth: -0.03, chinLen: +0.03, cheek: -0.002 },
+  fox: { jawWidth: -0.04, chinLen: +0.04, cheek: -0.002 },
+  tiger: { jawWidth: -0.04, chinLen: +0.04, cheek: -0.002 },
+  lion: { jawWidth: -0.04, chinLen: +0.04, cheek: -0.002 },
   // 롱 소프트 (갸름·온화)
   elephant: { faceLen: +0.03, width: -0.02, cheek: 0 },
   giraffe: { faceLen: +0.03, width: -0.02, cheek: 0 },

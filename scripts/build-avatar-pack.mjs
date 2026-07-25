@@ -20,16 +20,23 @@ import {
   sniffImageMime,
 } from './lib/avatar-pack-common.mjs';
 import { getOutfitDesign } from './lib/outfit-designs.mjs';
+import { warpFaceGlb, FACE_WARP_PROFILES } from './lib/face-warp.mjs';
+import { getEyeProfile } from './lib/eye-profiles.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EDITED_IMAGE_INDICES = [0, 5, 7, 8, 9, 11, 15, 17, 19, 20, 21, 28];
 // 헤어 길이 컷(img25)은 design.hairCut이 있는 슬러그에서만 편집된다 — 나머지는
 // img25 무편집(베이스 바이트 그대로). audit도 같은 규칙으로 슬러그별 검증한다.
 const HAIR_IMAGE_INDEX = 25;
+// 눈 하이라이트(img10)는 eyeProfile.highlightScale !== 1 인 슬러그만 편집한다
+// (v3.1 눈매 표: rabbit/owl/panda 확대, fox/tiger 축소 — 나머지는 무편집).
+const HIGHLIGHT_IMAGE_INDEX = 10;
 
-function editedImageIndicesFor(design) {
-  if (design.hairCut == null) return EDITED_IMAGE_INDICES;
-  return [...EDITED_IMAGE_INDICES, HAIR_IMAGE_INDEX].sort((a, b) => a - b);
+function editedImageIndicesFor(design, eyeProfile) {
+  const indices = [...EDITED_IMAGE_INDICES];
+  if (design.hairCut != null) indices.push(HAIR_IMAGE_INDEX);
+  if (eyeProfile.highlightScale !== 1) indices.push(HIGHLIGHT_IMAGE_INDEX);
+  return indices.sort((a, b) => a - b);
 }
 
 const DEFAULT_STYLES = [
@@ -120,8 +127,24 @@ const DEFAULT_STYLES = [
 ];
 
 // 헤어 틴트 곱셈 감쇠 보상 (스펙 대비 렌더가 어두운 슬러그만, styleFor에서 적용).
+// v3.1 자유 컬러(DESIGN-PACK-V3.1.md 3절) 기준 렌더 실측 보상값 — MToon _Color가
+// 그레이스케일 스트랜드(p50 휘도 ≈0.84)에 곱해져 밝은 헤어일수록 한 단계 어둡게
+// 렌더되므로, face 샷 하이라이트 밴드가 스펙 hex 근처로 읽히도록 상향한다.
+// 다크 컬러(bear/penguin/lion/tiger/owl)는 감쇠가 시각적으로 무시 가능해 무보상.
+// 값이 문자열이면 base만 보상, 객체면 { base, shade } 각각 보상한다 — 밝은 셰이드
+// 스펙은 _ShadeColor 곱 감쇠도 시각적으로 두드러진다 (panda orbit 뒷머리 실측).
 const HAIR_TINT_COMPENSATION = Object.freeze({
-  rabbit: '#C8BCD2', // 스펙 #B7A8C0 → 스트랜드 곱으로 슬레이트 렌더, 상향 보상
+  rabbit: '#FBE7B8', // 페일 골드 블론드 #E8D3A4 — 실측 렌더 게인 ≈0.73, 상향 보상
+  fox: '#F6F8FC', // 플래티넘 실버 #D9DCE3 — 실측 게인 ≈0.79, 상향 보상 (그레이 잠김 방지)
+  // panda: 밀크티 베이지 #C7AD8E 실측 게인 ≈0.78 — base 상향 보상.
+  // shade: v3.1 판정 — 스펙 #A9805C(orbit 뒷머리가 초콜릿으로 잠기던 #996E4C 상향)를
+  // 렌더 실측 게인 ≈0.80으로 나눠 보상 (#A9805C/0.8 ≈ #D0A072).
+  panda: { base: '#DFC9AB', shade: '#D0A072' },
+  monkey: '#877873', // 쿨 애시브라운 #6E5F58 — 실측 게인 ≈0.83, 상향 보상
+  turtle: '#9A6863', // 로즈 브라운 #8A5A55 — 소폭 상향
+  owl: '#6B6C77', // 다크 그레이 애시 #55565E — 실측 순흑 잠김, 그레이로 상향 보상
+  elephant: '#B27F4E', // 허니 브라운 #9A6B3F — 실측 게인 ≈0.79, 상향 보상
+  giraffe: '#A59B8F', // 그레이지 #8D8378 — 실측 게인 ≈0.80, 상향 보상
 });
 
 // The closed-mouth lip paint lives in the face albedo (image 11), while image
@@ -310,16 +333,22 @@ function styleFor(entry, index) {
   // 두드러지는 슬러그만 여기서 틴트를 상향 보상한다(rabbit 애시라벤더 #B7A8C0가
   // 슬레이트로 렌더되던 지적 → #C8BCD2).
   const tintCompensation = HAIR_TINT_COMPENSATION[entry.slug];
-  if (tintCompensation) hair = [tintCompensation, hair[1]];
-  const sharpen = Number(entry.eyeSharpen);
-  const eye = Number.isFinite(sharpen)
-    ? {
-      lift: Math.round(1 + sharpen * 10),
-      weight: Math.max(1, Math.round(1 + sharpen * 2.4)),
-      lash: Math.max(1, Math.round(0.5 + sharpen * 4.2)),
-      brow: Math.round(-2 + sharpen * 9),
-    }
-    : base.eye;
+  if (typeof tintCompensation === 'string') {
+    hair = [tintCompensation, hair[1]];
+  } else if (tintCompensation) {
+    hair = [tintCompensation.base ?? hair[0], tintCompensation.shade ?? hair[1]];
+  }
+  // v3.1: 눈매는 eyeSharpen 파생이 아니라 슬러그별 프로필(DESIGN-PACK-V3.1 1절 표).
+  // eyeSharpen은 이제 런타임 표정(angry) 전용 아트 스코어로만 남는다.
+  const eyeProfile = getEyeProfile(entry.slug);
+  // 눈썹 틴트: 새 헤어색(스펙, 보상 전) 동조 — img8은 그레이스케일로 유지하고
+  // FaceBrow materialPatch가 색을 소유한다 (work/NOTES.md 틴트 규약).
+  const hairSpec = Array.isArray(hairOverride) && hairOverride.length >= 2
+    ? hairOverride[0]
+    : hairOverride?.base ?? base.hair[0];
+  const [browHue, browSat, browLight] = rgbHsl(...hexRgb(hairSpec));
+  const browTint = hslRgb(browHue, clamp(browSat * 0.85, 0, 1), clamp(browLight * 0.72, 0.08, 0.60));
+  const browShade = hslRgb(browHue - 6, clamp(browSat * 0.85, 0, 1), clamp(browLight * 0.45, 0.05, 0.42));
   return {
     ...base,
     iris: iris.map((colour) => hexRgb(colour)),
@@ -334,7 +363,9 @@ function styleFor(entry, index) {
     )),
     outfit: outfit.slice(0, 3).map((colour) => hexRgb(colour)),
     design: getOutfitDesign(entry),
-    eye,
+    eyeProfile,
+    browTint,
+    browShade,
     lip: LIP_PROFILES[index % LIP_PROFILES.length],
     variantIndex: index,
   };
@@ -359,6 +390,31 @@ function rampColour(stops, amount) {
   const left = Math.min(stops.length - 2, Math.floor(scaled));
   const fraction = scaled - left;
   return [0, 1, 2].map((channel) => mix(stops[left][channel], stops[left + 1][channel], fraction));
+}
+
+/** 좌/우 반쪽을 각자 앵커(cx, cy) 기준으로 스케일 — 반쪽 경계 클립으로 침범 방지. */
+function scaleHalves(canvas, scale, anchors) {
+  const output = createCanvas(canvas.width, canvas.height);
+  const context = output.getContext('2d');
+  context.imageSmoothingEnabled = true;
+  const half = canvas.width / 2;
+  for (let side = 0; side < 2; side++) {
+    const [cx, cy] = anchors[side];
+    context.save();
+    context.beginPath();
+    context.rect(side * half, 0, half, canvas.height);
+    context.clip();
+    context.drawImage(
+      canvas,
+      side * half, 0, half, canvas.height,
+      cx + (side * half - cx) * scale,
+      cy * (1 - scale),
+      half * scale,
+      canvas.height * scale,
+    );
+    context.restore();
+  }
+  return output;
 }
 
 async function editIris(bytes, style) {
@@ -393,58 +449,222 @@ async function editIris(bytes, style) {
     }
   }
   context.putImageData(image, 0, 0);
+  // v3.1 irisScale: 재색칠 후 홍채 중심 기준 스케일 (동공은 중심에 있어 위치 불변).
+  const irisScale = style.eyeProfile.irisScale;
+  if (irisScale !== 1) return pngBuffer(scaleHalves(canvas, irisScale, centres));
   return pngBuffer(canvas);
 }
 
-function columnShift(x, width, role, eye, variantIndex) {
-  const half = width / 2;
-  const local = x < half ? x / half : (width - 1 - x) / half;
-  const outer = Math.pow(clamp(1 - local * 2.25), 1.35);
-  if (role === 'brow') {
-    const withinHalf = x < half ? x / half : (x - half) / half;
-    const arch = Math.sin(Math.PI * withinHalf);
-    return eye.brow * arch + outer * Math.max(0, eye.lift - 4) * 0.20;
+// 하이라이트(img10): 종별 확대/축소 — rabbit/owl/panda 대형 원형 유지·소폭 확대,
+// fox/tiger 축소 샤프(v3.1 표). 각 반쪽의 알파 중심(무게중심)을 앵커로 스케일해
+// 하이라이트 위치(홍채 대비 오프셋)는 유지한다. highlightScale 1.0이면 호출되지 않는다.
+async function editHighlight(bytes, style) {
+  const canvas = await canvasFrom(bytes);
+  const context = canvas.getContext('2d');
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
+  const data = image.data;
+  const half = canvas.width / 2;
+  const anchors = [];
+  for (let side = 0; side < 2; side++) {
+    let sumX = 0;
+    let sumY = 0;
+    let sumAlpha = 0;
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = side * half; x < (side + 1) * half; x++) {
+        const alpha = data[(y * canvas.width + x) * 4 + 3];
+        if (alpha === 0) continue;
+        sumX += x * alpha;
+        sumY += y * alpha;
+        sumAlpha += alpha;
+      }
+    }
+    if (sumAlpha === 0) throw new Error('editHighlight: half image has no opaque pixels');
+    anchors.push([sumX / sumAlpha, sumY / sumAlpha]);
   }
+  return pngBuffer(scaleHalves(canvas, style.eyeProfile.highlightScale, anchors));
+}
+
+// ---------------------------------------------------------------------------
+// 눈매 (5 아이라인 / 7 속눈썹 / 8 눈썹) — v3.1 프로필 기반 (scripts/lib/eye-profiles.mjs).
+// 텍스처 1024x256, 좌우 눈이 나란히, 눈꼬리가 텍스처 좌우 가장자리(work/NOTES.md).
+// 알파가 형태를 결정하므로 모든 변형은 캔버스 변환(알파 동반)으로 수행한다.
+// ---------------------------------------------------------------------------
+
+// 아랫라인/애교살 블롭 실측 존 (1024 기준: 좌 x240~410, 우 x615~785, y108~145) —
+// 눈꼬리 윙 하단(x<150, x>890)은 제외해 윙 실루엣을 보존한다.
+const LOWER_LID_ZONES = [[0.195, 0.43], [0.57, 0.805]]; // x/width
+const LOWER_LID_TOP = 0.42; // y/height (108/256)
+const DONOR_LOWER_PRESENCE = 0.4; // 도너 아랫라인 존재감의 프로필 축 상 위치
+const BROW_CENTER_Y = 132 / 256; // 눈썹 획 세로 스케일 앵커
+const LASH_BASELINE_Y = 130 / 256; // 속눈썹 가닥 길이 스케일 앵커 (눈꺼풀 라인)
+
+/** 컬럼별 수직 시프트 (+값 = 위로). 눈꼬리 가중은 텍스처 가장자리에서 최대. */
+function columnShift(x, width, role, profile) {
+  const half = width / 2;
+  const withinHalf = x < half ? x / half : (x - half) / half;
+  if (role === 'brow') {
+    const brow = profile.brow;
+    // 좌 반쪽은 x=0 이 눈꼬리(바깥), 우 반쪽은 x=width-1 이 눈꼬리.
+    const signedOuter = x < half ? 1 - 2 * withinHalf : 2 * withinHalf - 1;
+    return brow.arch * Math.sin(Math.PI * withinHalf)
+      + brow.tilt * Math.max(0, signedOuter)
+      + brow.raise;
+  }
+  // 눈꼬리 가중: 실측 콘텐츠 기준 윙(좌 x≈85..140, local 0.17..0.27)에서 ≈1.0,
+  // 눈 중앙(local ≥0.52)에서 0 — 표의 lift px가 눈꼬리에서 실제 px로 읽히게 한다.
+  const local = x < half ? x / half : (width - 1 - x) / half;
+  const outer = Math.pow(clamp((0.52 - local) / 0.35), 1.25);
   const roleScale = role === 'lash' ? 0.72 : 1;
-  const signature = ((variantIndex % 3) - 1) * Math.sin(Math.PI * local) * 0.7;
-  return eye.lift * outer * roleScale + signature;
+  return profile.lift * outer * roleScale - profile.drop;
+}
+
+/** 아이라인(5) 전처리: 아랫라인/애교살 알파 게인 (lower 0..1, 도너 ≈0.4). */
+function applyLowerLidPresence(canvas, lower) {
+  const gain = clamp(lower / DONOR_LOWER_PRESENCE, 0, 1.6);
+  if (Math.abs(gain - 1) < 0.01) return;
+  const context = canvas.getContext('2d');
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
+  const data = image.data;
+  const top = Math.round(canvas.height * LOWER_LID_TOP);
+  for (const [left, right] of LOWER_LID_ZONES) {
+    const x0 = Math.round(canvas.width * left);
+    const x1 = Math.round(canvas.width * right);
+    for (let y = top; y < canvas.height; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const offset = (y * canvas.width + x) * 4;
+        if (data[offset + 3] === 0) continue;
+        data[offset + 3] = Math.round(clamp(data[offset + 3] * gain, 0, 255));
+      }
+    }
+  }
+  context.putImageData(image, 0, 0);
+}
+
+/** 속눈썹(7) 전처리: 가닥 길이 스케일 (베이스라인 앵커, 위로 성장). */
+function applyLashLength(canvas, length) {
+  if (Math.abs(length - 1) < 0.01) return canvas;
+  const baseline = Math.round(canvas.height * LASH_BASELINE_Y);
+  const output = createCanvas(canvas.width, canvas.height);
+  const context = output.getContext('2d');
+  context.imageSmoothingEnabled = true;
+  // 베이스라인 아래(눈꺼풀 접합부)는 원본 유지, 위(가닥)만 세로 스케일.
+  context.drawImage(
+    canvas,
+    0, 0, canvas.width, baseline,
+    0, baseline - baseline * length, canvas.width, baseline * length,
+  );
+  context.drawImage(
+    canvas,
+    0, baseline, canvas.width, canvas.height - baseline,
+    0, baseline, canvas.width, canvas.height - baseline,
+  );
+  // 최장 가닥이 캔버스 상단에 클립될 때 잘린 단면이 아니라 팁으로 읽히게 페이드.
+  const image = context.getImageData(0, 0, output.width, output.height);
+  const data = image.data;
+  const fadeRows = 6;
+  for (let y = 0; y < fadeRows; y++) {
+    const factor = y / fadeRows;
+    for (let x = 0; x < output.width; x++) {
+      const offset = (y * output.width + x) * 4;
+      data[offset + 3] = Math.round(data[offset + 3] * factor);
+    }
+  }
+  context.putImageData(image, 0, 0);
+  return output;
+}
+
+/** 눈썹(8) 전처리: 획 두께(세로 스케일) + 길이(눈썹 중심 가로 스케일). */
+function applyBrowShape(canvas, brow) {
+  if (Math.abs(brow.thick - 1) < 0.01 && Math.abs(brow.length - 1) < 0.01) return canvas;
+  const output = createCanvas(canvas.width, canvas.height);
+  const context = output.getContext('2d');
+  context.imageSmoothingEnabled = true;
+  const half = canvas.width / 2;
+  const centerY = canvas.height * BROW_CENTER_Y;
+  for (let side = 0; side < 2; side++) {
+    const cx = canvas.width * (0.25 + 0.5 * side);
+    context.save();
+    context.beginPath();
+    context.rect(side * half, 0, half, canvas.height);
+    context.clip();
+    context.drawImage(
+      canvas,
+      side * half, 0, half, canvas.height,
+      cx + (side * half - cx) * brow.length,
+      centerY * (1 - brow.thick),
+      half * brow.length,
+      canvas.height * brow.thick,
+    );
+    context.restore();
+  }
+  return output;
 }
 
 async function editEyeLine(bytes, style, role) {
-  const source = await canvasFrom(bytes);
+  const profile = style.eyeProfile;
+  let source = await canvasFrom(bytes);
+
+  // --- 역할별 전처리 (시프트 전, 원본 좌표계에서) ---
+  if (role === 'line') {
+    applyLowerLidPresence(source, profile.lower);
+    // 반개 직선화 (turtle): 눈꺼풀 라인 앵커로 윗라인만 세로 압축 — 아치가 눌려
+    // 직선에 가까워진다. applyLashLength가 같은 앵커(y≈130) 세로 스케일을 소유.
+    const lineSquash = profile.lineSquash ?? 1;
+    if (Math.abs(lineSquash - 1) >= 0.01) source = applyLashLength(source, lineSquash);
+  }
+  if (role === 'lash') source = applyLashLength(source, profile.lash.length);
+  if (role === 'brow') source = applyBrowShape(source, profile.brow);
+
+  // --- 컬럼 수직 시프트 (눈꼬리 lift/처짐, 눈썹 아치/틸트/레이즈) ---
   const shifted = createCanvas(source.width, source.height);
   const shiftedContext = shifted.getContext('2d');
   shiftedContext.imageSmoothingEnabled = true;
   for (let x = 0; x < source.width; x++) {
-    const dy = columnShift(x, source.width, role, style.eye, style.variantIndex);
+    const dy = columnShift(x, source.width, role, profile);
     shiftedContext.drawImage(source, x, 0, 1, source.height, x, -dy, 1, source.height);
   }
 
+  // --- 두께 (위 방향 프랙셔널 딜레이션; brow는 전처리 세로 스케일이 두께 소유) ---
   const output = createCanvas(source.width, source.height);
   const outputContext = output.getContext('2d');
   const thickness = role === 'line'
-    ? style.eye.weight
+    ? 2 * profile.thick
     : role === 'lash'
-      ? style.eye.lash
-      : Math.max(0, Math.round(style.eye.weight / 2));
-  for (let offset = thickness; offset >= 1; offset--) {
-    outputContext.globalAlpha = 0.42 + 0.45 * (1 - offset / (thickness + 1));
+      ? clamp(1 + profile.thick * 1.6 + Math.max(0, profile.lift) * 0.10, 1, 5)
+      : 0;
+  for (let offset = Math.ceil(thickness); offset >= 1; offset--) {
+    const partial = clamp(thickness - (offset - 1));
+    outputContext.globalAlpha = (0.42 + 0.45 * (1 - offset / (thickness + 1))) * partial;
     outputContext.drawImage(shifted, 0, -offset);
     if (role === 'lash') outputContext.drawImage(shifted, offset * 0.25, 0);
   }
   outputContext.globalAlpha = 1;
   outputContext.drawImage(shifted, 0, 0);
 
+  // --- 재색칠: line/lash 는 팔레트 라인색 (머티리얼 틴트 113,41,41 곱 전제),
+  //     brow 는 그레이스케일 유지 — 색은 FaceBrow materialPatch(헤어 동조)가 소유.
+  //     알파 감마 0.72 부스트는 공통 (알파가 형태를 결정 — work/NOTES.md).
   const image = outputContext.getImageData(0, 0, output.width, output.height);
   const data = image.data;
+  const half = output.width / 2;
+  const outerBoost = role === 'lash' ? profile.lash.outerBoost : 0;
   for (let offset = 0; offset < data.length; offset += 4) {
     if (data[offset + 3] === 0) continue;
     const luminance = (data[offset] * 0.299 + data[offset + 1] * 0.587 + data[offset + 2] * 0.114) / 255;
     const amount = 0.38 + luminance * 0.62;
     for (let channel = 0; channel < 3; channel++) {
-      data[offset + channel] = Math.round(style.line[channel] * amount);
+      data[offset + channel] = Math.round(
+        (role === 'brow' ? 255 : style.line[channel]) * amount,
+      );
     }
-    data[offset + 3] = Math.round(255 * Math.pow(data[offset + 3] / 255, 0.72));
+    let alpha = 255 * Math.pow(data[offset + 3] / 255, 0.72);
+    if (outerBoost > 0) {
+      // 폭스아이/캣아이: 눈꼬리 존 가닥 강조 (알파 게인).
+      const x = (offset / 4) % output.width;
+      const local = x < half ? x / half : (output.width - 1 - x) / half;
+      alpha *= 1 + outerBoost * 0.55 * smoothstep(0.62, 1, 1 - local);
+    }
+    data[offset + 3] = Math.round(clamp(alpha, 0, 255));
   }
   outputContext.putImageData(image, 0, 0);
   return pngBuffer(output);
@@ -798,15 +1018,30 @@ async function editBodySkin(bytes, style) {
 // ---------------------------------------------------------------------------
 // 헤어 길이 컷 (img25, Hair_01 스트랜드 512x1024) — DESIGN-PACK-V3 "헤어 길이" 레시피.
 // 텍스처 하단(v 큼) = 머리끝(실측 corr(v,y)=-0.866). design.hairCut(row) 이하 알파 0,
-// 컷 위 22px 페더 램프, 컬럼별 사인 합성 지터 ±10px(결정적 — 시드는 기존 스타일
-// 규칙대로 variantIndex), 컷 위 90px RGB 1.0→0.38 곱 램프 팁 재음영(잘린 면이 아니라
-// 머리끝으로 읽히는 핵심). Hair_01 머티리얼은 이미 cutout(_Cutoff 0.5) — 패치 불필요.
+// 컬럼별 사인 합성 지터 ±10px(결정적 — 시드는 기존 스타일 규칙대로 variantIndex),
+// 컷 위 90px RGB 곱 램프 팁 재음영(잘린 면이 아니라 머리끝으로 읽히는 핵심).
+// Hair_01 머티리얼은 이미 cutout(_Cutoff 0.5) — 패치 불필요.
+//
+// v3.1 판정 라운드 수정 3건 (증거샷 실측 기반):
+// ① 컷 알파는 하드 에지 — 이전의 22px 페더 램프는 cutout에서 어차피 0.5 미만 구간이
+//    보이지 않고, 씬(thin) 스트랜드 밉 축소에서만 컷오프를 넘나들며 대시/점선 조각을
+//    만들었다. 지터가 에지 변주를 소유한다.
+// ② 팁 재음영 하한은 헤어 base 휘도 연동 — 단 방향은 판정 실측이 결정했다.
+//    '눈썹/아이라인 스케치 잔흔'(이마 대시·눈꼬리→귀 점선)의 실제 원인은 눈 텍스처가
+//    아니라 이 팁 재음영이다: 5/7/8/14/25 개별 소거 대조 렌더로 실증 — 모든
+//    스트랜드가 UV v 전장을 쓰므로 재음영 밴드가 앞머리/베이비헤어 중간(이마 높이)을
+//    지나고, 다크 헤어 x 0.38 스텁이 피부 위에서 스케치 선으로 읽혔다(재음영 0 대조
+//    렌더에서 잔선 완전 소멸). 따라서 어두운 헤어일수록 하한을 '높게'(스텁이 피부와
+//    대비되는 케이스), 밝은 헤어는 ≈0.6(줄무늬가 헤어 위에 얹히는 케이스)으로 완화.
+// ③ 팁 재음영은 균등 곱이 아니라 '셰이드 방향' 곱 — 균등 곱은 블론드를 올리브로
+//    회전시킨다. 채널별 계수를 카탈로그 hair.shade/base 비율(휘도 정규화)로 기울여
+//    렌더 팁이 그 헤어의 셰이드 색으로 읽히게 한다.
 // ---------------------------------------------------------------------------
 
-const HAIR_CUT_FEATHER = 22; // 컷 라인 위 알파 램프 높이(px)
 const HAIR_CUT_JITTER = 10; // 컬럼별 컷 라인 변주 진폭(px)
-const HAIR_CUT_DARKEN = 90; // 팁 재음영 밴드 높이(px)
-const HAIR_CUT_DARKEN_MIN = 0.38; // 최말단 곱 계수(원본 팁 톤 ~83/225 근사)
+const HAIR_CUT_DARKEN = 64; // 팁 재음영 밴드 높이(px) — 90은 잔선을 이마까지 끌었다
+const HAIR_CUT_DARKEN_MIN_DARK = 0.80; // 어두운 헤어 최말단 곱 계수 (v3.1 ②)
+const HAIR_CUT_DARKEN_MIN_BRIGHT = 0.62; // 밝은 헤어 최말단 곱 계수 (v3.1 ②)
 
 /** 컬럼별 컷 라인 지터: 사인 합성(진폭 0.5/0.35/0.15), 위상은 variantIndex 시드. */
 function hairCutJitter(x, amplitude, seed) {
@@ -828,21 +1063,38 @@ async function editHair(bytes, style) {
   const context = canvas.getContext('2d');
   const image = context.getImageData(0, 0, width, height);
   const data = image.data;
+  // 팁 재음영 하한(②): 렌더는 그레이스케일 스트랜드 x _Color(base 틴트) 곱이므로
+  // base 휘도가 곧 팁 줄무늬의 대비를 결정한다 — 밝을수록 하한을 완화(≈0.58).
+  const [hairR, hairG, hairB] = style.hair[0];
+  const hairLuminance = (hairR * 0.299 + hairG * 0.587 + hairB * 0.114) / 255;
+  const darkenMin = mix(
+    HAIR_CUT_DARKEN_MIN_DARK,
+    HAIR_CUT_DARKEN_MIN_BRIGHT,
+    smoothstep(0.35, 0.85, hairLuminance),
+  );
+  // 셰이드 방향 계수(③): shade/base 채널 비율을 휘도 정규화(순수 색조 기울기)해
+  // 밴드 하한에만 싣는다 — 밝기 감쇠는 darkenMin이, 색조는 이 벡터가 소유한다.
+  const [shadeR, shadeG, shadeB] = style.hair[1];
+  const ratio = [
+    shadeR / Math.max(hairR, 1),
+    shadeG / Math.max(hairG, 1),
+    shadeB / Math.max(hairB, 1),
+  ];
+  const ratioLuminance = ratio[0] * 0.299 + ratio[1] * 0.587 + ratio[2] * 0.114;
+  const shadeTilt = ratio.map((part) => clamp(part / Math.max(ratioLuminance, 0.01), 0.75, 1.30));
   for (let x = 0; x < width; x++) {
     const edge = cutRow + Math.round(hairCutJitter(x, HAIR_CUT_JITTER, style.variantIndex));
     for (let y = 0; y < height; y++) {
       const offset = (y * width + x) * 4;
       if (y >= edge) {
         data[offset + 3] = 0;
-      } else if (y >= edge - HAIR_CUT_FEATHER) {
-        data[offset + 3] = Math.round(data[offset + 3] * ((edge - y) / HAIR_CUT_FEATHER));
       }
       if (y >= edge - HAIR_CUT_DARKEN && y < edge) {
         const t = (edge - y) / HAIR_CUT_DARKEN; // 0 = 컷 라인, 1 = 밴드 상단
-        const factor = HAIR_CUT_DARKEN_MIN + (1 - HAIR_CUT_DARKEN_MIN) * t;
-        data[offset] = Math.round(data[offset] * factor);
-        data[offset + 1] = Math.round(data[offset + 1] * factor);
-        data[offset + 2] = Math.round(data[offset + 2] * factor);
+        for (let channel = 0; channel < 3; channel++) {
+          const factor = mix(darkenMin * shadeTilt[channel], 1, t);
+          data[offset + channel] = Math.round(clamp(data[offset + channel] * factor, 0, 255));
+        }
       }
     }
   }
@@ -1353,12 +1605,19 @@ function materialPatch(entry, style) {
     _Color: [1, 1, 1, 1],
     _ShadeColor: [1, 1, 1, 1],
   };
+  // v3.1: 눈썹 틴트 헤어 동조 — img8은 그레이스케일로 빌드하고(editEyeLine brow)
+  // 색은 FaceBrow _Color/_ShadeColor가 소유한다 (도너 네이비 틴트 대체).
+  const browTintPatch = {
+    _Color: vectorColour(style.browTint),
+    _ShadeColor: vectorColour(style.browShade),
+  };
   return {
     meta: { title: entry.title },
     materials: [
       { match: 'HairBack', vectorProperties },
       { match: 'HAIR_01', vectorProperties },
       { match: 'HAIR_02', vectorProperties: whiteTint },
+      { match: 'FaceBrow', vectorProperties: browTintPatch },
     ],
   };
 }
@@ -1380,10 +1639,11 @@ async function writeAvatarEdits(entry, style, sourceGlb, workDir, topsSourceByte
     [20, (bytes) => editSkirt(bytes, style)],
     [21, (bytes) => editShoes(bytes, style)],
     [HAIR_IMAGE_INDEX, (bytes) => editHair(bytes, style)],
+    [HIGHLIGHT_IMAGE_INDEX, (bytes) => editHighlight(bytes, style)],
     [28, (bytes) => editHairpin(bytes, style)],
   ]);
   const textures = [];
-  for (const imageIndex of editedImageIndicesFor(style.design)) {
+  for (const imageIndex of editedImageIndicesFor(style.design, style.eyeProfile)) {
     const sourceBytes = embeddedImageBytes(sourceGlb, imageIndex, 'base VRM');
     const sourceMime = sourceGlb.json.images[imageIndex].mimeType ?? sniffImageMime(sourceBytes);
     const expected = imageDimensions(sourceBytes, sourceMime);
@@ -1460,6 +1720,13 @@ async function buildOne(entry, position, total, options, source, sourceBytes, so
   const temporaryOutput = `${output}.building`;
   fs.rmSync(temporaryOutput, { force: true });
   await runRebuild(source, temporaryOutput, editedDir, patchPath);
+  // 얼굴형 워프 (DESIGN-PACK-V3.1 2절): 프로필 있는 슬러그만, 결정적 버텍스 변형.
+  // 눈알 인덱스 하드락·진폭 상한은 face-warp.mjs가 강제한다. flamingo는 프로필 없음.
+  const warpProfile = FACE_WARP_PROFILES[entry.slug];
+  if (warpProfile) {
+    const warped = warpFaceGlb(fs.readFileSync(temporaryOutput), warpProfile, { label: entry.slug });
+    fs.writeFileSync(temporaryOutput, warped.bytes);
+  }
   fs.renameSync(temporaryOutput, output);
   const outputBytes = fs.readFileSync(output);
 
@@ -1472,7 +1739,7 @@ async function buildOne(entry, position, total, options, source, sourceBytes, so
     sourceSha256: sha256(sourceBytes),
     model: path.relative(ROOT, output),
     modelSha256: sha256(outputBytes),
-    editedImageIndices: editedImageIndicesFor(style.design),
+    editedImageIndices: editedImageIndicesFor(style.design, style.eyeProfile),
     textures,
   };
   fs.writeFileSync(path.join(workDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -1534,7 +1801,7 @@ async function main() {
   const source = resolveBaseModel(ROOT, options.source);
   const sourceBytes = fs.readFileSync(source);
   const sourceGlb = parseGlb(sourceBytes, source);
-  for (const imageIndex of [...EDITED_IMAGE_INDICES, HAIR_IMAGE_INDEX]) {
+  for (const imageIndex of [...EDITED_IMAGE_INDICES, HAIR_IMAGE_INDEX, HIGHLIGHT_IMAGE_INDEX]) {
     const bytes = embeddedImageBytes(sourceGlb, imageIndex, source);
     imageDimensions(bytes, sourceGlb.json.images[imageIndex].mimeType ?? sniffImageMime(bytes));
   }

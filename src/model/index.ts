@@ -283,7 +283,13 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         }
         // ---- 눈매 강화: angry를 캐릭터별 소량 적용해 눈을 살짝 가늘게.
         //      blink가 진행 중일 땐 (1 - max(blink))로 감쇠 — 감은 눈에 겹치지 않게.
-        if (has.angry) em.setValue('angry', definition.eyeSharpen * (1 - Math.max(blL, blR)))
+        //      v3.1 expressionBias.angry는 eyeSharpen 대체가 아니라 소량 가산 —
+        //      합산 후에도 검증된 안전 범위 0.06..0.20 클램프를 유지한다.
+        const blinkAtten = 1 - Math.max(blL, blR)
+        const bias = definition.expressionBias
+        if (has.angry) {
+          em.setValue('angry', clamp(definition.eyeSharpen + (bias.angry ?? 0), 0.06, 0.2) * blinkAtten)
+        }
         if (has.aa) em.setValue('aa', clamp(frame.mouthOpen, 0, 1))
         const smile = clamp(frame.mouthSmile, -1, 1)
         const sm = Math.max(0, smile)
@@ -291,7 +297,8 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         // happy(VRoid Joy)는 상위 구간을 0.2로 캡하고, 입꼬리 상승 위주의
         // relaxed(VRoid Fun)를 주 채널로 쓴다. fx.happy(이벤트)만 풀 Joy.
         if (has.happy) em.setValue('happy', frame.fx.happy ? 1 : Math.min(sm * 0.5, 0.12))
-        if (has.relaxed) em.setValue('relaxed', sm * 0.8)
+        // v3.1 expressionBias.relaxed: 순한/나른한 종의 상시 소량 가산 (blink 감쇠 동일).
+        if (has.relaxed) em.setValue('relaxed', clamp(sm * 0.8 + (bias.relaxed ?? 0) * blinkAtten, 0, 1))
         if (has.sad) em.setValue('sad', Math.max(0, -smile) * 0.4)
         if (has.surprised) {
           const browRaise = Math.max(clamp(frame.browL, -1, 1), clamp(frame.browR, -1, 1))
