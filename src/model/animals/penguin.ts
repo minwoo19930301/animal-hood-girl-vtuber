@@ -117,14 +117,15 @@ export function buildPenguin(ctx: AnimalBuildContext): AnimalCostumeRig {
   const muzzleFollow = muzzleAnchor(base)
   // 앵커는 셸 표면보다 ~0.09rz 안쪽 — 부리가 림 밖으로 확실히 나오려면 전방(-Z)
   // 돌출을 그만큼 크게 잡아야 한다 (1차 시도 0.17L은 셸에 파묻혀 단추처럼 보였다.
-  // 2차 0.24L도 정면에서 폼폼 볼로 읽혀 0.28L + 훅 강화 — 판정 P2 반영:
-  // 정면 실루엣에서 끝단이 밑동 하단보다 아래로 내려와 '부리'로 판독된다)
+  // 2차 0.24L도 정면에서 폼폼 볼로 읽혀 0.28L + 훅 강화. 재판정 P2: 팁 y
+  // -0.16L도 밑동 하단(-0.125L)과 3px 차라 볼로 읽힘 → -0.21L로 추가 하강 —
+  // 정면 실루엣에서 끝단이 밑동 하단보다 확실히 아래로 내려와 '부리'로 판독된다)
   const beak = new THREE.Mesh(
     taperedTube(
       [
         new THREE.Vector3(0, 0.02 * L, 0.12 * L), // 셸 안쪽 밑동 (심 은폐)
-        new THREE.Vector3(0, -0.02 * L, -0.17 * L),
-        new THREE.Vector3(0, -0.16 * L, -0.28 * L), // 끝: 앞(-Z)·아래로 강한 훅 (눈썹 위 한참 위)
+        new THREE.Vector3(0, -0.035 * L, -0.17 * L),
+        new THREE.Vector3(0, -0.21 * L, -0.285 * L), // 끝: 앞(-Z)·아래로 강한 훅 (눈썹 위 한참 위)
       ],
       [0.17 * L, 0.125 * L, 0.045 * L],
       { scaleY: 0.85 },

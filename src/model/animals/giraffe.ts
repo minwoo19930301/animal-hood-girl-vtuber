@@ -107,18 +107,38 @@ export function buildGiraffe(ctx: AnimalBuildContext): AnimalCostumeRig {
   if (ctx.S === -1) base.pivot.rotation.y = Math.PI
   const L = ctx.crownH
 
-  // ---- 탠 라운드 패치 8개 (az/el/반경/세로비/기울기 — 비대칭 유기 분산, 콘 밖) ----
+  // ---- 탠 라운드 패치 10개 (az/el/반경/세로비/기울기 — 비대칭 유기 분산, 콘 밖) ----
+  // 재판정 P2 재배치: (a) 정면 45도 이내 셸 면이 민무늬 → 소형 패치 2개 추가
+  // (정면 상부 [0,0.82]·[-0.55,0.78] — 콘축 이격 θ 1.04/1.12, 상단 콘 경계
+  // 0.52~0.6 + 패치 각반경 ≤0.11 대비 여유. 오시콘 배제 반경 밖 검증).
+  // (b) 측면 [1.55,0.32]/[-1.68,0.30]이 orbit에서 귀 디스크와 블롭 겹침 →
+  // 귀 앵커에서 각거리 ≥0.45 밖으로 재배치, 우후측도 0.62→0.68로 간격 확보.
   const PATCHES: ReadonlyArray<readonly [number, number, number, number, number]> = [
+    [0.0, 0.82, 0.100, 0.85, 0.3],    // 정면 상부 중앙 (신규 — 이마 위 셸 면)
+    [-0.55, 0.78, 0.115, 0.88, -0.5], // 정면 좌상 (신규)
     [0.95, 0.75, 0.155, 0.88, 0.5],   // 우상 앞쪽 (림 오버행 위)
     [-1.05, 0.60, 0.185, 0.80, -0.4], // 좌상
-    [1.55, 0.32, 0.205, 0.90, 0.2],   // 우측면
-    [-1.68, 0.30, 0.170, 0.85, 0.9],  // 좌측면
-    [2.20, 0.62, 0.195, 0.82, -0.6],  // 우후측
+    [1.90, 0.35, 0.165, 0.90, 0.2],   // 우측면 (귀 배제 반경 밖으로 후퇴)
+    [-1.90, 0.42, 0.160, 0.85, 0.9],  // 좌측면 (귀 배제 반경 밖으로 후퇴)
+    [2.35, 0.68, 0.195, 0.82, -0.6],  // 우후측
     [-2.50, 0.52, 0.180, 0.90, 0.3],  // 좌후측
     [3.05, 0.30, 0.190, 0.86, 0.0],   // 뒤통수
     [-2.95, 0.95, 0.150, 0.80, 0.7],  // 뒤통수 상단
   ]
-  for (const [az, el, r, sq, rz] of PATCHES) addPatch(base, L, az, el, r * L, sq, rz)
+  // 배제 반경 가드 — 귀/오시콘 앵커 주변 패치 금지 (orbit 블롭 겹침 원천 차단).
+  // 각거리: 방향 벡터 사잇각 (surfacePoint dir 공식과 동일 구면 좌표).
+  const AVOID: ReadonlyArray<readonly [number, number, number]> = [
+    [1.28, 0.30, 0.45], [-1.28, 0.30, 0.45],   // 사이드 귀 (디스크 R 0.24L)
+    [0.42, 1.08, 0.30], [-0.42, 1.08, 0.30],   // 오시콘 (스토크가 가늘어 반경 작게)
+  ]
+  const dirOf = (az: number, el: number) => new THREE.Vector3(
+    Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el))
+  for (const [az, el, r, sq, rz] of PATCHES) {
+    const d = dirOf(az, el)
+    const clash = AVOID.some(([aaz, ael, rad]) => d.angleTo(dirOf(aaz, ael)) < rad)
+    if (clash) continue // 배제 반경 안 — 스킵 (배치표 검증 실패 시 안전망)
+    addPatch(base, L, az, el, r * L, sq, rz)
+  }
 
   // ---- 오시콘 ×2 + 사이드 귀 ×2 (돌출 파츠 → 히트메시) ----
   for (const side of [-1, 1] as const) {

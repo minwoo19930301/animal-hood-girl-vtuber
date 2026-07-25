@@ -41,8 +41,13 @@ const ACC: AccessoryColors = {
  * 중심판 1 + 둘레 6 로제트 — 후상부(뒤통수 위쪽) 중심, 전부 개구부 콘 반대편.
  * roll: 육각형 자체 회전(결정적 고정값) — 타일이 기계적으로 정렬돼 보이지 않게.
  * s: 판 크기 계수 (중심판이 가장 크다 — 실제 배갑 패턴).
+ * tx/ty: 앵커 로컬 X/Y 페이스-틸트 (rad) — 디스크 법선(방사 밖)을 정면 카메라
+ * 쪽으로 돌려 정면 3판이 엣지온 탭이 아니라 육각 "면"으로 읽히게 (판정 P2).
+ * 부호: tx>0 = 법선을 -Ŷ(앞-아래)쪽, ty = 법선을 ±X̂쪽 (좌우 판은 부호 반전).
  */
-const PLATES: ReadonlyArray<{ az: number; el: number; roll: number; s: number }> = [
+const PLATES: ReadonlyArray<{
+  az: number; el: number; roll: number; s: number; tx?: number; ty?: number
+}> = [
   { az: Math.PI, el: 0.50, roll: 0.00, s: 1.00 },        // 중심판
   { az: Math.PI, el: 1.05, roll: 0.32, s: 0.84 },        // 정수리 쪽
   { az: Math.PI, el: -0.06, roll: 0.18, s: 0.94 },       // 하단(목덜미 위)
@@ -50,12 +55,14 @@ const PLATES: ReadonlyArray<{ az: number; el: number; roll: number; s: number }>
   { az: Math.PI + 0.75, el: 0.80, roll: 0.12, s: 0.82 },
   { az: Math.PI - 0.72, el: 0.18, roll: 0.28, s: 0.92 }, // 하부 좌우
   { az: Math.PI + 0.72, el: 0.18, roll: 0.52, s: 0.92 },
-  // 정면 판독용 소형 플레이트 (판정 P1: 정면이 민무늬 그린 돔) — 림 상단 셸 면
-  // 중앙 1 + 정면 상측 좌우 2. 개구부 콘 검증: 콘축 이격 θ 각각 ≈1.22/1.50 rad,
-  // 해당 φ 콘 경계 ≈0.58/0.74 + 판 각반경(≤0.2) 대비 마진 ≥0.45 rad.
-  { az: 0, el: 1.02, roll: 0.40, s: 0.56 },              // 림 상단 중앙
-  { az: -1.32, el: 0.58, roll: 0.22, s: 0.72 },          // 정면 상측 좌우
-  { az: 1.32, el: 0.58, roll: 0.48, s: 0.72 },
+  // 정면 판독용 소형 플레이트 (판정 P1: 정면이 민무늬 그린 돔) — 림 상단 셸 면.
+  // 재판정 P2: 방사 법선 그대로는 정면에서 엣지온 탭 → el을 올려 페이스-틸트
+  // 여유를 벌고 tx/ty로 디스크 면을 카메라로. 개구부 콘 검증: 콘축 이격 θ
+  // 중앙 ≈1.24 / 좌우 ≈1.40 rad, 콘 경계 ≈0.58/0.75 + 판 각반경(≤0.17) 대비
+  // 마진 ≥0.45 rad 유지 (틸트는 위치 불변 — 잠기는 에지는 림 반대쪽).
+  { az: 0, el: 1.02, roll: 0.40, s: 0.56, tx: 0.52 },    // 림 상단 중앙
+  { az: -1.12, el: 0.74, roll: 0.22, s: 0.66, tx: 0.22, ty: -0.50 }, // 정면 상측 좌우
+  { az: 1.12, el: 0.74, roll: 0.48, s: 0.66, tx: 0.22, ty: 0.50 },
 ]
 
 export function buildTurtle(ctx: AnimalBuildContext): AnimalCostumeRig {
@@ -75,9 +82,20 @@ export function buildTurtle(ctx: AnimalBuildContext): AnimalCostumeRig {
     // 그다음 Rx(π/2) → 실린더 축(+Y)을 앵커 +Z(바깥 방사 방향)로.
     const plate = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.86, r, h, 6), plateMat)
     plate.rotation.set(Math.PI / 2, p.roll, 0)
-    plate.position.z = h * 0.15 // 반쯤 돌출 — 곡면이라 가장자리는 표면에 잠긴다
+    // 페이스-틸트 래퍼: 앵커 로컬 축 기준 Rx(tx)·Ry(ty)로 디스크 법선을 정면으로.
+    // 틸트 판은 앞쪽 에지가 셸에 잠기므로 z를 살짝 올려 잠김을 상쇄 (림 반대쪽
+    // 에지가 들리는 건 배갑 스큐트 단차로 읽혀 무해 — 렌더 판정).
+    const tilted = (p.tx ?? 0) !== 0 || (p.ty ?? 0) !== 0
+    plate.position.z = tilted ? h * 0.45 : h * 0.15 // 무틸트: 반쯤 돌출(기존 유지)
     addOutline(plate, L * 0.018, PALETTE.nightPurple)
-    anchor.add(plate)
+    if (tilted) {
+      const face = new THREE.Group()
+      face.rotation.set(p.tx ?? 0, p.ty ?? 0, 0)
+      face.add(plate)
+      anchor.add(face)
+    } else {
+      anchor.add(plate)
+    }
   }
 
   // ---- 꼬리 놉 (뒤통수 하단, 뒤·아래로 살짝 처지는 뭉툭한 테이퍼 튜브) ----
