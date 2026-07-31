@@ -25,7 +25,7 @@ import {
   taperedTube, unitSphereLo, type HoodBase, type HoodColors,
 } from './hoodKit'
 import { egg } from '../geo'
-import { buildShorts, buildTail } from '../bodyParts'
+import { buildTail } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 
 /** 셸/안감 색 — 카탈로그 팔레트 계승 (tiger.palette primary/shade + secondary) */
@@ -140,15 +140,6 @@ export function buildTiger(ctx: AnimalBuildContext): AnimalCostumeRig {
   // ---- 꼬리 (뒤 → 옆 → 앞으로 감겨 정면에서도 보인다) ----
   const tail = buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
     base: COL.shell, baseShade: COL.shellShade, tip: 0x241f22, tipShade: 0x14100f, girth: 0.55, length: 1.25, amp: 1.25,
-  })
-
-  // ---- 반바지 (도너 스커트를 hiddenMaterials로 숨기고 대체 — 하의 실루엣 분화) ----
-  buildShorts(
-    ctx.bones.hips ?? null,
-    ctx.bones.upperLegL, ctx.bones.upperLegR,
-    ctx.bones.lowerLegL, ctx.bones.lowerLegR,
-    ctx.crownH, ctx.S, {
-    base: 0x2E2620, baseShade: 0x1A1512, thighFraction: 0.74, girth: 1.0,
   })
 
   const acc = buildAccessories(

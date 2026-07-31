@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three'
 import { PALETTE } from '../palette'
-import { mergeShapes, taperedTube, unitSphereLo } from './geo'
+import { taperedTube, unitSphereLo } from './geo'
 import { toonMat, addOutline } from './animals/hoodKit'
 import { buildStrand, type StrandRig } from './strands'
 
@@ -171,118 +171,6 @@ export function buildBackShell(
   root.add(centre)
 
   chest.add(root)
-  return root
-}
-
-export interface ShortsSpec {
-  base: number
-  baseShade: number
-  /** 정강이까지 덮는 긴바지로 만들 때의 정강이 비율 (0 = 반바지) */
-  shinFraction?: number
-  /**
-   * 밑단 길이 — **허벅지 길이 비율**(0.72 ≈ 무릎 위 버뮤다).
-   * v1은 crownH 배수(0.66 → 허벅지의 36%)여서 '팬티처럼 짧다'는 지적을 받았다.
-   * 실측 허벅지 0.365m 기준으로 환산하도록 바꿨다(모델 스케일에 무관).
-   */
-  thighFraction?: number
-  /** 통 굵기 배율 */
-  girth?: number
-}
-
-/**
- * 반바지를 만들어 hips + 양 허벅지 본에 붙인다.
- *
- * 왜 필요한가: 도너 하의는 스커트 메시 하나뿐이라 전 캐릭터가 치마를 입는다("치마를 꼭
- * 써야할까?" 지적). 스커트를 hiddenMaterials로 숨기고 이 반바지를 씌우면 하의 실루엣이
- * 실제로 달라진다. 허벅지 통은 upperLeg 본에 붙으므로 다리를 움직이면 따라온다.
- */
-export function buildShorts(
-  hips: THREE.Object3D | null,
-  upperLegL: THREE.Object3D | null | undefined,
-  upperLegR: THREE.Object3D | null | undefined,
-  lowerLegL: THREE.Object3D | null | undefined,
-  lowerLegR: THREE.Object3D | null | undefined,
-  unit: number,
-  S: number,
-  spec: ShortsSpec,
-): THREE.Group | null {
-  if (!hips || !upperLegL || !upperLegR || !(unit > 1e-4)) return null
-  const girth = spec.girth ?? 1
-  // 허벅지 길이 실측 (본 간 거리) — 없으면 unit 기반 보수적 추정
-  const thighOf = (u?: THREE.Object3D | null, d?: THREE.Object3D | null) => (u && d
-    ? u.getWorldPosition(new THREE.Vector3()).distanceTo(d.getWorldPosition(new THREE.Vector3()))
-    : unit * 1.8)
-  const thigh = Math.max(thighOf(upperLegL, lowerLegL), thighOf(upperLegR, lowerLegR))
-  const len = (spec.thighFraction ?? 0.72) * thigh
-
-  const root = new THREE.Group()
-  root.name = 'shorts'
-  if (S === -1) root.rotation.y = Math.PI
-
-  // 힙 셸 — 허리(도너 스커트 웨이스트 y≈1.08)부터 밑위(y≈0.86)까지 한 덩어리로 덮는다.
-  // 실측 근거: 도너 스커트 단면 반경은 웨이스트 0.105m → 헴 0.20m. 이전 구현은 밴드
-  // 상단이 y 1.023에서 끝나 웨이스트까지 6cm 틈이 남았고, 그 사이로 몸이 드러났다
-  // ('바지 위로 살이 튀어나옴'). 폭은 몸에 맞춰 좁히고(0.56·unit ≈ 0.112m) 높이를 키운다.
-  // 조각을 나누면 아웃라인이 겹쳐 '층'으로 보이므로 힙+밑위를 1지오메트리로 병합한다.
-  const hipGeo = mergeShapes([
-    { g: unitSphereLo(), p: [0, unit * 0.16, 0], r: [0, 0, 0], s: [unit * 0.56 * girth, unit * 0.60, unit * 0.46 * girth] },
-    { g: unitSphereLo(), p: [0, -unit * 0.30, 0], r: [0, 0, 0], s: [unit * 0.34 * girth, unit * 0.30, unit * 0.36 * girth] },
-  ])
-  const hip = new THREE.Mesh(hipGeo, toonMat(spec.base, spec.baseShade))
-  addOutline(hip, unit * 0.03, PALETTE.nightPurple)
-  root.add(hip)
-  hips.add(root)
-
-
-  // 허벅지 통 ×2 — 각 upperLeg 본 로컬 -Y 방향
-  for (const leg of [upperLegL, upperLegR]) {
-    const tube = new THREE.Mesh(
-      taperedTube(
-        [
-          // 힙 밴드 안쪽까지 크게 올려 겹친다 — 겹침이 얕으면 밴드와 통 사이에
-          // 틈이 생겨 '찢어진 듯' 보인다(사용자 지적).
-          new THREE.Vector3(0, unit * 0.30, 0),
-          new THREE.Vector3(0, -len * 0.5, 0),
-          new THREE.Vector3(0, -len, 0),
-        ],
-        // 밑단이 살짝 넓어지는 통 — 타이트 레깅스가 아니라 반바지로 읽히게
-        // 슬림 핏 — 이전(0.40/0.36/0.37)은 '펑퍼진' 통으로 보였다
-        [unit * 0.31 * girth, unit * 0.285 * girth, unit * 0.285 * girth],
-      ),
-      toonMat(spec.base, spec.baseShade),
-    )
-    addOutline(tube, unit * 0.028, PALETTE.nightPurple)
-    const holder = new THREE.Group()
-    holder.name = 'shortsLeg'
-    holder.add(tube)
-    leg.add(holder)
-  }
-
-  // 긴바지: 정강이 본에도 통을 붙인다 (무릎에서 겹치게 시작해 이음선 은폐)
-  const shin = spec.shinFraction ?? 0
-  if (shin > 0) {
-    for (const knee of [lowerLegL, lowerLegR]) {
-      if (!knee) continue
-      const shinLen = shin * thigh
-      const tube = new THREE.Mesh(
-        taperedTube(
-          [
-            new THREE.Vector3(0, unit * 0.22, 0),
-            new THREE.Vector3(0, -shinLen * 0.5, 0),
-            new THREE.Vector3(0, -shinLen, 0),
-          ],
-          [unit * 0.30 * girth, unit * 0.26 * girth, unit * 0.235 * girth],
-        ),
-        toonMat(spec.base, spec.baseShade),
-      )
-      addOutline(tube, unit * 0.026, PALETTE.nightPurple)
-      const holder = new THREE.Group()
-      holder.name = 'pantsShin'
-      holder.add(tube)
-      knee.add(holder)
-    }
-  }
-
   return root
 }
 

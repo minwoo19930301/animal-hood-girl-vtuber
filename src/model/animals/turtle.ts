@@ -16,7 +16,7 @@ import {
   buildHoodBase, muzzleAnchor, surfacePoint, toonMat, addOutline, taperedTube,
   type HoodColors,
 } from './hoodKit'
-import { buildShorts, buildBackShell } from '../bodyParts'
+import { buildBackShell } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 
 /** 셸/안감 색 — 카탈로그 팔레트 계승 (turtle.palette primary/shade + secondary) */
@@ -120,15 +120,6 @@ export function buildTurtle(ctx: AnimalBuildContext): AnimalCostumeRig {
   buildBackShell(ctx.bones.chest ?? null, ctx.crownH, ctx.S, {
     base: COL.shell, baseShade: COL.shellShade, rim: 0xe6d9a8, rimShade: 0xbfae7e, plates: 6,
   })
-
-  // ---- 긴바지 (도너 스커트를 hiddenMaterials로 숨기고 대체) ----
-  buildShorts(
-    ctx.bones.hips ?? null,
-    ctx.bones.upperLegL, ctx.bones.upperLegR,
-    ctx.bones.lowerLegL, ctx.bones.lowerLegR,
-    ctx.crownH, ctx.S, {
-      base: 0x2E7D74, baseShade: 0x1D5A54, thighFraction: 1.02, shinFraction: 1.05, girth: 1.0,
-    })
 
   const acc = buildAccessories(
     {

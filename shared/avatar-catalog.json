@@ -90,9 +90,7 @@
       "accent": "#5B7C4A",
       "dark": "#31431F"
     },
-    "hiddenMaterials": [
-      "bottoms"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "rabbit",
@@ -216,9 +214,7 @@
       "accent": "#F5B940",
       "dark": "#20242E"
     },
-    "hiddenMaterials": [
-      "bottoms"
-    ]
+    "hiddenMaterials": []
   },
   {
     "slug": "owl",
@@ -346,7 +342,6 @@
       "dark": "#2E2620"
     },
     "hiddenMaterials": [
-      "bottoms",
       "hair_02"
     ]
   },
