@@ -82,7 +82,7 @@ export function buildTail(
   root.add(anchor)
 
   const strand = buildStrand({
-    segments: 9,
+    segments: 7,
     length: unit * 2.35 * len,
     radius: unit * 0.155 * girth,
     taper: 0.34,
@@ -91,7 +91,7 @@ export function buildTail(
     tip: spec.tip ?? null,
     tipShade: spec.tipShade ?? null,
     restBend: 0.10 * side,
-    amp: 0.30 * (spec.amp ?? 1),
+    amp: 0.13 * (spec.amp ?? 1),
     freq: 1.9,
     phase: side > 0 ? 0.4 : 2.1,
     tuft: spec.tuft,

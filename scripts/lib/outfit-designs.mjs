@@ -9,13 +9,15 @@
 //   collar      셔츠 카라(상단 중앙 밴드)   trim       V넥 리브 트림(개구부 둘레)
 //   cuff        소매 커프 밴드             hem        밑단 골지 밴드
 //   zipper      중앙 지퍼                  placket    셔츠 앞섶(V 개구부로 보이는 셔츠)
-//   sleeves     null=셔츠 소매/바디 소매 페인트 원본 유지, 지정 시 재염색
+//   sleeves     null=도너 흰 셔츠 소매 유지, 지정 시 재염색. v3.4: 13종 전부 null이라
+//               '왜 다 하얀 소매냐'는 지적을 받았다 — 대비가 필요한 rabbit/giraffe만 흰색 유지.
 //   skirt       스커트 본체               skirtStripe 밑단 스트라이프(null=스커트색으로 중화)
 //   skirtDots   스커트 도트 장식 색(선택)
 //   shoes       로퍼 본체                 shoesSole   밝은 부위/밑창(null=본체 자동 밝힘)
 //   bow         목 보타이                 hairpin     헤어핀(img28)
 //   wristband   손목 밴드(img15 페인트)    motif       {type, color} 상의 UV 직접 드로잉(선택)
-//   socks       니삭스(img15 다리 스트립 y1560~2048 다크그레이 삭스 영역 재염색.
+//   socks       니삭스 색. 피부색을 주면 '맨다리'로 읽힌다(v3.4: rabbit/panda/dog/monkey/
+//               elephant는 맨다리 또는 스킨톤 타이츠). (img15 다리 스트립 y1560~2048 다크그레이 삭스 영역 재염색.
 //               실루엣 경계는 원본 알베도 그대로 — 색만 바꾼다)
 //   hairpinShape 헤어핀(HAIR_02) 형태 변형 — { rotate(rad), scale[3], bars[{rotate,scale}] }.
 //               도너 핀은 교차한 바 2개다: bars[0]=세로축 바, bars[1]=앞뒤축 바.
@@ -37,7 +39,7 @@
 export const OUTFIT_DESIGNS = Object.freeze({
   bear: {
     vest: '#F2E6CF', vestShade: '#D8C2A0', collar: '#2F5D45', trim: '#2F5D45',
-    cuff: '#2F5D45', hem: '#2F5D45', zipper: '#6B4830', placket: '#F3F1EC', sleeves: null,
+    cuff: '#2F5D45', hem: '#2F5D45', zipper: '#6B4830', placket: '#F3F1EC', sleeves: '#2F5D45',
     skirt: '#C08A4F', skirtStripe: '#65402D', skirtDots: null,
     shoes: '#6B4830', shoesSole: null, bow: '#8D6142', hairpin: '#D9B896',
     wristband: '#6B4830', motif: { type: 'pawPatch', color: '#6B4830' },
@@ -46,18 +48,18 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   monkey: {
     vest: '#BC8532', vestShade: '#96682A', collar: '#F1D9BE', trim: '#F1D9BE',
-    cuff: '#F1D9BE', hem: '#F1D9BE', zipper: '#6D2338', placket: '#F3F1EC', sleeves: null,
+    cuff: '#F1D9BE', hem: '#F1D9BE', zipper: '#6D2338', placket: '#F3F1EC', sleeves: '#6D2338',
     skirt: '#6D2338', skirtStripe: '#BC8532', skirtDots: null,
     // hairpin: img28은 헤어 액센트 스트랜드도 샘플한다 — 크림(#F1D9BE) 대신
     // 카탈로그 hair.accent 코퍼로 클램프(와인레드 표류 지적, 셰이드는 램프 자동).
     shoes: '#F3EFE7', shoesSole: null, bow: '#6D2338', hairpin: '#D77B3E',
     wristband: '#8A5A34', motif: null,
-    socks: '#3B2A1C', hairpinShape: { rotate: 0.5, bars: [{ scale: [1, 1.5, 1] }, { scale: [1, 1, 0.45] }] },
+    socks: '#D6A078', hairpinShape: { rotate: 0.5, bars: [{ scale: [1, 1.5, 1] }, { scale: [1, 1, 0.45] }] },
     skirtCut: 0.26, skirtStretch: null, hairCut: [{ row: 950 }, { row: 700, region: 'front', softness: 0.40 }],
   },
   turtle: {
     vest: '#7FB069', vestShade: '#4F7C48', collar: '#2E7D74', trim: '#DCEBC4',
-    cuff: '#2E7D74', hem: '#DCEBC4', zipper: '#31431F', placket: '#F3F1EC', sleeves: null,
+    cuff: '#2E7D74', hem: '#DCEBC4', zipper: '#31431F', placket: '#F3F1EC', sleeves: '#2E7D74',
     skirt: '#3C4247', skirtStripe: '#2E8C81', skirtDots: null,
     shoes: '#4F7C48', shoesSole: null, bow: '#2E8C81', hairpin: '#24AFA4',
     wristband: '#5B7C4A', motif: { type: 'hexPlates', color: '#31431F' },
@@ -70,12 +72,12 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#D8A0A8', skirtStripe: '#FFFFFF', skirtDots: '#FFFFFF',
     shoes: '#E4849E', shoesSole: null, bow: '#F5A9B8', hairpin: '#F5A9B8',
     wristband: '#F5A9B8', motif: null,
-    socks: '#F2F3F7', hairpinShape: { rotate: 0.785, scale: [1, 1.2, 1.2] },
+    socks: '#F2C8AE', hairpinShape: { rotate: 0.785, scale: [1, 1.2, 1.2] },
     skirtCut: 0.22, skirtStretch: null, hairCut: [{ row: 799 }, { row: 850, region: 'front', softness: 0.45 }],
   },
   fox: {
     vest: '#B5502A', vestShade: '#8C3B1E', collar: '#F7EBD3', trim: '#F7EBD3',
-    cuff: '#F7EBD3', hem: '#F7EBD3', zipper: '#3B2A20', placket: '#F3F1EC', sleeves: null,
+    cuff: '#F7EBD3', hem: '#F7EBD3', zipper: '#3B2A20', placket: '#F3F1EC', sleeves: '#3A3E4A',
     skirt: '#232024', skirtStripe: '#B5502A', skirtDots: null,
     shoes: '#4A2E1E', shoesSole: null, bow: '#F7EBD3', hairpin: '#F7EBD3',
     wristband: '#C9622B', motif: null,
@@ -84,16 +86,16 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   panda: {
     vest: '#F7F4EF', vestShade: '#D6D1CB', collar: '#2E2B2C', trim: '#2E2B2C',
-    cuff: '#2E2B2C', hem: '#2E2B2C', zipper: '#2E2B2C', placket: '#F3F1EC', sleeves: null,
+    cuff: '#2E2B2C', hem: '#2E2B2C', zipper: '#2E2B2C', placket: '#F3F1EC', sleeves: '#2E2B2C',
     skirt: '#262324', skirtStripe: null, skirtDots: null,
     shoes: '#201D1E', shoesSole: null, bow: '#C63838', hairpin: '#C63838',
     wristband: '#2E2B2C', motif: null,
-    socks: '#2E2B2C', hairpinShape: { bars: [{ scale: [1, 1.7, 1] }, { scale: [1, 1, 0.35] }] },
+    socks: '#F0C6A8', hairpinShape: { bars: [{ scale: [1, 1.7, 1] }, { scale: [1, 1, 0.35] }] },
     skirtCut: null, skirtStretch: 1.20, hairCut: [{ row: 900 }, { row: 690, region: 'front', softness: 0.38 }],
   },
   penguin: {
     vest: '#26324A', vestShade: '#1E2532', collar: '#F6F8FA', trim: '#F6F8FA',
-    cuff: '#F6F8FA', hem: '#F6F8FA', zipper: '#F5B940', placket: '#F3F1EC', sleeves: null,
+    cuff: '#F6F8FA', hem: '#F6F8FA', zipper: '#F5B940', placket: '#F3F1EC', sleeves: '#22304E',
     skirt: '#26324A', skirtStripe: null, skirtDots: null,
     shoes: '#1B1D24', shoesSole: null, bow: '#F5B940', hairpin: '#F5B940',
     wristband: '#F5B940', motif: { type: 'bibPanel', color: '#F6F8FA' },
@@ -102,7 +104,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   owl: {
     vest: '#74543A', vestShade: '#54391F', collar: '#E8D5B8', trim: '#E8D5B8',
-    cuff: '#E8D5B8', hem: '#74543A', zipper: '#33261B', placket: '#F3F1EC', sleeves: null,
+    cuff: '#E8D5B8', hem: '#74543A', zipper: '#33261B', placket: '#F3F1EC', sleeves: '#33261B',
     skirt: '#4A3423', skirtStripe: null, skirtDots: null,
     shoes: '#65482F', shoesSole: null, bow: '#F0B429', hairpin: '#F0B429',
     wristband: '#F0B429', motif: { type: 'argyleBand', color: '#F0B429' },
@@ -111,27 +113,27 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   cat: {
     vest: '#EBB755', vestShade: '#C8872E', collar: '#22304E', trim: '#22304E',
-    cuff: '#22304E', hem: '#22304E', zipper: '#C8872E', placket: '#F3F1EC', sleeves: null,
+    cuff: '#22304E', hem: '#22304E', zipper: '#C8872E', placket: '#F3F1EC', sleeves: '#4A4F59',
     skirt: '#22304E', skirtStripe: '#EBB755', skirtDots: null,
     // hairpin: 네이비(#22304E)는 허니골드 헤어 위에서 검정으로 읽혀 골드로 변경.
     shoes: '#6B4526', shoesSole: null, bow: '#22304E', hairpin: '#F0B657',
     wristband: '#B5722E', motif: { type: 'regimentalCollar', color: '#EBB755' },
-    socks: '#4A331C', hairpinShape: { rotate: 0.785, scale: [1, 1.25, 0.7] },
+    socks: '#22242A', hairpinShape: { rotate: 0.785, scale: [1, 1.25, 0.7] },
     skirtCut: null, skirtStretch: 1.08, hairCut: null,
   },
   dog: {
     vest: '#F2E3C8', vestShade: '#D3BE99', collar: '#C9793A', trim: '#C9793A',
-    cuff: '#C9793A', hem: '#C9793A', zipper: '#8A5A34', placket: '#FBF7EF', sleeves: null,
+    cuff: '#C9793A', hem: '#C9793A', zipper: '#8A5A34', placket: '#FBF7EF', sleeves: '#C9793A',
     skirt: '#8A5A34', skirtStripe: '#F2E3C8', skirtDots: null,
     // hairpin: 네이비(#22304E)는 허니골드 헤어 위에서 검정으로 읽혀 골드로 변경.
     shoes: '#8A5A34', shoesSole: null, bow: '#C9793A', hairpin: '#F2E3C8',
     wristband: '#8A5A34', motif: { type: 'regimentalCollar', color: '#EBB755' },
-    socks: '#2E2118', hairpinShape: { rotate: 0.35, scale: [1, 0.9, 0.9] },
+    socks: '#F0C6A8', hairpinShape: { rotate: 0.35, scale: [1, 0.9, 0.9] },
     skirtCut: 0.16, skirtStretch: null, hairCut: [{ row: 720 }, { row: 800, region: 'front', softness: 0.40 }],
   },
   tiger: {
     vest: '#EE8A3C', vestShade: '#C65F26', collar: '#2E2620', trim: '#2E2620',
-    cuff: '#2E2620', hem: '#2E2620', zipper: '#2E2620', placket: '#F3F1EC', sleeves: null,
+    cuff: '#2E2620', hem: '#2E2620', zipper: '#2E2620', placket: '#F3F1EC', sleeves: '#2E2620',
     skirt: '#26211D', skirtStripe: '#EE8A3C', skirtDots: null,
     shoes: '#26211D', shoesSole: null, bow: '#2E2620', hairpin: '#F39A49',
     wristband: '#2E2620', motif: { type: 'bibPanel', color: '#FFF1DC' },
@@ -140,11 +142,11 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   elephant: {
     vest: '#8290A6', vestShade: '#6F7B91', collar: '#E9EEF5', trim: '#E9EEF5',
-    cuff: '#E9EEF5', hem: '#E9EEF5', zipper: '#F0A7B4', placket: '#F3F1EC', sleeves: null,
+    cuff: '#E9EEF5', hem: '#E9EEF5', zipper: '#F0A7B4', placket: '#F3F1EC', sleeves: '#465063',
     skirt: '#9BA8BC', skirtStripe: null, skirtDots: null,
     shoes: '#F2F3F7', shoesSole: null, bow: '#F0A7B4', hairpin: '#F0A7B4',
     wristband: '#F0A7B4', motif: null,
-    socks: '#F2F3F7', hairpinShape: { rotate: -0.35, scale: [1, 0.8, 0.8] },
+    socks: '#E8CDB4', hairpinShape: { rotate: -0.35, scale: [1, 0.8, 0.8] },
     skirtCut: null, skirtStretch: 1.10, hairCut: [{ row: 820, tiltX: 0.12 }],
   },
   giraffe: {

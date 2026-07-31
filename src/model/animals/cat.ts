@@ -121,7 +121,7 @@ export function buildCat(ctx: AnimalBuildContext): AnimalCostumeRig {
   const tail = buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
     base: COL.shell, baseShade: COL.shellShade,
     tip: DECOR.cream, tipShade: DECOR.creamShade,
-    girth: 0.52, length: 1.55, amp: 1.2, curl: 0.14,
+    girth: 0.52, length: 1.55, amp: 1.2, curl: 0.08,
   })
 
   const acc = buildAccessories(

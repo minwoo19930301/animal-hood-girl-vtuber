@@ -144,12 +144,13 @@ export function buildStrand(spec: StrandSpec): StrandRig {
         // 머리 반대 방향 반응 (사용자 디렉션: 고개를 오른쪽으로 돌리면 꼬리는 왼쪽으로).
         // 부호는 실측으로 확정했다 — 앵커가 x축 −2.62rad 젖혀져 있어 로컬 z 회전이
         // 월드에서 뒤집히므로, 반대 방향을 얻으려면 +부호가 맞다(CDP로 꼬리끝 월드 x 측정).
-        const rate = 1 - Math.exp(-dt * (14 - i * 2.2))
+        // 시간상수 0.18~0.45s — 트래킹 노이즈가 꼬리에 그대로 실리지 않게 느리게 따라간다
+        const rate = 1 - Math.exp(-dt * (5.5 - i * 0.55))
         smoothYaw[i] += (yaw - smoothYaw[i]) * rate
         smoothPitch[i] += (pitchS - smoothPitch[i]) * rate
-        pivots[i].rotation.z = restZ[i] + idle + counter * smoothYaw[i] * 1.65 * norm * depth
+        pivots[i].rotation.z = restZ[i] + idle + counter * smoothYaw[i] * 1.05 * norm * depth
         // x축(앞뒤)은 작게만 — z축 스윙과 섞이면 끝이 원을 그린다.
-        pivots[i].rotation.x = counter * smoothPitch[i] * 0.18 * norm * depth
+        pivots[i].rotation.x = counter * smoothPitch[i] * 0.06 * norm * depth
       }
     },
   }

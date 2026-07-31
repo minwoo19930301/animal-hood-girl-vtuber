@@ -127,7 +127,7 @@ export function buildDog(ctx: AnimalBuildContext): AnimalCostumeRig {
   const tail = buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
     base: DECOR.cream, baseShade: DECOR.creamShade,
     tip: COL.shell, tipShade: COL.shellShade,
-    girth: 0.95, length: 1.05, amp: 1.0, curl: 0.40,
+    girth: 0.95, length: 1.05, amp: 1.0, curl: 0.24,
   })
 
   const acc = buildAccessories(
