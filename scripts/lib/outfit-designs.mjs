@@ -47,14 +47,14 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirtCut: 0.18, skirtStretch: null, hairCut: [{ row: 799 }, { row: 870, region: 'front', softness: 0.42 }],
   },
   monkey: {
-    vest: '#BC8532', vestShade: '#96682A', collar: '#F1D9BE', trim: '#F1D9BE',
-    cuff: '#F1D9BE', hem: '#F1D9BE', zipper: '#6D2338', placket: '#F3F1EC', sleeves: '#6D2338',
+    vest: '#F3F1EC', vestShade: '#96682A', collar: '#F1D9BE', trim: '#F1D9BE',
+    cuff: '#F1D9BE', hem: '#F1D9BE', zipper: '#6D2338', placket: '#F3F1EC', sleeves: 'bare',
     skirt: '#6D2338', skirtStripe: '#BC8532', skirtDots: null,
     // hairpin: img28은 헤어 액센트 스트랜드도 샘플한다 — 크림(#F1D9BE) 대신
     // 카탈로그 hair.accent 코퍼로 클램프(와인레드 표류 지적, 셰이드는 램프 자동).
     shoes: '#F3EFE7', shoesSole: null, bow: '#6D2338', hairpin: '#D77B3E',
     wristband: '#8A5A34', motif: null,
-    socks: '#D6A078', hairpinShape: { rotate: 0.5, bars: [{ scale: [1, 1.5, 1] }, { scale: [1, 1, 0.45] }] },
+    socks: null, hairpinShape: { rotate: 0.5, bars: [{ scale: [1, 1.5, 1] }, { scale: [1, 1, 0.45] }] },
     skirtCut: 0.26, skirtStretch: null, hairCut: [{ row: 950 }, { row: 700, region: 'front', softness: 0.40 }],
   },
   turtle: {
@@ -72,12 +72,12 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#D8A0A8', skirtStripe: '#FFFFFF', skirtDots: '#FFFFFF',
     shoes: '#E4849E', shoesSole: null, bow: '#F5A9B8', hairpin: '#F5A9B8',
     wristband: '#F5A9B8', motif: null,
-    socks: '#F2C8AE', hairpinShape: { rotate: 0.785, scale: [1, 1.2, 1.2] },
+    socks: null, hairpinShape: { rotate: 0.785, scale: [1, 1.2, 1.2] },
     skirtCut: 0.22, skirtStretch: null, hairCut: [{ row: 799 }, { row: 850, region: 'front', softness: 0.45 }],
   },
   fox: {
-    vest: '#B5502A', vestShade: '#8C3B1E', collar: '#F7EBD3', trim: '#F7EBD3',
-    cuff: '#F7EBD3', hem: '#F7EBD3', zipper: '#3B2A20', placket: '#F3F1EC', sleeves: '#3A3E4A',
+    vest: '#F3F1EC', vestShade: '#8C3B1E', collar: '#F7EBD3', trim: '#F7EBD3',
+    cuff: '#F7EBD3', hem: '#F7EBD3', zipper: '#3B2A20', placket: '#F3F1EC', sleeves: 'bare',
     skirt: '#232024', skirtStripe: '#B5502A', skirtDots: null,
     shoes: '#4A2E1E', shoesSole: null, bow: '#F7EBD3', hairpin: '#F7EBD3',
     wristband: '#C9622B', motif: null,
@@ -90,7 +90,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#262324', skirtStripe: null, skirtDots: null,
     shoes: '#201D1E', shoesSole: null, bow: '#C63838', hairpin: '#C63838',
     wristband: '#2E2B2C', motif: null,
-    socks: '#F0C6A8', hairpinShape: { bars: [{ scale: [1, 1.7, 1] }, { scale: [1, 1, 0.35] }] },
+    socks: null, hairpinShape: { bars: [{ scale: [1, 1.7, 1] }, { scale: [1, 1, 0.35] }] },
     skirtCut: null, skirtStretch: 1.20, hairCut: [{ row: 900 }, { row: 690, region: 'front', softness: 0.38 }],
   },
   penguin: {
@@ -122,13 +122,13 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirtCut: null, skirtStretch: 1.08, hairCut: null,
   },
   dog: {
-    vest: '#F2E3C8', vestShade: '#D3BE99', collar: '#C9793A', trim: '#C9793A',
-    cuff: '#C9793A', hem: '#C9793A', zipper: '#8A5A34', placket: '#FBF7EF', sleeves: '#C9793A',
+    vest: '#FBF7EF', vestShade: '#D3BE99', collar: '#C9793A', trim: '#C9793A',
+    cuff: '#C9793A', hem: '#C9793A', zipper: '#8A5A34', placket: '#FBF7EF', sleeves: 'bare',
     skirt: '#8A5A34', skirtStripe: '#F2E3C8', skirtDots: null,
     // hairpin: 네이비(#22304E)는 허니골드 헤어 위에서 검정으로 읽혀 골드로 변경.
     shoes: '#8A5A34', shoesSole: null, bow: '#C9793A', hairpin: '#F2E3C8',
     wristband: '#8A5A34', motif: { type: 'regimentalCollar', color: '#EBB755' },
-    socks: '#F0C6A8', hairpinShape: { rotate: 0.35, scale: [1, 0.9, 0.9] },
+    socks: null, hairpinShape: { rotate: 0.35, scale: [1, 0.9, 0.9] },
     skirtCut: 0.16, skirtStretch: null, hairCut: [{ row: 720 }, { row: 800, region: 'front', softness: 0.40 }],
   },
   tiger: {
@@ -146,7 +146,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#9BA8BC', skirtStripe: null, skirtDots: null,
     shoes: '#F2F3F7', shoesSole: null, bow: '#F0A7B4', hairpin: '#F0A7B4',
     wristband: '#F0A7B4', motif: null,
-    socks: '#E8CDB4', hairpinShape: { rotate: -0.35, scale: [1, 0.8, 0.8] },
+    socks: null, hairpinShape: { rotate: -0.35, scale: [1, 0.8, 0.8] },
     skirtCut: null, skirtStretch: 1.10, hairCut: [{ row: 820, tiltX: 0.12 }],
   },
   giraffe: {

@@ -893,8 +893,13 @@ async function editBodySkin(bytes, style) {
   const donorReplacement = tintKeepingDetail([240, 198, 176], style.skin, 0.78, 0.70);
   const replacementHsl = rgbHsl(...donorReplacement);
   const wristbandTarget = hsvOf(style.design.wristband);
-  const sleevesTarget = style.design.sleeves ? hsvOf(style.design.sleeves) : null;
-  const socksHsl = rgbHsl(...hexRgb(style.design.socks));
+  // sleeves: 'bare' → 흰 긴팔 페인트를 피부로 치환해 맨팔(민소매)로 만든다.
+  // '전 캐릭터가 반팔 + 흰 토시'로 보이던 원인이 이 도너 페인트다.
+  const bareSleeves = style.design.sleeves === 'bare';
+  const sleevesTarget = style.design.sleeves && !bareSleeves ? hsvOf(style.design.sleeves) : null;
+  // socks: null → 재염색을 건너뛴다. 그러면 아래 피부 중화 휴리스틱이 도너 니삭스를
+  // 피부로 지워 '맨다리'가 된다(스킨톤 재염색과 달리 삭스 경계·음영이 남지 않는다).
+  const socksHsl = style.design.socks ? rgbHsl(...hexRgb(style.design.socks)) : null;
   // 도너 니삭스: 다리 스트립 하단의 다크그레이 블록 (실측 y>=1555, x0~489 / x1558~2047).
   // 아래 중화 휴리스틱이 피부로 지우던 영역 — 대신 팔레트 socks 색으로 재염색한다.
   // 경계는 재작도하지 않는다: 무채색 판정에 걸리는 픽셀만 색을 바꿔 원본 실루엣 유지.
@@ -936,7 +941,14 @@ async function editBodySkin(bytes, style) {
           }
           continue; // 밴드 존의 나머지(소매 가장자리 등)는 그대로
         }
-        if (sleevesTarget && saturation < 0.15 && lightness > 0.70) {
+        if (bareSleeves && saturation < 0.20 && lightness > 0.62) {
+          // 흰 페인트의 명암을 피부 램프로 옮긴다 — 실루엣/주름 음영은 유지된다.
+          const shade = clamp(replacementHsl[2] + (lightness - 0.86) * 0.55, 0.10, 0.98);
+          const [r, g, b] = hslRgb(replacementHsl[0], replacementHsl[1] * 0.92, shade);
+          data[offset] = Math.round(r);
+          data[offset + 1] = Math.round(g);
+          data[offset + 2] = Math.round(b);
+        } else if (sleevesTarget && saturation < 0.15 && lightness > 0.70) {
           const [, , hsvVal] = rgbHsv(...source);
           const [r, g, b] = hsvRgb(
             sleevesTarget[0],
@@ -961,7 +973,7 @@ async function editBodySkin(bytes, style) {
       const inFootSockZone = y >= footSockZoneTop
         && x > sockStripLeft && x < sockStripRight
         && lightness < 0.46;
-      if ((inSockZone || inFootSockZone) && saturation < 0.32 && lightness > 0.04 && lightness < 0.72) {
+      if (socksHsl && (inSockZone || inFootSockZone) && saturation < 0.32 && lightness > 0.04 && lightness < 0.72) {
         const sockLightness = clamp(socksHsl[2] + (lightness - 0.21) * 0.35, 0.03, 0.97);
         const [r, g, b] = hslRgb(socksHsl[0], socksHsl[1], sockLightness);
         data[offset] = Math.round(r);
@@ -1191,7 +1203,7 @@ async function editTops(bytes, style) {
   const cuffTarget = design.cuff ? hsvOf(design.cuff) : null;
   const hemTarget = hsvOf(design.hem);
   const zipperTarget = hsvOf(design.zipper);
-  const sleevesTarget = design.sleeves ? hsvOf(design.sleeves) : null;
+  const sleevesTarget = design.sleeves && design.sleeves !== 'bare' ? hsvOf(design.sleeves) : null;
 
   // 원본 명도 보존용 스냅샷 + 조끼 마스크 (지퍼/밑단/모티프 클리핑).
   const sourceValue = new Float32Array(width * height);

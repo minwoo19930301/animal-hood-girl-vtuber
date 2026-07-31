@@ -216,8 +216,8 @@ export function buildShorts(
 
   // 힙 밴드 — 허리부터 밑위까지 덮는 납작한 타원 (맨살 노출 방지)
   const band = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
-  band.scale.set(unit * 0.63 * girth, unit * 0.48, unit * 0.45 * girth)
-  band.position.y = -unit * 0.10
+  band.scale.set(unit * 0.66 * girth, unit * 0.52, unit * 0.47 * girth)
+  band.position.y = -unit * 0.06
   addOutline(band, unit * 0.03, PALETTE.nightPurple)
   root.add(band)
   hips.add(root)
@@ -227,12 +227,14 @@ export function buildShorts(
     const tube = new THREE.Mesh(
       taperedTube(
         [
-          new THREE.Vector3(0, unit * 0.06, 0),
+          // 힙 밴드 안쪽까지 크게 올려 겹친다 — 겹침이 얕으면 밴드와 통 사이에
+          // 틈이 생겨 '찢어진 듯' 보인다(사용자 지적).
+          new THREE.Vector3(0, unit * 0.30, 0),
           new THREE.Vector3(0, -len * 0.5, 0),
           new THREE.Vector3(0, -len, 0),
         ],
         // 밑단이 살짝 넓어지는 통 — 타이트 레깅스가 아니라 반바지로 읽히게
-        [unit * 0.33 * girth, unit * 0.35 * girth, unit * 0.37 * girth],
+        [unit * 0.40 * girth, unit * 0.36 * girth, unit * 0.37 * girth],
       ),
       toonMat(spec.base, spec.baseShade),
     )
