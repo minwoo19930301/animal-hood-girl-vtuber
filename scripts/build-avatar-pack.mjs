@@ -22,6 +22,7 @@ import {
 import { getOutfitDesign } from './lib/outfit-designs.mjs';
 import { warpFaceGlb, FACE_WARP_PROFILES } from './lib/face-warp.mjs';
 import { getEyeProfile } from './lib/eye-profiles.mjs';
+import { trimHairGlb } from './lib/hair-trim.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EDITED_IMAGE_INDICES = [0, 5, 7, 8, 9, 11, 15, 17, 19, 20, 21, 28];
@@ -1052,6 +1053,15 @@ function hairCutJitter(x, amplitude, seed) {
   );
 }
 
+// v3.2 (버그 수정): 알파 컷을 텍스처에서 제거하고 지오메트리 클리핑으로 옮겼다.
+// 실측 근거 — img25 커버리지 99.2%, 텍셀당 world Y 폭 중앙값 0.192(헤어 전체 높이
+// 0.570의 34%)로 모든 스트랜드 카드가 같은 UV를 공유한다. 따라서 "행 이하 알파 0"은
+// 턱 높이의 롱 스트랜드와 이마를 지나는 베이비헤어를 같은 행에서 동시에 자르고,
+// 그 절단면이 이마 중앙에 수평 대시로 남아 '1자 눈썹'처럼 읽혔다.
+// 어블레이션(bear): 알파 컷만 끄면 이마 대시가 완전히 소멸하고, 재음영만 끄면
+// 그대로 남는다 → 원인은 팁 재음영이 아니라 알파 컷이었다(v3.1 진단 정정).
+// 실제 컷은 scripts/lib/hair-trim.mjs가 컷 평면 y = yCut + 지터(x)로 수행하며,
+// 이마 위 카드는 y가 평면보다 높아 자동 보존된다. 여기 남은 편집은 팁 재음영뿐이다.
 async function editHair(bytes, style) {
   const cutRow = style.design.hairCut;
   if (!Number.isInteger(cutRow) || cutRow <= 0) {
@@ -1086,9 +1096,8 @@ async function editHair(bytes, style) {
     const edge = cutRow + Math.round(hairCutJitter(x, HAIR_CUT_JITTER, style.variantIndex));
     for (let y = 0; y < height; y++) {
       const offset = (y * width + x) * 4;
-      if (y >= edge) {
-        data[offset + 3] = 0;
-      }
+      // 알파 컷은 v3.2에서 지오메트리(hair-trim.mjs)로 이동했다 — 텍스처는 팁
+      // 재음영만 담당한다. 컷 라인 아래 텍셀은 클리핑으로 렌더에서 사라진다.
       if (y >= edge - HAIR_CUT_DARKEN && y < edge) {
         const t = (edge - y) / HAIR_CUT_DARKEN; // 0 = 컷 라인, 1 = 밴드 상단
         for (let channel = 0; channel < 3; channel++) {
@@ -1726,6 +1735,18 @@ async function buildOne(entry, position, total, options, source, sourceBytes, so
   if (warpProfile) {
     const warped = warpFaceGlb(fs.readFileSync(temporaryOutput), warpProfile, { label: entry.slug });
     fs.writeFileSync(temporaryOutput, warped.bytes);
+  }
+  // 헤어 길이 컷 (v3.2): 텍스처 알파 컷 대신 컷 평면 지오메트리 클리핑.
+  // 이마를 지나는 베이비헤어는 평면보다 높아 보존되므로 '1자 눈썹' 잔흔이 없다.
+  if (style.design.hairCut != null) {
+    const trimmed = trimHairGlb(fs.readFileSync(temporaryOutput), {
+      cutRow: style.design.hairCut,
+      jitterPx: HAIR_CUT_JITTER,
+      seed: style.variantIndex,
+      imageIndex: HAIR_IMAGE_INDEX,
+      label: entry.slug,
+    });
+    fs.writeFileSync(temporaryOutput, trimmed.bytes);
   }
   fs.renameSync(temporaryOutput, output);
   const outputBytes = fs.readFileSync(output);

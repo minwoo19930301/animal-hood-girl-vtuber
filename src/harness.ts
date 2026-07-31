@@ -26,7 +26,7 @@ import { neutralFrame, neutralArm, type ArmPose, type Dir3 } from './contract'
 import { PALETTE } from './palette'
 import { isAvatarSlug } from './model/animals/registry'
 
-const q = new URLSearchParams(location.search)
+let q = new URLSearchParams(location.search)
 const num = (k: string, d = 0) => (q.has(k) ? parseFloat(q.get(k)!) : d)
 const flag = (k: string) => q.get(k) === '1'
 
@@ -158,7 +158,8 @@ function buildArm(side: 1 | -1, sfx: 'L' | 'R'): ArmPose | null {
   return a
 }
 
-// 프레임 구성
+// 프레임 구성 — 현재 q(쿼리 파라미터)에서 한 프레임을 만든다.
+function buildFrame() {
 const f = neutralFrame()
 f.tracked = 1
 f.head.pitch = num('pitch')
@@ -199,14 +200,32 @@ f.fx.happy = flag('happy')
 f.fx.sweat = flag('sweat')
 f.fx.anger = flag('anger')
 f.breath = num('breath')
+  return f
+}
 
 // 2차 모션(스프링) 정착 프리롤: 고정 스텝으로 결정적 시뮬레이션
-const t = num('t', 1.0)
 const STEP = 1 / 60
-let sim = 0
-while (sim < t) {
-  mingo.apply(f, STEP, sim)
-  sim += STEP
+let simClock = 0
+
+/** 현재 q로 프레임을 만들어 seconds만큼 고정 스텝 진행 후 1회 렌더. */
+function renderPose(seconds: number): void {
+  const frame = buildFrame()
+  let elapsed = 0
+  do {
+    mingo.apply(frame, STEP, simClock)
+    simClock += STEP
+    elapsed += STEP
+  } while (elapsed < seconds)
+  renderer.render(scene, camera)
 }
-renderer.render(scene, camera)
+
+renderPose(num('t', 1.0))
 document.title = 'READY'
+
+// 시퀀스(GIF) 렌더용 훅 — 같은 페이지에서 포즈만 갈아끼워 VRM 재로드를 피한다.
+// 스프링 상태가 프레임 사이에 이어지므로 2차 모션이 연속적으로 보인다.
+;(window as unknown as { __pose?: (query: string, seconds?: number) => void }).__pose =
+  (query: string, seconds = STEP) => {
+    q = new URLSearchParams(query)
+    renderPose(seconds)
+  }
