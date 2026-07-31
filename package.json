@@ -13,7 +13,8 @@
     "shot": "node scripts/screenshot.mjs",
     "avatars:build": "node scripts/build-avatar-pack.mjs",
     "avatars:audit": "node scripts/audit-avatar-pack.mjs",
-    "avatars:shots": "node scripts/render-avatar-matrix.mjs"
+    "avatars:shots": "node scripts/render-avatar-matrix.mjs",
+    "avatars:gifs": "node scripts/render-avatar-gifs.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.35",
