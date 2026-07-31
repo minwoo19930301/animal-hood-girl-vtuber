@@ -16,6 +16,7 @@ import {
   buildHoodBase, muzzleAnchor, surfacePoint, toonMat, addOutline, taperedTube,
   type HoodColors,
 } from './hoodKit'
+import { buildBackShell } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 
 /** 셸/안감 색 — 카탈로그 팔레트 계승 (turtle.palette primary/shade + secondary) */
@@ -115,6 +116,11 @@ export function buildTurtle(ctx: AnimalBuildContext): AnimalCostumeRig {
   tailAnchor.add(tail)
 
   // ---- 액세서리 (손목밴드+드로스트링) — flamingo.ts와 동일 배선, 색만 오버라이드 ----
+  // ---- 등껍질 (chest 본에 얹는 돔 + 테두리 각질대 + 육각 플레이트) ----
+  buildBackShell(ctx.bones.chest ?? null, ctx.crownH, ctx.S, {
+    base: COL.shell, baseShade: COL.shellShade, rim: 0xe6d9a8, rimShade: 0xbfae7e, plates: 6,
+  })
+
   const acc = buildAccessories(
     {
       chest: ctx.bones.chest ?? null,
@@ -128,6 +134,8 @@ export function buildTurtle(ctx: AnimalBuildContext): AnimalCostumeRig {
     },
     ctx.S,
     ACC,
+    1,
+    { wristband: false },
   )
 
   // muzzleFollow: 상단 림 중앙 앵커 — 거북이는 주둥이 장식 없음(빈 앵커 유지,

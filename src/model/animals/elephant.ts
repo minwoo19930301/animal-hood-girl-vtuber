@@ -158,6 +158,8 @@ export function buildElephant(ctx: AnimalBuildContext): AnimalCostumeRig {
     },
     ctx.S,
     ACC,
+    1,
+    { strings: false },
   )
 
   // 귀 플랩 2차 모션 — 가벼운 Follower (좌우 스프링 상수 미세 비대칭, 결정적)

@@ -127,6 +127,8 @@ export function buildOwl(ctx: AnimalBuildContext): AnimalCostumeRig {
     },
     ctx.S,
     ACC,
+    1,
+    { wristband: false, strings: false },
   )
 
   return {

@@ -105,6 +105,7 @@ export function buildPanda(ctx: AnimalBuildContext): AnimalCostumeRig {
     ctx.S,
     ACC,
     0.45,
+    { wristband: false },
   )
 
   return {

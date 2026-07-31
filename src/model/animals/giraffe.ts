@@ -163,6 +163,8 @@ export function buildGiraffe(ctx: AnimalBuildContext): AnimalCostumeRig {
     },
     ctx.S,
     ACC,
+    1,
+    { wristband: false },
   )
 
   return {

@@ -25,6 +25,7 @@ import {
   taperedTube, unitSphereLo, type HoodBase, type HoodColors,
 } from './hoodKit'
 import { egg } from '../geo'
+import { buildTail } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 
 /** 셸/안감 색 — 카탈로그 팔레트 계승 (tiger.palette primary/shade + secondary) */
@@ -136,6 +137,11 @@ export function buildTiger(ctx: AnimalBuildContext): AnimalCostumeRig {
   muzzleFollow.add(nose)
 
   // ---- 액세서리 (손목밴드+드로스트링) — flamingo.ts 배선 패턴 ----
+  // ---- 꼬리 (뒤 → 옆 → 앞으로 감겨 정면에서도 보인다) ----
+  buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
+    base: COL.shell, baseShade: COL.shellShade, tip: 0x241f22, tipShade: 0x14100f, girth: 0.72, length: 1.15,
+  })
+
   const acc = buildAccessories(
     {
       chest: ctx.bones.chest ?? null,

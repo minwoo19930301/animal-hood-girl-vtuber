@@ -184,8 +184,12 @@ export interface MingoBridge {
    * (구버전 preload 호환을 위해 optional)
    */
   onVisibility?(cb: (visible: boolean) => void): void
+  /** Electron 메뉴/단축키 명령 (avatar-smaller 등) */
+  onDebugCommand?(cb: (cmd: string) => void): void
   dragBy(dx: number, dy: number): void
   quit(): void
+  /** 네이티브 옵션 메뉴 팝업 (캐릭터+보기+종료) */
+  showAvatarMenu?(currentSlug: string): void
 }
 
 declare global {

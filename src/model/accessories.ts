@@ -165,15 +165,23 @@ export function buildAccessories(
   S: number,
   colors: AccessoryColors = DEFAULT_ACC_COLORS,
   cordScale = 1,
+  parts: { wristband?: boolean; strings?: boolean } = {},
 ): AccessoryRig {
+  // parts: 종별 파츠 온/오프 — 전 캐릭터가 손목밴드+드로스트링을 똑같이 달고 있어
+  // 실루엣이 균질해지던 문제 때문에, 일부 종은 손목밴드나 끈을 생략한다.
+  const withWristband = parts.wristband ?? true
+  const withStrings = parts.strings ?? true
+
   // ---- 손목밴드 2개 (hand 로컬 계산이라 S 불필요) ----
-  if (bones.handL && bones.lowerArmL) buildWristband(bones.handL, bones.lowerArmL, colors)
-  if (bones.handR && bones.lowerArmR) buildWristband(bones.handR, bones.lowerArmR, colors)
+  if (withWristband) {
+    if (bones.handL && bones.lowerArmL) buildWristband(bones.handL, bones.lowerArmL, colors)
+    if (bones.handR && bones.lowerArmR) buildWristband(bones.handR, bones.lowerArmR, colors)
+  }
 
   // ---- 드로스트링 2가닥 (chest 어태치, 쇄골 근처 앵커 자동 산출) ----
   const strings: StringRig[] = []
   const { chest, neck, upperArmL, upperArmR } = bones
-  if (chest && neck && upperArmL && upperArmR) {
+  if (withStrings && chest && neck && upperArmL && upperArmR) {
     const Cw = chest.getWorldPosition(new THREE.Vector3())
     const Nw = neck.getWorldPosition(new THREE.Vector3())
     const hw = upperArmL.getWorldPosition(new THREE.Vector3())

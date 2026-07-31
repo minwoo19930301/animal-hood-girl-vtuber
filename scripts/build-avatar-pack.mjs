@@ -24,6 +24,7 @@ import { warpFaceGlb, FACE_WARP_PROFILES } from './lib/face-warp.mjs';
 import { getEyeProfile } from './lib/eye-profiles.mjs';
 import { trimHairGlb } from './lib/hair-trim.mjs';
 import { shapeHairpinGlb } from './lib/hairpin-shape.mjs';
+import { stretchGarmentGlb } from './lib/garment-length.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EDITED_IMAGE_INDICES = [0, 5, 7, 8, 9, 11, 15, 17, 19, 20, 21, 28];
@@ -1767,6 +1768,18 @@ async function buildOne(entry, position, total, options, source, sourceBytes, so
       label: `${entry.slug}:skirt`,
     });
     fs.writeFileSync(temporaryOutput, trimmedSkirt.bytes);
+  }
+  // 스커트 길이 늘리기 (v3.2): 컷의 반대 방향 — 도너보다 긴 실루엣이 필요한 종.
+  if (style.design.skirtStretch != null) {
+    if (style.design.skirtCut != null) {
+      throw new Error(`${entry.slug}: skirtCut and skirtStretch are mutually exclusive`);
+    }
+    const stretched = stretchGarmentGlb(fs.readFileSync(temporaryOutput), {
+      scaleY: style.design.skirtStretch,
+      imageIndex: SKIRT_IMAGE_INDEX,
+      label: `${entry.slug}:skirt`,
+    });
+    fs.writeFileSync(temporaryOutput, stretched.bytes);
   }
   // 헤어핀 형태 (v3.2): 도너 X자 클립 하나를 종별 실루엣으로 변형 (색만 다르던 문제).
   if (style.design.hairpinShape != null) {

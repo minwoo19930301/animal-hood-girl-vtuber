@@ -12,6 +12,7 @@
  */
 import * as THREE from 'three'
 import { PALETTE } from '../../palette'
+import { buildTail } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 import type { AnimalBuildContext, AnimalCostumeRig } from './types'
 import {
@@ -145,6 +146,11 @@ export function buildFox(ctx: AnimalBuildContext): AnimalCostumeRig {
   const muzzleFollow = muzzleAnchor(base)
 
   // ---- 액세서리: 손목밴드+드로스트링 (flamingo.ts 배선 패턴) ----
+  // ---- 꼬리 (뒤 → 옆 → 앞으로 감겨 정면에서도 보인다) ----
+  buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
+    base: COL.shell, baseShade: COL.shellShade, tip: 0xf6efe6, tipShade: 0xd3c6b8, girth: 1.05, length: 1.0,
+  })
+
   const acc = buildAccessories(
     {
       chest: ctx.bones.chest ?? null,
