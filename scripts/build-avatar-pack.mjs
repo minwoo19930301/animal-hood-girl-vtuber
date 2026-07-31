@@ -23,6 +23,7 @@ import { getOutfitDesign } from './lib/outfit-designs.mjs';
 import { warpFaceGlb, FACE_WARP_PROFILES } from './lib/face-warp.mjs';
 import { getEyeProfile } from './lib/eye-profiles.mjs';
 import { trimHairGlb } from './lib/hair-trim.mjs';
+import { shapeHairpinGlb } from './lib/hairpin-shape.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EDITED_IMAGE_INDICES = [0, 5, 7, 8, 9, 11, 15, 17, 19, 20, 21, 28];
@@ -32,6 +33,10 @@ const HAIR_IMAGE_INDEX = 25;
 // 눈 하이라이트(img10)는 eyeProfile.highlightScale !== 1 인 슬러그만 편집한다
 // (v3.1 눈매 표: rabbit/owl/panda 확대, fox/tiger 축소 — 나머지는 무편집).
 const HIGHLIGHT_IMAGE_INDEX = 10;
+// 스커트(Bottoms) 알베도 — skirtCut 지오메트리 컷의 대상 재질을 찾는 데 쓴다.
+const SKIRT_IMAGE_INDEX = 20;
+// 헤어핀(HAIR_02) 알베도 — hairpinShape 지오메트리 변형의 대상 재질.
+const HAIRPIN_IMAGE_INDEX = 28;
 
 function editedImageIndicesFor(design, eyeProfile) {
   const indices = [...EDITED_IMAGE_INDICES];
@@ -1750,6 +1755,27 @@ async function buildOne(entry, position, total, options, source, sourceBytes, so
       label: entry.slug,
     });
     fs.writeFileSync(temporaryOutput, trimmed.bytes);
+  }
+  // 스커트 밑단 컷 (v3.2): 도너 스커트 하나로 전 캐릭터가 같은 실루엣이던 문제 완화.
+  // 밑단은 이미 열린 경계라 평면 클리핑이 내부 면을 드러내지 않는다.
+  if (style.design.skirtCut != null) {
+    const trimmedSkirt = trimHairGlb(fs.readFileSync(temporaryOutput), {
+      cuts: [{ fraction: style.design.skirtCut }],
+      jitterPx: 0,
+      seed: style.variantIndex,
+      imageIndex: SKIRT_IMAGE_INDEX,
+      label: `${entry.slug}:skirt`,
+    });
+    fs.writeFileSync(temporaryOutput, trimmedSkirt.bytes);
+  }
+  // 헤어핀 형태 (v3.2): 도너 X자 클립 하나를 종별 실루엣으로 변형 (색만 다르던 문제).
+  if (style.design.hairpinShape != null) {
+    const shaped = shapeHairpinGlb(fs.readFileSync(temporaryOutput), {
+      ...style.design.hairpinShape,
+      imageIndex: HAIRPIN_IMAGE_INDEX,
+      label: `${entry.slug}:hairpin`,
+    });
+    fs.writeFileSync(temporaryOutput, shaped.bytes);
   }
   fs.renameSync(temporaryOutput, output);
   const outputBytes = fs.readFileSync(output);
