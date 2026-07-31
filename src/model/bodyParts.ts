@@ -174,8 +174,12 @@ export function buildBackShell(
 export interface ShortsSpec {
   base: number
   baseShade: number
-  /** 밑단 길이 (unit 배수, 0.5 ≈ 허벅지 중간) */
-  length?: number
+  /**
+   * 밑단 길이 — **허벅지 길이 비율**(0.72 ≈ 무릎 위 버뮤다).
+   * v1은 crownH 배수(0.66 → 허벅지의 36%)여서 '팬티처럼 짧다'는 지적을 받았다.
+   * 실측 허벅지 0.365m 기준으로 환산하도록 바꿨다(모델 스케일에 무관).
+   */
+  thighFraction?: number
   /** 통 굵기 배율 */
   girth?: number
 }
@@ -191,13 +195,20 @@ export function buildShorts(
   hips: THREE.Object3D | null,
   upperLegL: THREE.Object3D | null | undefined,
   upperLegR: THREE.Object3D | null | undefined,
+  lowerLegL: THREE.Object3D | null | undefined,
+  lowerLegR: THREE.Object3D | null | undefined,
   unit: number,
   S: number,
   spec: ShortsSpec,
 ): THREE.Group | null {
   if (!hips || !upperLegL || !upperLegR || !(unit > 1e-4)) return null
-  const len = (spec.length ?? 0.62) * unit
   const girth = spec.girth ?? 1
+  // 허벅지 길이 실측 (본 간 거리) — 없으면 unit 기반 보수적 추정
+  const thighOf = (u?: THREE.Object3D | null, d?: THREE.Object3D | null) => (u && d
+    ? u.getWorldPosition(new THREE.Vector3()).distanceTo(d.getWorldPosition(new THREE.Vector3()))
+    : unit * 1.8)
+  const thigh = Math.max(thighOf(upperLegL, lowerLegL), thighOf(upperLegR, lowerLegR))
+  const len = (spec.thighFraction ?? 0.72) * thigh
 
   const root = new THREE.Group()
   root.name = 'shorts'
@@ -205,7 +216,7 @@ export function buildShorts(
 
   // 힙 밴드 — 허리부터 밑위까지 덮는 납작한 타원 (맨살 노출 방지)
   const band = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
-  band.scale.set(unit * 0.60 * girth, unit * 0.46, unit * 0.42 * girth)
+  band.scale.set(unit * 0.63 * girth, unit * 0.48, unit * 0.45 * girth)
   band.position.y = -unit * 0.10
   addOutline(band, unit * 0.03, PALETTE.nightPurple)
   root.add(band)
@@ -220,7 +231,8 @@ export function buildShorts(
           new THREE.Vector3(0, -len * 0.5, 0),
           new THREE.Vector3(0, -len, 0),
         ],
-        [unit * 0.30 * girth, unit * 0.29 * girth, unit * 0.27 * girth],
+        // 밑단이 살짝 넓어지는 통 — 타이트 레깅스가 아니라 반바지로 읽히게
+        [unit * 0.33 * girth, unit * 0.35 * girth, unit * 0.37 * girth],
       ),
       toonMat(spec.base, spec.baseShade),
     )

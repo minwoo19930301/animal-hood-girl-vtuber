@@ -105,8 +105,12 @@ export function buildMonkey(ctx: AnimalBuildContext): AnimalCostumeRig {
   })
 
   // ---- 반바지 (도너 스커트를 hiddenMaterials로 숨기고 대체 — 하의 실루엣 분화) ----
-  buildShorts(ctx.bones.hips ?? null, ctx.bones.upperLegL, ctx.bones.upperLegR, ctx.crownH, ctx.S, {
-    base: 0x6D2338, baseShade: 0x4A1524, length: 0.66, girth: 1.0,
+  buildShorts(
+    ctx.bones.hips ?? null,
+    ctx.bones.upperLegL, ctx.bones.upperLegR,
+    ctx.bones.lowerLegL, ctx.bones.lowerLegR,
+    ctx.crownH, ctx.S, {
+    base: 0x6D2338, baseShade: 0x4A1524, thighFraction: 0.74, girth: 1.0,
   })
 
   const acc = buildAccessories(
