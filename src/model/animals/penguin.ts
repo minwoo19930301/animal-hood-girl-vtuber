@@ -16,6 +16,7 @@ import {
   buildHoodBase, muzzleAnchor, toonMat, addOutline, taperedTube, TILT,
   type HoodBase, type HoodColors,
 } from './hoodKit'
+import { buildShorts } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 
 /** 셸/안감 색 — 카탈로그 팔레트 계승 (penguin.palette primary/shade + secondary) */
@@ -140,6 +141,15 @@ export function buildPenguin(ctx: AnimalBuildContext): AnimalCostumeRig {
   base.hitMeshes.push(beak)
 
   // ---- 액세서리 (손목밴드+드로스트링) — flamingo.ts와 동일 배선, 색만 오버라이드 ----
+  // ---- 긴바지 (도너 스커트를 hiddenMaterials로 숨기고 대체) ----
+  buildShorts(
+    ctx.bones.hips ?? null,
+    ctx.bones.upperLegL, ctx.bones.upperLegR,
+    ctx.bones.lowerLegL, ctx.bones.lowerLegR,
+    ctx.crownH, ctx.S, {
+      base: 0x22304E, baseShade: 0x141F33, thighFraction: 1.02, shinFraction: 1.05, girth: 1.0,
+    })
+
   const acc = buildAccessories(
     {
       chest: ctx.bones.chest ?? null,

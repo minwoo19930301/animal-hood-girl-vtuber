@@ -177,6 +177,8 @@ export function buildBackShell(
 export interface ShortsSpec {
   base: number
   baseShade: number
+  /** 정강이까지 덮는 긴바지로 만들 때의 정강이 비율 (0 = 반바지) */
+  shinFraction?: number
   /**
    * 밑단 길이 — **허벅지 길이 비율**(0.72 ≈ 무릎 위 버뮤다).
    * v1은 crownH 배수(0.66 → 허벅지의 36%)여서 '팬티처럼 짧다'는 지적을 받았다.
@@ -219,10 +221,20 @@ export function buildShorts(
 
   // 힙 밴드 — 허리부터 밑위까지 덮는 납작한 타원 (맨살 노출 방지)
   const band = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
-  band.scale.set(unit * 0.56 * girth, unit * 0.46, unit * 0.40 * girth)
+  // 밴드는 허벅지 통보다 확실히 넓어야 한다 — 좁히면 통 상단이 밴드 밖으로 나와
+  // 이음선이 '찢어진' 것처럼 보인다(0.56에서 재발). 시트 볼륨은 넓게 유지하고
+  // 통만 슬림하게 간다.
+  band.scale.set(unit * 0.70 * girth, unit * 0.50, unit * 0.50 * girth)
   band.position.y = -unit * 0.06
   addOutline(band, unit * 0.03, PALETTE.nightPurple)
   root.add(band)
+
+  // 밑위(크로치) 필러 — 두 다리 사이 틈을 메운다
+  const crotch = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
+  crotch.scale.set(unit * 0.30 * girth, unit * 0.30, unit * 0.34 * girth)
+  crotch.position.y = -unit * 0.34
+  addOutline(crotch, unit * 0.026, PALETTE.nightPurple)
+  root.add(crotch)
   hips.add(root)
 
   // 허벅지 통 ×2 — 각 upperLeg 본 로컬 -Y 방향
@@ -247,6 +259,31 @@ export function buildShorts(
     holder.name = 'shortsLeg'
     holder.add(tube)
     leg.add(holder)
+  }
+
+  // 긴바지: 정강이 본에도 통을 붙인다 (무릎에서 겹치게 시작해 이음선 은폐)
+  const shin = spec.shinFraction ?? 0
+  if (shin > 0) {
+    for (const knee of [lowerLegL, lowerLegR]) {
+      if (!knee) continue
+      const shinLen = shin * thigh
+      const tube = new THREE.Mesh(
+        taperedTube(
+          [
+            new THREE.Vector3(0, unit * 0.22, 0),
+            new THREE.Vector3(0, -shinLen * 0.5, 0),
+            new THREE.Vector3(0, -shinLen, 0),
+          ],
+          [unit * 0.30 * girth, unit * 0.26 * girth, unit * 0.235 * girth],
+        ),
+        toonMat(spec.base, spec.baseShade),
+      )
+      addOutline(tube, unit * 0.026, PALETTE.nightPurple)
+      const holder = new THREE.Group()
+      holder.name = 'pantsShin'
+      holder.add(tube)
+      knee.add(holder)
+    }
   }
 
   return root

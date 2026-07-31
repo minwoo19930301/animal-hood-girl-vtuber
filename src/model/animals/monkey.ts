@@ -13,7 +13,7 @@
 import * as THREE from 'three'
 import { PALETTE } from '../../palette'
 import { teardrop } from '../geo'
-import { buildShorts, buildTail } from '../bodyParts'
+import { buildTail } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 import type { AnimalBuildContext, AnimalCostumeRig } from './types'
 import {
@@ -102,15 +102,6 @@ export function buildMonkey(ctx: AnimalBuildContext): AnimalCostumeRig {
   // ---- 꼬리 (원숭이는 길고 얇게 — 사용자 디렉션) ----
   const tail = buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
     base: COL.shell, baseShade: COL.shellShade, girth: 0.50, length: 1.15, amp: 1.35, curl: 0.10, tipCurl: 3.40,
-  })
-
-  // ---- 반바지 (도너 스커트를 hiddenMaterials로 숨기고 대체 — 하의 실루엣 분화) ----
-  buildShorts(
-    ctx.bones.hips ?? null,
-    ctx.bones.upperLegL, ctx.bones.upperLegR,
-    ctx.bones.lowerLegL, ctx.bones.lowerLegR,
-    ctx.crownH, ctx.S, {
-    base: 0x6D2338, baseShade: 0x4A1524, thighFraction: 0.74, girth: 1.0,
   })
 
   const acc = buildAccessories(
