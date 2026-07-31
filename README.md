@@ -14,11 +14,11 @@ macOS 화면 위에 떠 있는, 카메라로 움직이는 3D 동물 후드 VTube
 
 | | | |
 |:---:|:---:|:---:|
-| <img src="docs/gif/bear.gif" width="230" alt="곰"><br>**`1` 곰**<br>순한 처진 눈<br>블루블랙 숄더 보브 | <img src="docs/gif/monkey.gif" width="230" alt="원숭이"><br>**`2` 원숭이**<br>장난기 올라간 눈<br>쿨 애시브라운 하이 포니 | <img src="docs/gif/turtle.gif" width="230" alt="거북이"><br>**`3` 거북이**<br>나른한 반개 직선 눈<br>로즈 브라운 블런트 보브 |
-| <img src="docs/gif/rabbit.gif" width="230" alt="토끼"><br>**`4` 토끼**<br>세로로 큰 동그란 눈 + 애교살<br>페일 골드 블론드 트윈테일 | <img src="docs/gif/fox.gif" width="230" alt="여우"><br>**`5` 여우**<br>날카로운 폭스아이<br>플래티넘 실버 울프컷 | <img src="docs/gif/panda.gif" width="230" alt="판다"><br>**`6` 판다**<br>동글 순둥<br>밀크티 베이지 스페이스 번 |
-| <img src="docs/gif/penguin.gif" width="230" alt="펭귄"><br>**`7` 펭귄**<br>시원한 직선 윗꺼풀<br>초콜릿 브라운 크롭 | <img src="docs/gif/owl.gif" width="230" alt="부엉이"><br>**`8` 부엉이**<br>크게 뜬 원형<br>다크 그레이 애시 브레이드 | <img src="docs/gif/lion.gif" width="230" alt="사자"><br>**`9` 사자**<br>대담한 굵은 라인<br>다크 버건디 볼륨 메인 |
-| <img src="docs/gif/tiger.gif" width="230" alt="호랑이"><br>**`0` 호랑이**<br>가장 좁은 캣아이<br>순흑 하이 브레이드 포니 | <img src="docs/gif/elephant.gif" width="230" alt="코끼리"><br>**`-` 코끼리**<br>길고 낮은 순한 눈<br>허니 브라운 로우 포니 | <img src="docs/gif/giraffe.gif" width="230" alt="기린"><br>**`=` 기린**<br>와이드 아몬드 + 긴 속눈썹<br>그레이지 버블 포니 |
-| <img src="docs/gif/flamingo.gif" width="230" alt="플라밍고"><br>**`` ` `` 플라밍고**<br>원본 오서링 모델<br>시노 교복 + 플라밍고 후드 | | |
+| <img src="docs/gif/bear.gif" width="230" alt="곰"><br>**`1` 곰**<br>순한 처진 눈 (경사 −6)<br>크림슨 레드 · 숄더 보브<br>스커트 −6cm | <img src="docs/gif/monkey.gif" width="230" alt="원숭이"><br>**`2` 원숭이**<br>장난기 올라간 눈 (+26)<br>쿨 애시브라운 · 롱 + 페이스프레이밍<br>−8.7cm | <img src="docs/gif/turtle.gif" width="230" alt="거북이"><br>**`3` 거북이**<br>나른한 반개 (개구 61 최소)<br>로즈 브라운 · 친 블런트 보브<br>원본 길이 |
+| <img src="docs/gif/rabbit.gif" width="230" alt="토끼"><br>**`4` 토끼**<br>동그란 큰 눈 + 애교살 (개구 96)<br>페일 골드 블론드 · 숄더 랩<br>−7.4cm | <img src="docs/gif/fox.gif" width="230" alt="여우"><br>**`5` 여우**<br>폭스아이 (경사 +30 최대)<br>플래티넘 실버 · 비대칭 울프컷 6.4cm<br>−9.4cm | <img src="docs/gif/panda.gif" width="230" alt="판다"><br>**`6` 판다**<br>동글 순둥 (처짐 + 개구 확대)<br>밀크티 베이지 · 롱 + 뭉툭 앞머리<br>원본 길이 |
+| <img src="docs/gif/penguin.gif" width="230" alt="펭귄"><br>**`7` 펭귄**<br>시원한 직선 윗꺼풀 (개구 66)<br>초콜릿 브라운 · 이어라인 크롭<br>−8cm | <img src="docs/gif/owl.gif" width="230" alt="부엉이"><br>**`8` 부엉이**<br>크게 뜬 원형 (개구 100 최대)<br>다크 그레이 애시 · 롱<br>−3.3cm | <img src="docs/gif/lion.gif" width="230" alt="사자"><br>**`9` 사자**<br>대담한 굵은 라인 (두께 최대)<br>다크 버건디 · 롱 볼륨 메인<br>−4.7cm |
+| <img src="docs/gif/tiger.gif" width="230" alt="호랑이"><br>**`0` 호랑이**<br>좁은 캣아이 (+28, 로우 브로우)<br>순흑 · 사이드 비대칭 8.9cm<br>−10cm 최단 | <img src="docs/gif/elephant.gif" width="230" alt="코끼리"><br>**`-` 코끼리**<br>길고 낮은 순한 눈 (−10 처짐 최대)<br>허니 브라운 · 사이드스웹 미디엄<br>−2.7cm | <img src="docs/gif/giraffe.gif" width="230" alt="기린"><br>**`=` 기린**<br>와이드 아몬드 + 최장 속눈썹<br>그레이지 · 레이어드 미디엄<br>−6.7cm |
+| <img src="docs/gif/flamingo.gif" width="230" alt="플라밍고"><br>**`` ` `` 플라밍고**<br>도너 원본 눈매<br>시노 교복 + 플라밍고 후드<br>파이프라인 미적용(무변경) | | |
 
 GIF는 결정적 룩덱 하네스가 렌더한 12프레임 아이들 루프다(`npm run avatars:gifs`).
 고개 스웨이·눈깜빡임·발화·호흡 2차 모션이 들어 있고, 실제 앱에서는 이 채널들이 카메라
