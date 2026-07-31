@@ -101,7 +101,7 @@ export function buildMonkey(ctx: AnimalBuildContext): AnimalCostumeRig {
   // 손목밴드 + 드로스트링 (flamingo.ts 배선과 동일, 색만 오버라이드)
   // ---- 꼬리 (원숭이는 길고 얇게 — 사용자 디렉션) ----
   const tail = buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
-    base: COL.shell, baseShade: COL.shellShade, girth: 0.50, length: 2.05, amp: 1.35, curl: 0.18,
+    base: COL.shell, baseShade: COL.shellShade, girth: 0.50, length: 1.15, amp: 1.35, curl: 0.10, tipCurl: 3.40,
   })
 
   // ---- 반바지 (도너 스커트를 hiddenMaterials로 숨기고 대체 — 하의 실루엣 분화) ----

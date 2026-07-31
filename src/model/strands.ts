@@ -47,8 +47,13 @@ export interface StrandSpec {
   counter?: number
   /** 분절 색 교대 [색, 셰이드] — 지정하면 홀수 분절이 이 색이 된다(라쿤 링무늬) */
   rings?: [number, number] | null
-  /** 끝으로 갈수록 누적되는 추가 굽힘 (rad/분절) — 원숭이 꼬불 꼬리 */
+  /** 끝으로 갈수록 누적되는 추가 굽힘 (rad/분절) — 전체적인 꼬불거림 */
   curl?: number
+  /**
+   * 끝단에 집중되는 굽힘 (rad/분절) — t^3 가중이라 마지막 2~3분절만 크게 말린다.
+   * 원숭이처럼 '끄트머리가 둥글게 말린' 꼬리를 만들 때 쓴다(curl은 전체 곡률).
+   */
+  tipCurl?: number
   /** 분절마다 주는 비틀림 (rad) — curl과 합쳐 3D 코일이 된다 */
   twist?: number
 }
@@ -76,6 +81,7 @@ export function buildStrand(spec: StrandSpec): StrandRig {
   // 기준 분절 수 4를 유지 척도로 삼아 모든 각도 스펙을 정규화한다.
   const norm = 4 / n
   const curl = (spec.curl ?? 0) * norm
+  const tipCurl = (spec.tipCurl ?? 0) * norm
   const twist = (spec.twist ?? 0) * norm
   let parent: THREE.Object3D = root
 
@@ -83,7 +89,8 @@ export function buildStrand(spec: StrandSpec): StrandRig {
     const pivot = new THREE.Group()
     pivot.position.y = i === 0 ? 0 : -segLen
     // 정지 자세: 기본 굽힘 + 끝으로 갈수록 누적되는 curl (꼬불), twist는 코일 축
-    const rest = spec.restBend + curl * (0.35 + 0.65 * (i / Math.max(1, n - 1)))
+    const t = i / Math.max(1, n - 1)
+    const rest = spec.restBend + curl * (0.35 + 0.65 * t) + tipCurl * Math.pow(t, 3)
     restZ.push(rest)
     pivot.rotation.z = rest
     pivot.rotation.y = twist

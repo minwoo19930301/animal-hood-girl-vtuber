@@ -44,8 +44,10 @@ export interface TailSpec {
   amp?: number
   /** 분절 색 교대 [색, 셰이드] — 라쿤 링무늬 꼬리 */
   rings?: [number, number] | null
-  /** 꼬불거림 (rad/분절 누적) — 원숭이처럼 말린 꼬리 */
+  /** 꼬불거림 (rad/분절 누적) */
   curl?: number
+  /** 끝단 집중 컬 (rad/분절, t^3 가중) — 끄트머리만 둥글게 말린다 */
+  tipCurl?: number
   /** 코일 비틀림 (rad/분절) */
   twist?: number
 }
@@ -97,6 +99,7 @@ export function buildTail(
     tuft: spec.tuft,
     rings: spec.rings ?? null,
     curl: spec.curl ?? 0,
+    tipCurl: spec.tipCurl ?? 0,
     twist: spec.twist ?? 0,
     outline: unit * 0.05,
   })
@@ -216,7 +219,7 @@ export function buildShorts(
 
   // 힙 밴드 — 허리부터 밑위까지 덮는 납작한 타원 (맨살 노출 방지)
   const band = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
-  band.scale.set(unit * 0.66 * girth, unit * 0.52, unit * 0.47 * girth)
+  band.scale.set(unit * 0.56 * girth, unit * 0.46, unit * 0.40 * girth)
   band.position.y = -unit * 0.06
   addOutline(band, unit * 0.03, PALETTE.nightPurple)
   root.add(band)
@@ -234,7 +237,8 @@ export function buildShorts(
           new THREE.Vector3(0, -len, 0),
         ],
         // 밑단이 살짝 넓어지는 통 — 타이트 레깅스가 아니라 반바지로 읽히게
-        [unit * 0.40 * girth, unit * 0.36 * girth, unit * 0.37 * girth],
+        // 슬림 핏 — 이전(0.40/0.36/0.37)은 '펑퍼진' 통으로 보였다
+        [unit * 0.31 * girth, unit * 0.285 * girth, unit * 0.285 * girth],
       ),
       toonMat(spec.base, spec.baseShade),
     )

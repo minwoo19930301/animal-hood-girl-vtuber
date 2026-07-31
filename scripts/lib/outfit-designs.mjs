@@ -39,7 +39,7 @@
 export const OUTFIT_DESIGNS = Object.freeze({
   bear: {
     vest: '#F2E6CF', vestShade: '#D8C2A0', collar: '#2F5D45', trim: '#2F5D45',
-    cuff: '#2F5D45', hem: '#2F5D45', zipper: '#6B4830', placket: '#F3F1EC', sleeves: '#2F5D45',
+    cuff: '#2F5D45', hem: '#2F5D45', zipper: '#6B4830', placket: '#F3F1EC', sleeves: '#F2E6CF',
     skirt: '#C08A4F', skirtStripe: '#65402D', skirtDots: null,
     shoes: '#6B4830', shoesSole: null, bow: '#8D6142', hairpin: '#D9B896',
     wristband: '#6B4830', motif: { type: 'pawPatch', color: '#6B4830' },
@@ -59,7 +59,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   turtle: {
     vest: '#7FB069', vestShade: '#4F7C48', collar: '#2E7D74', trim: '#DCEBC4',
-    cuff: '#2E7D74', hem: '#DCEBC4', zipper: '#31431F', placket: '#F3F1EC', sleeves: '#2E7D74',
+    cuff: '#2E7D74', hem: '#DCEBC4', zipper: '#31431F', placket: '#F3F1EC', sleeves: '#7FB069',
     skirt: '#3C4247', skirtStripe: '#2E8C81', skirtDots: null,
     shoes: '#4F7C48', shoesSole: null, bow: '#2E8C81', hairpin: '#24AFA4',
     wristband: '#5B7C4A', motif: { type: 'hexPlates', color: '#31431F' },
@@ -95,7 +95,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   penguin: {
     vest: '#26324A', vestShade: '#1E2532', collar: '#F6F8FA', trim: '#F6F8FA',
-    cuff: '#F6F8FA', hem: '#F6F8FA', zipper: '#F5B940', placket: '#F3F1EC', sleeves: '#22304E',
+    cuff: '#F6F8FA', hem: '#F6F8FA', zipper: '#F5B940', placket: '#F3F1EC', sleeves: '#26324A',
     skirt: '#26324A', skirtStripe: null, skirtDots: null,
     shoes: '#1B1D24', shoesSole: null, bow: '#F5B940', hairpin: '#F5B940',
     wristband: '#F5B940', motif: { type: 'bibPanel', color: '#F6F8FA' },
@@ -104,7 +104,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   owl: {
     vest: '#74543A', vestShade: '#54391F', collar: '#E8D5B8', trim: '#E8D5B8',
-    cuff: '#E8D5B8', hem: '#74543A', zipper: '#33261B', placket: '#F3F1EC', sleeves: '#33261B',
+    cuff: '#E8D5B8', hem: '#74543A', zipper: '#33261B', placket: '#F3F1EC', sleeves: '#74543A',
     skirt: '#4A3423', skirtStripe: null, skirtDots: null,
     shoes: '#65482F', shoesSole: null, bow: '#F0B429', hairpin: '#F0B429',
     wristband: '#F0B429', motif: { type: 'argyleBand', color: '#F0B429' },
@@ -112,12 +112,12 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirtCut: null, skirtStretch: 1.16, hairCut: null,
   },
   cat: {
-    vest: '#EBB755', vestShade: '#C8872E', collar: '#22304E', trim: '#22304E',
-    cuff: '#22304E', hem: '#22304E', zipper: '#C8872E', placket: '#F3F1EC', sleeves: '#4A4F59',
-    skirt: '#22304E', skirtStripe: '#EBB755', skirtDots: null,
+    vest: '#E8E2D5', vestShade: '#C2BBAC', collar: '#4A4F59', trim: '#4A4F59',
+    cuff: '#4A4F59', hem: '#4A4F59', zipper: '#2A2B31', placket: '#F3F1EC', sleeves: '#4A4F59',
+    skirt: '#4A4F59', skirtStripe: '#E8E2D5', skirtDots: null,
     // hairpin: 네이비(#22304E)는 허니골드 헤어 위에서 검정으로 읽혀 골드로 변경.
-    shoes: '#6B4526', shoesSole: null, bow: '#22304E', hairpin: '#F0B657',
-    wristband: '#B5722E', motif: { type: 'regimentalCollar', color: '#EBB755' },
+    shoes: '#2A2B31', shoesSole: null, bow: '#6F7480', hairpin: '#E8E2D5',
+    wristband: '#6F7480', motif: { type: 'regimentalCollar', color: '#EBB755' },
     socks: '#22242A', hairpinShape: { rotate: 0.785, scale: [1, 1.25, 0.7] },
     skirtCut: null, skirtStretch: 1.08, hairCut: null,
   },
@@ -142,7 +142,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   elephant: {
     vest: '#8290A6', vestShade: '#6F7B91', collar: '#E9EEF5', trim: '#E9EEF5',
-    cuff: '#E9EEF5', hem: '#E9EEF5', zipper: '#F0A7B4', placket: '#F3F1EC', sleeves: '#465063',
+    cuff: '#E9EEF5', hem: '#E9EEF5', zipper: '#F0A7B4', placket: '#F3F1EC', sleeves: '#8290A6',
     skirt: '#9BA8BC', skirtStripe: null, skirtDots: null,
     shoes: '#F2F3F7', shoesSole: null, bow: '#F0A7B4', hairpin: '#F0A7B4',
     wristband: '#F0A7B4', motif: null,
@@ -151,7 +151,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
   },
   giraffe: {
     vest: '#F3D689', vestShade: '#D79F2C', collar: '#8A5A34', trim: '#8A5A34',
-    cuff: '#8A5A34', hem: '#F3D689', zipper: '#8A5A34', placket: '#F3F1EC', sleeves: null,
+    cuff: '#8A5A34', hem: '#F3D689', zipper: '#8A5A34', placket: '#F3F1EC', sleeves: '#F3D689',
     skirt: '#C99A5B', skirtStripe: null, skirtDots: null,
     shoes: '#F5EFDC', shoesSole: null, bow: '#8A5A34', hairpin: '#8A5A34',
     wristband: '#C98A3B', motif: { type: 'roundPatches', color: '#C98A3B' },
