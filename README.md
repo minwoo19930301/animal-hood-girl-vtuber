@@ -58,8 +58,18 @@ node scripts/test-hair-trim.mjs   # 헤어 컷 지오메트리 클리핑 자체 
 
 - **얼굴형 워프** (`scripts/lib/face-warp.mjs`) — 라운드/샤프/롱소프트/뉴트럴 4계열
   버텍스 성형. 눈알 버텍스는 하드락, 진폭 상한 강제.
-- **헤어 길이 컷** (`scripts/lib/hair-trim.mjs`) — 컷 평면 `y = yCut + 지터(x)`로
-  헤어 스트랜드를 Sutherland–Hodgman 클리핑.
+- **헤어 길이 컷** (`scripts/lib/hair-trim.mjs`) — 컷 높이장
+  `h = yBase + Σ(yPlane−yBase)·w(x,z) + tilt` 로 헤어 스트랜드를 Sutherland–Hodgman
+  클리핑. 영역 가중이 연속이라 이음선이 없다. 길이 편차 실측 1.075~1.443(약 37cm),
+  비대칭 컷 fox 6.4cm · tiger 8.9cm.
+- **스커트 밑단 컷** — 같은 클리핑의 `fraction` 모드(재질 자체 높이 비율). 밑단 상승
+  0cm(turtle·panda)~10cm(tiger).
+- **헤어핀 형태** (`scripts/lib/hairpin-shape.mjs`) — 도너 핀은 교차한 바 2개다. 각 바를
+  자기 centroid 기준으로 회전·축별 스케일해 점·세로 장바·사선·십자·큰 X로 분화시킨다
+  (바 길이 14~86mm).
+
+눈매도 종별로 구조가 다르다. 편집된 아이라인 텍스처(1024x256) 실측 기준 개구 높이
+61(turtle 반개)~100(owl 원형), 눈꼬리 경사 −10(elephant 처짐)~+30(fox 폭스아이).
 
 ### 헤어 컷을 텍스처가 아니라 지오메트리에서 하는 이유
 
