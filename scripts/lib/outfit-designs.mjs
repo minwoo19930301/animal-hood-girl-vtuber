@@ -109,7 +109,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     socks: '#33261B', hairpinShape: { scale: [1, 1.4, 1.4] },
     skirtCut: null, skirtStretch: 1.16, hairCut: null,
   },
-  lion: {
+  cat: {
     vest: '#EBB755', vestShade: '#C8872E', collar: '#22304E', trim: '#22304E',
     cuff: '#22304E', hem: '#22304E', zipper: '#C8872E', placket: '#F3F1EC', sleeves: null,
     skirt: '#22304E', skirtStripe: '#EBB755', skirtDots: null,
@@ -118,6 +118,16 @@ export const OUTFIT_DESIGNS = Object.freeze({
     wristband: '#B5722E', motif: { type: 'regimentalCollar', color: '#EBB755' },
     socks: '#4A331C', hairpinShape: { rotate: 0.785, scale: [1, 1.25, 0.7] },
     skirtCut: null, skirtStretch: 1.08, hairCut: null,
+  },
+  dog: {
+    vest: '#F2E3C8', vestShade: '#D3BE99', collar: '#C9793A', trim: '#C9793A',
+    cuff: '#C9793A', hem: '#C9793A', zipper: '#8A5A34', placket: '#FBF7EF', sleeves: null,
+    skirt: '#8A5A34', skirtStripe: '#F2E3C8', skirtDots: null,
+    // hairpin: 네이비(#22304E)는 허니골드 헤어 위에서 검정으로 읽혀 골드로 변경.
+    shoes: '#8A5A34', shoesSole: null, bow: '#C9793A', hairpin: '#F2E3C8',
+    wristband: '#8A5A34', motif: { type: 'regimentalCollar', color: '#EBB755' },
+    socks: '#2E2118', hairpinShape: { rotate: 0.35, scale: [1, 0.9, 0.9] },
+    skirtCut: 0.16, skirtStretch: null, hairCut: [{ row: 720 }, { row: 800, region: 'front', softness: 0.40 }],
   },
   tiger: {
     vest: '#EE8A3C', vestShade: '#C65F26', collar: '#2E2620', trim: '#2E2620',

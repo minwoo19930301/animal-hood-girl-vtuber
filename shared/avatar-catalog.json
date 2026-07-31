@@ -246,17 +246,17 @@
     "hiddenMaterials": []
   },
   {
-    "slug": "lion",
-    "label": "사자",
+    "slug": "cat",
+    "label": "고양이",
     "key": "9",
-    "modelUrl": "./models/lion.vrm",
+    "modelUrl": "./models/cat.vrm",
     "eyeSharpen": 0.8,
     "expressionBias": {
       "angry": 0.08
     },
-    "hairStyle": "dark-burgundy-voluminous-shoulder-mane",
-    "hairIntent": "다크 버건디 — 골드 의상 위 딥 포인트 (v3 허니골드 깔맞춤 해제)",
-    "outfitStyle": "sun-gold-regimental-street",
+    "hairStyle": "silver-ash-voluminous-shoulder-wave",
+    "hairIntent": "실버 애시 — 차콜 후드와 쿨 대비 (사자 갈기 절차생성 실패 → 고양이로 교체)",
+    "outfitStyle": "charcoal-street-utility",
     "skinTone": "#C8875D",
     "iris": {
       "dark": "#4D480B",
@@ -264,20 +264,52 @@
       "light": "#F3E985"
     },
     "hair": {
-      "base": "#58242C",
-      "shade": "#0E0608",
-      "accent": "#A0424D"
+      "base": "#8A8F9C",
+      "shade": "#4B4F5A",
+      "accent": "#C7CBD6"
     },
     "palette": {
-      "primary": "#EBB755",
-      "shade": "#C8872E",
-      "secondary": "#FFE9BC",
-      "accent": "#B5722E",
-      "dark": "#4A331C"
+      "primary": "#6F7480",
+      "shade": "#4A4F59",
+      "secondary": "#E8E2D5",
+      "accent": "#2A2B31",
+      "dark": "#22242A"
     },
     "hiddenMaterials": [
       "hair_02"
     ]
+  },
+  {
+    "slug": "dog",
+    "label": "강아지",
+    "key": "[",
+    "modelUrl": "./models/dog.vrm",
+    "eyeSharpen": 0.42,
+    "expressionBias": {
+      "relaxed": 0.08
+    },
+    "hairStyle": "warm-caramel-short-layered-bob",
+    "hairIntent": "웜 캐러멜 — 시바 레드 후드와 톤온톤, 밝게 분리 (사용자 추가 요청)",
+    "outfitStyle": "sunlit-varsity-sporty",
+    "skinTone": "#F0C6A8",
+    "iris": {
+      "dark": "#2A1608",
+      "mid": "#8A5220",
+      "light": "#F2CB8A"
+    },
+    "hair": {
+      "base": "#9A6B3F",
+      "shade": "#5B3A20",
+      "accent": "#D8A570"
+    },
+    "palette": {
+      "primary": "#C9793A",
+      "shade": "#9A5526",
+      "secondary": "#F4E7D3",
+      "accent": "#8A5A34",
+      "dark": "#2E2118"
+    },
+    "hiddenMaterials": []
   },
   {
     "slug": "tiger",

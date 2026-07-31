@@ -138,8 +138,8 @@ export function buildTiger(ctx: AnimalBuildContext): AnimalCostumeRig {
 
   // ---- 액세서리 (손목밴드+드로스트링) — flamingo.ts 배선 패턴 ----
   // ---- 꼬리 (뒤 → 옆 → 앞으로 감겨 정면에서도 보인다) ----
-  buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
-    base: COL.shell, baseShade: COL.shellShade, tip: 0x241f22, tipShade: 0x14100f, girth: 0.72, length: 1.15,
+  const tail = buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
+    base: COL.shell, baseShade: COL.shellShade, tip: 0x241f22, tipShade: 0x14100f, girth: 0.55, length: 1.25, amp: 1.25,
   })
 
   const acc = buildAccessories(
@@ -162,6 +162,9 @@ export function buildTiger(ctx: AnimalBuildContext): AnimalCostumeRig {
     headFollow: base.shellPivot,
     muzzleFollow,
     hitMeshes: base.hitMeshes,
-    update: (pitchS, yaw, breath, dt) => acc.sway(pitchS, yaw, breath, dt),
+    update: (pitchS, yaw, breath, dt) => {
+      acc.sway(pitchS, yaw, breath, dt)
+      tail?.sway(pitchS, yaw, breath, dt)
+    },
   }
 }

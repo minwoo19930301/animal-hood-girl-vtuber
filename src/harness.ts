@@ -229,3 +229,20 @@ document.title = 'READY'
     q = new URLSearchParams(query)
     renderPose(seconds)
   }
+
+// 디버그: 씬 그래프 조회 (룩덱 QA 전용 — 렌더에는 영향 없음)
+;(window as unknown as { __scene?: () => unknown }).__scene = () => {
+  const out: Array<{ name: string; pos: number[]; visible: boolean; type: string }> = []
+  scene.traverse((o) => {
+    if (!o.name) return
+    const p = o.getWorldPosition(new THREE.Vector3())
+    out.push({
+      name: o.name,
+      type: o.type,
+      visible: o.visible,
+      pos: [+p.x.toFixed(3), +p.y.toFixed(3), +p.z.toFixed(3)],
+    })
+  })
+  return out
+}
+;(window as unknown as { __sceneRoot?: unknown }).__sceneRoot = scene

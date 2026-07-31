@@ -19,7 +19,8 @@ import { buildFox } from './fox'
 import { buildPanda } from './panda'
 import { buildPenguin } from './penguin'
 import { buildOwl } from './owl'
-import { buildLion } from './lion'
+import { buildCat } from './cat'
+import { buildDog } from './dog'
 import { buildTiger } from './tiger'
 import { buildElephant } from './elephant'
 import { buildGiraffe } from './giraffe'
@@ -81,7 +82,8 @@ const SLUGS = [
   'panda',
   'penguin',
   'owl',
-  'lion',
+  'cat',
+  'dog',
   'tiger',
   'elephant',
   'giraffe',
@@ -99,7 +101,8 @@ const BUILDERS: Readonly<Record<AvatarSlug, AnimalBuilder>> = Object.freeze({
   panda: buildPanda,
   penguin: buildPenguin,
   owl: buildOwl,
-  lion: buildLion,
+  cat: buildCat,
+  dog: buildDog,
   tiger: buildTiger,
   elephant: buildElephant,
   giraffe: buildGiraffe,

@@ -86,12 +86,15 @@ export function buildBear(ctx: AnimalBuildContext): AnimalCostumeRig {
   // ---- 주둥이 범프 (정수리~림 위, 크림) + 갈색 코 — muzzleFollow 자식 ----
   // index.ts 스프링이 muzzleFollow.rotation을 매 프레임 덮어쓴다 — 자식 add만, 회전 세팅 금지
   const muzzleFollow = muzzleAnchor(base)
+  // v3.2: 이전 치수(0.26 x 0.20 x 0.22, z -0.08)는 정면에서 이마에 얹힌 크림 '원판'으로
+  // 읽혔다(사용자 지적). 좌우·상하를 줄이고 앞으로 길게 뽑아 측면 프로필에서 스누트로,
+  // 정면에서는 작게 보이게 한다.
   const bump = new THREE.Mesh(
-    egg(0.26 * L, 0.20 * L, 0.22 * L, -0.08),
+    egg(0.175 * L, 0.135 * L, 0.30 * L, -0.10),
     toonMat(DECOR.cream, DECOR.creamShade),
   )
-  bump.position.set(0, 0.02 * L, -0.08 * L)
-  bump.rotation.x = -0.35 // 긴 축을 셸 경사면에 눕혀 정수리→림 위로 드리우는 스누트
+  bump.position.set(0, -0.01 * L, -0.16 * L)
+  bump.rotation.x = -0.30 // 긴 축을 셸 경사면에 눕혀 앞으로 뻗는 스누트
   addOutline(bump, L * 0.024, PALETTE.nightPurple)
   muzzleFollow.add(bump)
   base.hitMeshes.push(bump)
@@ -99,7 +102,7 @@ export function buildBear(ctx: AnimalBuildContext): AnimalCostumeRig {
     egg(0.072 * L, 0.055 * L, 0.05 * L, 0),
     toonMat(DECOR.nose, DECOR.noseShade),
   )
-  nose.position.set(0, -0.005 * L, -0.265 * L) // 스누트 전면 상부 — 플라밍고 부리팁보다 위 (얼굴 안전)
+  nose.position.set(0, -0.012 * L, -0.395 * L) // 길어진 스누트 팁 (얼굴 개구부 위)
   nose.rotation.x = -0.35 // 스누트 경사면과 정렬
   addOutline(nose, L * 0.016, PALETTE.nightPurple)
   muzzleFollow.add(nose)

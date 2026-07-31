@@ -69,7 +69,7 @@ export const FACE_WARP_PROFILES = Object.freeze({
   // 샤프 (턱선 좁게, 턱 살짝 길게)
   fox: { jawWidth: -0.04, chinLen: +0.04, cheek: -0.002 },
   tiger: { jawWidth: -0.04, chinLen: +0.04, cheek: -0.002 },
-  lion: { jawWidth: -0.04, chinLen: +0.04, cheek: -0.002 },
+  cat: { jawWidth: -0.04, chinLen: +0.04, cheek: -0.002 },
   // 롱 소프트 (갸름·온화)
   elephant: { faceLen: +0.03, width: -0.02, cheek: 0 },
   giraffe: { faceLen: +0.03, width: -0.02, cheek: 0 },

@@ -13,6 +13,7 @@
 import * as THREE from 'three'
 import { PALETTE } from '../../palette'
 import { teardrop } from '../geo'
+import { buildTail } from '../bodyParts'
 import { buildAccessories, type AccessoryColors } from '../accessories'
 import type { AnimalBuildContext, AnimalCostumeRig } from './types'
 import {
@@ -98,6 +99,11 @@ export function buildMonkey(ctx: AnimalBuildContext): AnimalCostumeRig {
   const muzzleFollow = muzzleAnchor(base)
 
   // 손목밴드 + 드로스트링 (flamingo.ts 배선과 동일, 색만 오버라이드)
+  // ---- 꼬리 (원숭이는 길고 얇게 — 사용자 디렉션) ----
+  const tail = buildTail(ctx.bones.hips ?? null, ctx.crownH, ctx.S, {
+    base: COL.shell, baseShade: COL.shellShade, girth: 0.50, length: 2.05, amp: 1.35, curl: 0.30,
+  })
+
   const acc = buildAccessories(
     {
       chest: ctx.bones.chest ?? null,
@@ -118,6 +124,9 @@ export function buildMonkey(ctx: AnimalBuildContext): AnimalCostumeRig {
     headFollow: base.shellPivot,
     muzzleFollow,
     hitMeshes: base.hitMeshes,
-    update: (pitchS, yaw, breath, dt) => acc.sway(pitchS, yaw, breath, dt),
+    update: (pitchS, yaw, breath, dt) => {
+      acc.sway(pitchS, yaw, breath, dt)
+      tail?.sway(pitchS, yaw, breath, dt)
+    },
   }
 }

@@ -79,11 +79,17 @@ export const EYE_PROFILES = Object.freeze({
     lash: { length: 1.0, outerBoost: 0 },
     brow: { arch: 7, tilt: 0, raise: 6, thick: 0.90, length: 0.95 },
   },
-  lion: { // 대담한 굵은 라인 — 두께 최대
+  cat: { // 대담한 굵은 라인 — 두께 최대
     lift: 12, thick: 1.50, drop: 0, lineSquash: 0.95, lower: 0.34,
     irisScale: 1.0, highlightScale: 1.0,
     lash: { length: 1.0, outerBoost: 0 },
     brow: { arch: 4, tilt: 2, raise: 0, thick: 1.55, length: 1.05 },
+  },
+  dog: { // 순하고 둥근 눈 (강아지 — 사용자 추가 요청) — 두께 최대
+    lift: -4, thick: 1.10, drop: -5, lineSquash: 1.20, lower: 0.70,
+    irisScale: 1.16, highlightScale: 1.14,
+    lash: { length: 1.0, outerBoost: 0 },
+    brow: { arch: 3, tilt: -2, raise: 2, thick: 1.05, length: 1.0 },
   },
   tiger: { // 가장 좁은 캣아이 — 눈꼬리 상승 + 개구 조임 + 로우 브로우
     lift: 26, thick: 1.30, drop: 10, lineSquash: 0.78, lower: 0.12,
