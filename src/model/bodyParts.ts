@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three'
 import { PALETTE } from '../palette'
-import { taperedTube, unitSphereLo } from './geo'
+import { mergeShapes, taperedTube, unitSphereLo } from './geo'
 import { toonMat, addOutline } from './animals/hoodKit'
 import { buildStrand, type StrandRig } from './strands'
 
@@ -219,23 +219,20 @@ export function buildShorts(
   root.name = 'shorts'
   if (S === -1) root.rotation.y = Math.PI
 
-  // 힙 밴드 — 허리부터 밑위까지 덮는 납작한 타원 (맨살 노출 방지)
-  const band = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
-  // 밴드는 허벅지 통보다 확실히 넓어야 한다 — 좁히면 통 상단이 밴드 밖으로 나와
-  // 이음선이 '찢어진' 것처럼 보인다(0.56에서 재발). 시트 볼륨은 넓게 유지하고
-  // 통만 슬림하게 간다.
-  band.scale.set(unit * 0.70 * girth, unit * 0.50, unit * 0.50 * girth)
-  band.position.y = -unit * 0.06
-  addOutline(band, unit * 0.03, PALETTE.nightPurple)
-  root.add(band)
-
-  // 밑위(크로치) 필러 — 두 다리 사이 틈을 메운다
-  const crotch = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
-  crotch.scale.set(unit * 0.30 * girth, unit * 0.30, unit * 0.34 * girth)
-  crotch.position.y = -unit * 0.34
-  addOutline(crotch, unit * 0.026, PALETTE.nightPurple)
-  root.add(crotch)
+  // 힙 셸 — 허리(도너 스커트 웨이스트 y≈1.08)부터 밑위(y≈0.86)까지 한 덩어리로 덮는다.
+  // 실측 근거: 도너 스커트 단면 반경은 웨이스트 0.105m → 헴 0.20m. 이전 구현은 밴드
+  // 상단이 y 1.023에서 끝나 웨이스트까지 6cm 틈이 남았고, 그 사이로 몸이 드러났다
+  // ('바지 위로 살이 튀어나옴'). 폭은 몸에 맞춰 좁히고(0.56·unit ≈ 0.112m) 높이를 키운다.
+  // 조각을 나누면 아웃라인이 겹쳐 '층'으로 보이므로 힙+밑위를 1지오메트리로 병합한다.
+  const hipGeo = mergeShapes([
+    { g: unitSphereLo(), p: [0, unit * 0.16, 0], r: [0, 0, 0], s: [unit * 0.56 * girth, unit * 0.60, unit * 0.46 * girth] },
+    { g: unitSphereLo(), p: [0, -unit * 0.30, 0], r: [0, 0, 0], s: [unit * 0.34 * girth, unit * 0.30, unit * 0.36 * girth] },
+  ])
+  const hip = new THREE.Mesh(hipGeo, toonMat(spec.base, spec.baseShade))
+  addOutline(hip, unit * 0.03, PALETTE.nightPurple)
+  root.add(hip)
   hips.add(root)
+
 
   // 허벅지 통 ×2 — 각 upperLeg 본 로컬 -Y 방향
   for (const leg of [upperLegL, upperLegR]) {
