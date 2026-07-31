@@ -106,12 +106,48 @@ function jitterAt(x, amplitude, seed) {
 }
 
 /**
- * Hair_01 스트랜드를 컷 평면 위쪽만 남기도록 클리핑한다.
+ * 컷 높이장(height field) — 여러 평면을 부드러운 영역 가중으로 합성한다.
+ *
+ * h(v) = yBase + Σ (yPlane_i − yBase) · w_i(v) + tiltX·x + tiltZ·z + 지터(x)
+ *
+ * w_i는 z(앞/뒤) · x(좌/우) 정규화 좌표의 smoothstep이라 연속이다 — 카드 사이에
+ * 불연속 이음선이 생기지 않는다. yPlane_i는 하드코딩이 아니라 각 컷의 row 근처
+ * UV v를 가진 버텍스 median y에서 유도한다(기존 규약과 동일).
+ *
+ * @typedef {object} HairCutSpec
+ * @property {number} row            img25 행 (필수)
+ * @property {'all'|'front'|'back'|'left'|'right'} [region] 적용 영역 (기본 all)
+ * @property {number} [softness]     영역 경계 부드러움 0..1 (기본 0.35)
+ * @property {number} [tiltX]        x 기울기 (world/world) — 비대칭 컷
+ * @property {number} [tiltZ]        z 기울기 — 앞뒤 경사 컷
+ * @property {number} [jitterPx]     이 컷의 지터 진폭(px)
+ */
+
+function smoothstep(edge0, edge1, x) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+/** 정규화 좌표(0..1)에서의 영역 가중치. */
+function regionWeight(region, softness, nx, nz) {
+  const s = Math.min(0.49, Math.max(0.01, softness / 2));
+  switch (region) {
+    case 'front': return smoothstep(0.5 + s, 0.5 - s, nz);
+    case 'back': return smoothstep(0.5 - s, 0.5 + s, nz);
+    case 'left': return smoothstep(0.5 - s, 0.5 + s, nx);
+    case 'right': return smoothstep(0.5 + s, 0.5 - s, nx);
+    default: return 1;
+  }
+}
+
+/**
+ * Hair_01 스트랜드를 컷 높이장 위쪽만 남기도록 클리핑한다.
  *
  * @param {Buffer|Uint8Array} glbBytes 입력 VRM(GLB)
  * @param {object} options
- * @param {number} options.cutRow      design.hairCut (img25 행)
- * @param {number} [options.jitterPx]  컷 라인 변주 진폭(px, 기존 규약과 동일)
+ * @param {number} [options.cutRow]    단일 평면 컷 (하위 호환)
+ * @param {HairCutSpec[]} [options.cuts] 다평면 컷 (첫 항목이 기준 평면)
+ * @param {number} [options.jitterPx]  기본 지터 진폭(px)
  * @param {number} [options.seed]      결정적 위상 시드(variantIndex)
  * @param {number} [options.imageIndex] 스트랜드 아틀라스 이미지 인덱스
  * @param {number} [options.textureHeight] 아틀라스 높이(px)
@@ -119,14 +155,27 @@ function jitterAt(x, amplitude, seed) {
  */
 export function trimHairGlb(glbBytes, {
   cutRow,
+  cuts,
   jitterPx = 10,
   seed = 0,
   imageIndex = 25,
   textureHeight = 1024,
   label = 'GLB',
 } = {}) {
-  if (!Number.isInteger(cutRow) || cutRow <= 0 || cutRow >= textureHeight) {
-    throw new Error(`${label}: cutRow must be an integer inside (0, ${textureHeight})`);
+  const specs = cuts ?? (cutRow === undefined ? [] : [{ row: cutRow }]);
+  if (specs.length === 0) throw new Error(`${label}: provide cutRow or cuts`);
+  for (const spec of specs) {
+    const hasRow = spec.row !== undefined;
+    const hasFraction = spec.fraction !== undefined;
+    if (hasRow === hasFraction) {
+      throw new Error(`${label}: each cut needs exactly one of row or fraction`);
+    }
+    if (hasRow && (!Number.isInteger(spec.row) || spec.row <= 0 || spec.row >= textureHeight)) {
+      throw new Error(`${label}: cut row must be an integer inside (0, ${textureHeight})`);
+    }
+    if (hasFraction && !(spec.fraction > 0 && spec.fraction < 1)) {
+      throw new Error(`${label}: cut fraction must be inside (0, 1)`);
+    }
   }
   const source = parseGlb(glbBytes, label);
   const json = JSON.parse(JSON.stringify(source.json));
@@ -186,16 +235,83 @@ export function trimHairGlb(glbBytes, {
   }
 
   // 컷 높이와 px→world 기울기를 메시에서 유도 (하드코딩 좌표 없음).
-  const yCut = medianYAtRow(positions, uvs, referenced, cutRow, textureHeight);
-  const yAbove = medianYAtRow(positions, uvs, referenced, cutRow - GRADIENT_SPAN_PX, textureHeight);
-  const yBelow = medianYAtRow(positions, uvs, referenced, cutRow + GRADIENT_SPAN_PX, textureHeight);
-  if (!Number.isFinite(yCut) || !Number.isFinite(yAbove) || !Number.isFinite(yBelow)) {
-    throw new Error(`${label}: could not measure hair cut height at row ${cutRow}`);
+  // row 컷: 해당 UV 행 근처 버텍스의 median y (스트랜드 아틀라스처럼 v↔y 상관이 있을 때)
+  // fraction 컷: 대상 재질 자체 높이 범위의 아래쪽 비율 (의상처럼 UV가 무관할 때)
+  let extentMinY = Infinity;
+  let extentMaxY = -Infinity;
+  for (const v of referenced) {
+    const y = positions[v * 3 + 1];
+    if (y < extentMinY) extentMinY = y;
+    if (y > extentMaxY) extentMaxY = y;
   }
-  const worldPerPixel = Math.abs(yAbove - yBelow) / (2 * GRADIENT_SPAN_PX);
+  const extent = extentMaxY - extentMinY;
+  const heightOf = (spec) => (spec.row !== undefined
+    ? medianYAtRow(positions, uvs, referenced, spec.row, textureHeight)
+    : extentMinY + extent * spec.fraction);
+
+  const baseRow = specs[0].row;
+  const yCut = heightOf(specs[0]);
+  let worldPerPixel;
+  if (baseRow !== undefined) {
+    const yAbove = medianYAtRow(positions, uvs, referenced, baseRow - GRADIENT_SPAN_PX, textureHeight);
+    const yBelow = medianYAtRow(positions, uvs, referenced, baseRow + GRADIENT_SPAN_PX, textureHeight);
+    if (!Number.isFinite(yAbove) || !Number.isFinite(yBelow)) {
+      throw new Error(`${label}: could not measure the cut gradient at row ${baseRow}`);
+    }
+    worldPerPixel = Math.abs(yAbove - yBelow) / (2 * GRADIENT_SPAN_PX);
+  } else {
+    // fraction 컷은 px 척도가 없다 — 지터를 재질 높이의 0.1%/px로 환산.
+    worldPerPixel = extent * 0.001;
+  }
+  if (!Number.isFinite(yCut)) {
+    throw new Error(`${label}: could not measure the cut height for ${JSON.stringify(specs[0])}`);
+  }
   const jitterAmplitude = jitterPx * worldPerPixel;
 
-  const cutAt = (x) => yCut + jitterAt(x, jitterAmplitude, seed);
+  // 각 컷의 평면 높이 + 헤어 x/z 바운즈(영역 가중 정규화용).
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const v of referenced) {
+    const x = positions[v * 3];
+    const z = positions[v * 3 + 2];
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (z < minZ) minZ = z;
+    if (z > maxZ) maxZ = z;
+  }
+  const spanX = Math.max(maxX - minX, 1e-6);
+  const spanZ = Math.max(maxZ - minZ, 1e-6);
+
+  const planes = specs.map((spec, index) => {
+    const y = index === 0 ? yCut : heightOf(spec);
+    if (!Number.isFinite(y)) throw new Error(`${label}: could not measure cut height at row ${spec.row}`);
+    return {
+      delta: y - yCut,
+      region: spec.region ?? 'all',
+      softness: spec.softness ?? 0.35,
+      tiltX: spec.tiltX ?? 0,
+      tiltZ: spec.tiltZ ?? 0,
+      jitter: (spec.jitterPx ?? jitterPx) * worldPerPixel,
+      y,
+    };
+  });
+
+  const cutAt = (x, z) => {
+    const nx = (x - minX) / spanX;
+    const nz = (z - minZ) / spanZ;
+    let height = yCut;
+    let jitter = 0;
+    for (const plane of planes) {
+      const weight = regionWeight(plane.region, plane.softness, nx, nz);
+      if (weight <= 0) continue;
+      height += plane.delta * weight;
+      height += (plane.tiltX * x + plane.tiltZ * z) * weight;
+      jitter += plane.jitter * weight;
+    }
+    return height + jitterAt(x, jitter, seed);
+  };
 
   // --- 클리핑 -------------------------------------------------------------
   const newVertices = new Map(); // edgeKey -> new vertex index
@@ -254,10 +370,10 @@ export function trimHairGlb(glbBytes, {
   };
 
   const signedDistance = (v) => {
-    if (v < vertexCount) return positions[v * 3 + 1] - cutAt(positions[v * 3]);
+    if (v < vertexCount) return positions[v * 3 + 1] - cutAt(positions[v * 3], positions[v * 3 + 2]);
     const local = (v - vertexCount) * 3;
     const appendedPositions = appended.get('POSITION');
-    return appendedPositions[local + 1] - cutAt(appendedPositions[local]);
+    return appendedPositions[local + 1] - cutAt(appendedPositions[local], appendedPositions[local + 2]);
   };
 
   let removedTriangles = 0;
@@ -267,7 +383,8 @@ export function trimHairGlb(glbBytes, {
     const kept = [];
     for (let t = 0; t + 2 < indices.length; t += 3) {
       const tri = [indices[t], indices[t + 1], indices[t + 2]];
-      const distances = tri.map((v) => positions[v * 3 + 1] - cutAt(positions[v * 3]));
+      const distances = tri.map((v) => positions[v * 3 + 1]
+        - cutAt(positions[v * 3], positions[v * 3 + 2]));
       if (distances.every((d) => d >= -CLIP_EPSILON)) {
         kept.push(tri[0], tri[1], tri[2]);
         continue;
@@ -377,7 +494,8 @@ export function trimHairGlb(glbBytes, {
   return {
     bytes,
     stats: {
-      cutRow,
+      cutRow: baseRow,
+      cuts: planes.map((p) => ({ region: p.region, y: +p.y.toFixed(4) })),
       yCut,
       worldPerPixel,
       jitterAmplitude,

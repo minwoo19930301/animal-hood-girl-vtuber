@@ -33,7 +33,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#C08A4F', skirtStripe: '#65402D', skirtDots: null,
     shoes: '#6B4830', shoesSole: null, bow: '#8D6142', hairpin: '#D9B896',
     wristband: '#6B4830', motif: { type: 'pawPatch', color: '#6B4830' },
-    socks: '#33221A', hairCut: 799,
+    socks: '#33221A', hairCut: [{ row: 799 }, { row: 870, region: 'front', softness: 0.42 }],
   },
   monkey: {
     vest: '#BC8532', vestShade: '#96682A', collar: '#F1D9BE', trim: '#F1D9BE',
@@ -43,7 +43,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     // 카탈로그 hair.accent 코퍼로 클램프(와인레드 표류 지적, 셰이드는 램프 자동).
     shoes: '#F3EFE7', shoesSole: null, bow: '#6D2338', hairpin: '#D77B3E',
     wristband: '#8A5A34', motif: null,
-    socks: '#3B2A1C', hairCut: null,
+    socks: '#3B2A1C', hairCut: [{ row: 950 }, { row: 700, region: 'front', softness: 0.40 }],
   },
   turtle: {
     vest: '#7FB069', vestShade: '#4F7C48', collar: '#2E7D74', trim: '#DCEBC4',
@@ -51,7 +51,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#3C4247', skirtStripe: '#2E8C81', skirtDots: null,
     shoes: '#4F7C48', shoesSole: null, bow: '#2E8C81', hairpin: '#24AFA4',
     wristband: '#5B7C4A', motif: { type: 'hexPlates', color: '#31431F' },
-    socks: '#31431F', hairCut: 666,
+    socks: '#31431F', hairCut: [{ row: 666, tiltZ: 0.06 }],
   },
   rabbit: {
     vest: '#F5F0EA', vestShade: '#D8CEC3', collar: '#E4849E', trim: '#E4849E',
@@ -59,7 +59,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#D8A0A8', skirtStripe: '#FFFFFF', skirtDots: '#FFFFFF',
     shoes: '#E4849E', shoesSole: null, bow: '#F5A9B8', hairpin: '#F5A9B8',
     wristband: '#F5A9B8', motif: null,
-    socks: '#F2F3F7', hairCut: 799,
+    socks: '#F2F3F7', hairCut: [{ row: 799 }, { row: 850, region: 'front', softness: 0.45 }],
   },
   fox: {
     vest: '#B5502A', vestShade: '#8C3B1E', collar: '#F7EBD3', trim: '#F7EBD3',
@@ -67,7 +67,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#232024', skirtStripe: '#B5502A', skirtDots: null,
     shoes: '#4A2E1E', shoesSole: null, bow: '#F7EBD3', hairpin: '#F7EBD3',
     wristband: '#C9622B', motif: null,
-    socks: '#3B2A20', hairCut: 737,
+    socks: '#3B2A20', hairCut: [{ row: 737, tiltX: 0.18 }, { row: 660, region: 'left', softness: 0.5 }],
   },
   panda: {
     vest: '#F7F4EF', vestShade: '#D6D1CB', collar: '#2E2B2C', trim: '#2E2B2C',
@@ -75,7 +75,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#262324', skirtStripe: null, skirtDots: null,
     shoes: '#201D1E', shoesSole: null, bow: '#C63838', hairpin: '#C63838',
     wristband: '#2E2B2C', motif: null,
-    socks: '#2E2B2C', hairCut: null,
+    socks: '#2E2B2C', hairCut: [{ row: 900 }, { row: 690, region: 'front', softness: 0.38 }],
   },
   penguin: {
     vest: '#26324A', vestShade: '#1E2532', collar: '#F6F8FA', trim: '#F6F8FA',
@@ -83,7 +83,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#26324A', skirtStripe: null, skirtDots: null,
     shoes: '#1B1D24', shoesSole: null, bow: '#F5B940', hairpin: '#F5B940',
     wristband: '#F5B940', motif: { type: 'bibPanel', color: '#F6F8FA' },
-    socks: '#20242E', hairCut: 512,
+    socks: '#20242E', hairCut: [{ row: 512 }, { row: 700, region: 'front', softness: 0.45 }],
   },
   owl: {
     vest: '#74543A', vestShade: '#54391F', collar: '#E8D5B8', trim: '#E8D5B8',
@@ -108,7 +108,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#26211D', skirtStripe: '#EE8A3C', skirtDots: null,
     shoes: '#26211D', shoesSole: null, bow: '#2E2620', hairpin: '#F39A49',
     wristband: '#2E2620', motif: { type: 'bibPanel', color: '#FFF1DC' },
-    socks: '#2E2620', hairCut: null,
+    socks: '#2E2620', hairCut: [{ row: 880 }, { row: 760, region: 'right', softness: 0.5 }],
   },
   elephant: {
     vest: '#8290A6', vestShade: '#6F7B91', collar: '#E9EEF5', trim: '#E9EEF5',
@@ -116,7 +116,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#9BA8BC', skirtStripe: null, skirtDots: null,
     shoes: '#F2F3F7', shoesSole: null, bow: '#F0A7B4', hairpin: '#F0A7B4',
     wristband: '#F0A7B4', motif: null,
-    socks: '#F2F3F7', hairCut: null,
+    socks: '#F2F3F7', hairCut: [{ row: 820, tiltX: 0.12 }],
   },
   giraffe: {
     vest: '#F3D689', vestShade: '#D79F2C', collar: '#8A5A34', trim: '#8A5A34',
@@ -124,7 +124,7 @@ export const OUTFIT_DESIGNS = Object.freeze({
     skirt: '#C99A5B', skirtStripe: null, skirtDots: null,
     shoes: '#F5EFDC', shoesSole: null, bow: '#8A5A34', hairpin: '#8A5A34',
     wristband: '#C98A3B', motif: { type: 'roundPatches', color: '#C98A3B' },
-    socks: '#4A371C', hairCut: null,
+    socks: '#4A371C', hairCut: [{ row: 860 }, { row: 780, region: 'front', softness: 0.4 }, { row: 900, region: 'back', softness: 0.45 }],
   },
 });
 

@@ -1063,7 +1063,8 @@ function hairCutJitter(x, amplitude, seed) {
 // 실제 컷은 scripts/lib/hair-trim.mjs가 컷 평면 y = yCut + 지터(x)로 수행하며,
 // 이마 위 카드는 y가 평면보다 높아 자동 보존된다. 여기 남은 편집은 팁 재음영뿐이다.
 async function editHair(bytes, style) {
-  const cutRow = style.design.hairCut;
+  const spec = style.design.hairCut;
+  const cutRow = Array.isArray(spec) ? spec[0]?.row : spec;
   if (!Number.isInteger(cutRow) || cutRow <= 0) {
     throw new Error(`editHair called without a valid design.hairCut (${cutRow})`);
   }
@@ -1739,8 +1740,10 @@ async function buildOne(entry, position, total, options, source, sourceBytes, so
   // 헤어 길이 컷 (v3.2): 텍스처 알파 컷 대신 컷 평면 지오메트리 클리핑.
   // 이마를 지나는 베이비헤어는 평면보다 높아 보존되므로 '1자 눈썹' 잔흔이 없다.
   if (style.design.hairCut != null) {
+    const spec = style.design.hairCut;
+    const cuts = Array.isArray(spec) ? spec : [{ row: spec }];
     const trimmed = trimHairGlb(fs.readFileSync(temporaryOutput), {
-      cutRow: style.design.hairCut,
+      cuts,
       jitterPx: HAIR_CUT_JITTER,
       seed: style.variantIndex,
       imageIndex: HAIR_IMAGE_INDEX,
