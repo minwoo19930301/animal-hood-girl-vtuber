@@ -58,7 +58,9 @@
       "accent": "#8A5A34",
       "dark": "#3B2A1C"
     },
-    "hiddenMaterials": []
+    "hiddenMaterials": [
+      "bottoms"
+    ]
   },
   {
     "slug": "turtle",
@@ -342,6 +344,7 @@
       "dark": "#2E2620"
     },
     "hiddenMaterials": [
+      "bottoms",
       "hair_02"
     ]
   },

@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three'
 import { PALETTE } from '../palette'
-import { unitSphereLo } from './geo'
+import { taperedTube, unitSphereLo } from './geo'
 import { toonMat, addOutline } from './animals/hoodKit'
 import { buildStrand, type StrandRig } from './strands'
 
@@ -168,6 +168,69 @@ export function buildBackShell(
   root.add(centre)
 
   chest.add(root)
+  return root
+}
+
+export interface ShortsSpec {
+  base: number
+  baseShade: number
+  /** 밑단 길이 (unit 배수, 0.5 ≈ 허벅지 중간) */
+  length?: number
+  /** 통 굵기 배율 */
+  girth?: number
+}
+
+/**
+ * 반바지를 만들어 hips + 양 허벅지 본에 붙인다.
+ *
+ * 왜 필요한가: 도너 하의는 스커트 메시 하나뿐이라 전 캐릭터가 치마를 입는다("치마를 꼭
+ * 써야할까?" 지적). 스커트를 hiddenMaterials로 숨기고 이 반바지를 씌우면 하의 실루엣이
+ * 실제로 달라진다. 허벅지 통은 upperLeg 본에 붙으므로 다리를 움직이면 따라온다.
+ */
+export function buildShorts(
+  hips: THREE.Object3D | null,
+  upperLegL: THREE.Object3D | null | undefined,
+  upperLegR: THREE.Object3D | null | undefined,
+  unit: number,
+  S: number,
+  spec: ShortsSpec,
+): THREE.Group | null {
+  if (!hips || !upperLegL || !upperLegR || !(unit > 1e-4)) return null
+  const len = (spec.length ?? 0.62) * unit
+  const girth = spec.girth ?? 1
+
+  const root = new THREE.Group()
+  root.name = 'shorts'
+  if (S === -1) root.rotation.y = Math.PI
+
+  // 힙 밴드 — 허리부터 밑위까지 덮는 납작한 타원 (맨살 노출 방지)
+  const band = new THREE.Mesh(unitSphereLo(), toonMat(spec.base, spec.baseShade))
+  band.scale.set(unit * 0.60 * girth, unit * 0.46, unit * 0.42 * girth)
+  band.position.y = -unit * 0.10
+  addOutline(band, unit * 0.03, PALETTE.nightPurple)
+  root.add(band)
+  hips.add(root)
+
+  // 허벅지 통 ×2 — 각 upperLeg 본 로컬 -Y 방향
+  for (const leg of [upperLegL, upperLegR]) {
+    const tube = new THREE.Mesh(
+      taperedTube(
+        [
+          new THREE.Vector3(0, unit * 0.06, 0),
+          new THREE.Vector3(0, -len * 0.5, 0),
+          new THREE.Vector3(0, -len, 0),
+        ],
+        [unit * 0.30 * girth, unit * 0.29 * girth, unit * 0.27 * girth],
+      ),
+      toonMat(spec.base, spec.baseShade),
+    )
+    addOutline(tube, unit * 0.028, PALETTE.nightPurple)
+    const holder = new THREE.Group()
+    holder.name = 'shortsLeg'
+    holder.add(tube)
+    leg.add(holder)
+  }
+
   return root
 }
 
