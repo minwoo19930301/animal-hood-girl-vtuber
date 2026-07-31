@@ -8,8 +8,8 @@
     "expressionBias": {
       "relaxed": 0.06
     },
-    "hairStyle": "blue-black-shoulder-bob-curtain-fringe",
-    "hairIntent": "블루블랙 — 크림 의상과 대비, 차분 (v3 체스트넛 깔맞춤 해제)",
+    "hairStyle": "crimson-red-shoulder-bob-curtain-fringe",
+    "hairIntent": "크림슨 레드 — 크림/포레스트 의상 위 강한 웜 포인트 (사용자 디렉션: 곰 빨간머리)",
     "outfitStyle": "forest-varsity-camp",
     "skinTone": "#F2C8AE",
     "iris": {
@@ -18,9 +18,9 @@
       "light": "#FFD58A"
     },
     "hair": {
-      "base": "#23283E",
-      "shade": "#07090D",
-      "accent": "#48507F"
+      "base": "#B8382A",
+      "shade": "#5A140F",
+      "accent": "#E8785C"
     },
     "palette": {
       "primary": "#8D6142",
