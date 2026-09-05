@@ -9,6 +9,13 @@ contextBridge.exposeInMainWorld('mingo', {
   },
   onVisibility(cb) {
     ipcRenderer.on('mingo:visibility', (_e, visible) => cb(visible))
+    ipcRenderer.send('mingo:renderer-ready')
+  },
+  onDebugCommand(cb) {
+    ipcRenderer.on('mingo:debug-command', (_e, command) => cb(command))
+  },
+  showAvatarMenu(currentSlug) {
+    ipcRenderer.send('mingo:avatar-menu', currentSlug)
   },
   dragBy(dx, dy) {
     ipcRenderer.send('mingo:drag-by', dx, dy)

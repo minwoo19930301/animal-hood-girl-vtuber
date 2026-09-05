@@ -260,6 +260,7 @@ export function createTracker(): Tracker {
   let videoEl: HTMLVideoElement | null = null
   let running = false
   let rvfcHandle = 0
+  let generation = 0
 
   // 락 없는 더블버퍼: 콜백이 back(1-front)을 완성한 뒤 front 인덱스만 바꾼다.
   // JS는 단일 스레드라 latest() 호출자는 항상 "완성된" 프레임만 본다 —
@@ -654,9 +655,14 @@ export function createTracker(): Tracker {
   return {
     async start(video: HTMLVideoElement): Promise<void> {
       if (running) return
+      const epoch = ++generation
+      const ensureCurrent = () => {
+        if (epoch !== generation) throw new DOMException('Tracking startup cancelled', 'AbortError')
+      }
       try {
         // 에셋은 전부 로컬 (네트워크 금지 — BRIEF): ./wasm, ./models/*.task
         const fileset = await FilesetResolver.forVisionTasks('./wasm')
+        ensureCurrent()
 
         const makeFace = (delegate: 'GPU' | 'CPU') =>
           FaceLandmarker.createFromOptions(fileset, {
@@ -683,23 +689,29 @@ export function createTracker(): Tracker {
         try {
           faceLm = await makeFace('GPU')
         } catch (e) {
+          ensureCurrent()
           console.warn('[tracking] FaceLandmarker GPU 델리게이트 실패 → CPU 폴백', e)
           faceLm = await makeFace('CPU')
         }
+        ensureCurrent()
         try {
           handLm = await makeHand('GPU')
         } catch (e) {
+          ensureCurrent()
           console.warn('[tracking] HandLandmarker GPU 델리게이트 실패 → CPU 폴백', e)
           handLm = await makeHand('CPU')
         }
+        ensureCurrent()
         try {
           poseLm = await makePose('GPU')
         } catch (e) {
+          ensureCurrent()
           console.warn('[tracking] PoseLandmarker GPU 델리게이트 실패 → CPU 폴백', e)
           poseLm = await makePose('CPU')
         }
+        ensureCurrent()
       } catch (err) {
-        console.error(
+        if (epoch === generation) console.error(
           '[tracking] mediapipe 초기화 실패 — ./wasm 및 ./models/*.task 경로/파일 확인',
           err,
         )
@@ -721,6 +733,7 @@ export function createTracker(): Tracker {
     },
 
     stop(): void {
+      generation++
       running = false
       if (videoEl && rvfcHandle !== 0) {
         videoEl.cancelVideoFrameCallback(rvfcHandle)
