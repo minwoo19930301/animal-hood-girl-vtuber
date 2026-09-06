@@ -435,7 +435,6 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
 
   api.ready = loadVRM(root, api, definition)
     .then((r) => { rig = r })
-    .catch((err) => { console.error('[mingo] VRM load failed — 모델 없이 idle', err) })
 
   return api
 }
@@ -449,6 +448,7 @@ async function loadVRM(
   loader.register((parser) => new VRMLoaderPlugin(parser))
   const gltf = await loader.loadAsync(definition.modelUrl)
   const vrm = gltf.userData.vrm as VRM
+  if (!vrm?.humanoid) throw new Error(`Invalid VRM avatar: ${definition.modelUrl}`)
 
   VRMUtils.removeUnnecessaryVertices(gltf.scene)
   VRMUtils.combineSkeletons(gltf.scene)

@@ -25,8 +25,17 @@ npm install
 npm start
 ```
 
+Node.js 22.18+가 필요하다 (`npm test`는 Node의 TypeScript 실행 기능을 사용한다).
+
 `npm run dev` 개발 모드 · `npm run typecheck` 타입 검사 · `npm run build` 프로덕션 빌드.
 창은 항상 위에 뜨는 투명·클릭통과 오버레이이고, 숨기면 렌더 루프와 웹캠이 함께 멈춘다.
+상단 카메라 버튼으로 언제든 카메라를 끄고 자동 모션만 사용할 수 있다. 권한 거부,
+연결 해제, 트래커 초기화 실패 시 카메라 스트림을 닫고 `다시 연결` 버튼을 표시한다.
+아바타 로드 실패는 별도 메시지와 재시도 버튼으로 표시하며 카메라를 시작하지 않는다.
+칩 또는 아바타 우클릭 메뉴에서 캐릭터, 크기, 종료를 선택한다.
+
+`npm test`는 카메라 수명·취소·재시도·권한 정책과 얼굴/헤어 지오메트리를 검사한다.
+실제 카메라나 macOS 권한 승인은 사용하지 않는다.
 
 ## 아바타 팩
 
@@ -39,6 +48,9 @@ npm run avatars:audit     # 리그·표정 보존, 텍스처 규격, 고유성 �
 npm run avatars:shots     # 14종 × 7씬 렌더 QA 행렬
 npm run avatars:gifs      # 14종 아이들 루프 GIF
 ```
+
+`avatars:audit`는 빌드가 만든 `work/avatar-pack`의 텍스처·매니페스트도 대조하므로,
+처음 clone한 뒤에는 `avatars:build`를 먼저 실행한다.
 
 차별화는 텍스처 재염색 + 결정적 지오메트리 연산으로 이뤄진다: 얼굴형 워프
 (`face-warp.mjs`), 헤어·스커트 길이 클리핑(`hair-trim.mjs`), 헤어핀 형태

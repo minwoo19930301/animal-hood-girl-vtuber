@@ -9,6 +9,12 @@
        버퍼 픽셀(2×)로 커져 창에 반만 보이는 문제가 난다 → CSS로 창에 맞춤 */
     canvas#stage { display: block; width: 100vw; height: 100vh; }
     video#cam { position: fixed; left: -9999px; top: 0; width: 2px; height: 2px; opacity: 0; }
+    #runtime-status { position: fixed; top: 12px; left: 12px; right: 12px; z-index: 70; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; color: #f4f6ff; font-size: 11px; }
+    #runtime-status span { padding: 6px 9px; border-radius: 10px; background: rgba(10, 12, 20, 0.86); }
+    #runtime-status button { border: 1px solid rgba(255,255,255,.35); border-radius: 10px; padding: 6px 9px; background: #202738; color: #fff; font: inherit; cursor: pointer; }
+    #runtime-status [hidden] { display: none; }
+    button:focus-visible { outline: 2px solid #a6d8ff; outline-offset: 3px; }
+    button:disabled { opacity: .55; cursor: default; }
 
     /* 현재 캐릭터 칩 — 클릭/우클릭으로 전환 UI */
     #avatar-chip {
@@ -113,6 +119,12 @@
   </style>
 </head>
 <body>
+  <div id="runtime-status">
+    <span id="model-status" role="status">아바타 불러오는 중…</span>
+    <button id="model-retry" type="button" hidden>아바타 다시 불러오기</button>
+    <span id="camera-status" role="status">카메라 대기 중</span>
+    <button id="camera-toggle" type="button" aria-pressed="false">카메라 끄기</button>
+  </div>
   <video id="cam" playsinline muted></video>
   <canvas id="stage"></canvas>
 
@@ -123,7 +135,7 @@
     </div>
     <div id="avatar-grid"></div>
   </div>
-  <button id="avatar-chip" type="button" title="캐릭터 바꾸기 (C / 우클릭)">
+  <button id="avatar-chip" type="button" title="캐릭터 바꾸기 (C / 우클릭)" aria-haspopup="dialog" aria-expanded="false" aria-controls="avatar-picker">
     <span class="emoji" id="chip-emoji">🦊</span>
     <span id="chip-label">여우</span>
     <span class="caret">▾</span>

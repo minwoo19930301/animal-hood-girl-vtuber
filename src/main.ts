@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { createMingo } from './model/index'
 import { createTracker } from './tracking/index'
+import { createCameraSession, type CameraState } from './camera'
 import { createAliveness } from './aliveness/index'
 import { neutralFrame, type CursorInfo } from './contract'
 import {
@@ -17,6 +18,10 @@ const chipEmoji = document.getElementById('chip-emoji')
 const chipLabel = document.getElementById('chip-label')
 const pickerEl = document.getElementById('avatar-picker')
 const gridEl = document.getElementById('avatar-grid')
+const modelStatus = document.getElementById('model-status')!
+const cameraStatus = document.getElementById('camera-status')!
+const cameraButton = document.getElementById('camera-toggle') as HTMLButtonElement
+const retryModel = document.getElementById('model-retry') as HTMLButtonElement
 
 /** 종별 이모지 (칩/피커 UI용 — 카탈로그 외 장식) */
 const AVATAR_EMOJI: Readonly<Record<AvatarSlug, string>> = {
@@ -64,6 +69,9 @@ function switchToAvatar(next: AvatarSlug) {
 function setPickerOpen(open: boolean) {
   pickerOpen = open
   pickerEl?.classList.toggle('open', open)
+  chipEl?.setAttribute('aria-expanded', String(open))
+  if (open) gridEl?.querySelector<HTMLButtonElement>('button.active')?.focus()
+  else if (pickerEl?.contains(document.activeElement)) chipEl?.focus()
   // 피커가 열려 있으면 클릭스루 OFF 유지
   if (open && window.mingo && clickThrough) {
     clickThrough = false
@@ -75,7 +83,7 @@ function setPickerOpen(open: boolean) {
 function isOverUi(clientX: number, clientY: number): boolean {
   const el = document.elementFromPoint(clientX, clientY)
   if (!el) return false
-  return !!(el.closest('#avatar-chip') || el.closest('#avatar-picker'))
+  return !!(el.closest('#avatar-chip') || el.closest('#avatar-picker') || el.closest('#runtime-status'))
 }
 
 function refreshChip() {
@@ -90,6 +98,7 @@ if (gridEl) {
     btn.type = 'button'
     btn.dataset.slug = entry.slug
     if (entry.slug === avatar) btn.classList.add('active')
+    btn.setAttribute('aria-pressed', String(entry.slug === avatar))
     btn.innerHTML =
       `<span class="emoji">${AVATAR_EMOJI[entry.slug] ?? '🐾'}</span>` +
       `<span class="label">${entry.label}</span>` +
@@ -187,7 +196,7 @@ function frameCamera() {
   const bodyH = Math.max(0.5, mingo.height || 1.5)
   const lookY = bodyH * 0.52
   // 전신 + 동물 후드/귀 여유. avatarZoom↑ = 더 작게 보임
-  const fitH = bodyH * 1.35 * Math.max(0.85, avatarZoom)
+  const fitH = bodyH * 1.35 * avatarZoom
   const dist = fitH / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
   camera.position.set(0, lookY, dist)
   camera.lookAt(0, lookY, 0)
@@ -198,10 +207,21 @@ function frameCamera() {
 frameCamera()
 window.addEventListener('resize', frameCamera)
 // VRM 등 비동기 모델은 로드 완료 후 실측 높이로 재프레이밍
+let modelLoaded = false
 mingo.ready?.then(() => {
   console.log('[mingo] model ready height=', mingo.height, 'hits=', mingo.hitMeshes.length)
+  modelLoaded = true
+  modelStatus.hidden = true
   frameCamera()
+  syncCamera()
+}).catch((error) => {
+  console.error('[mingo] avatar failed to load', error)
+  modelStatus.textContent = '아바타를 불러오지 못했어요.'
+  retryModel.hidden = false
+  cameraButton.disabled = true
+  cameraStatus.textContent = '아바타 로드 후 카메라를 사용할 수 있어요.'
 })
+retryModel.addEventListener('click', () => location.reload())
 
 // Electron 메뉴 바 / 우클릭 / 단축키 → 옵션 실행
 window.mingo?.onDebugCommand?.((cmd) => {
@@ -216,53 +236,34 @@ window.mingo?.onDebugCommand?.((cmd) => {
 })
 
 // ---------- 트래킹 + 생명감 ----------
-const tracker = createTracker()
 const aliveness = createAliveness()
-let trackingUp = false
-let camStream: MediaStream | null = null
-let camBusy = false
-let camWanted = true // visibilitychange로 토글 — await 도중 hide되면 startCam이 스스로 정리
-
-async function startCam() {
-  if (camBusy || trackingUp) return
-  camBusy = true
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
+let cameraEnabled = true
+let cameraState: CameraState = 'off'
+let pipelinePaused = document.hidden
+const cameraSession = createCameraSession({
+  video,
+  createTracker,
+  getUserMedia: () => navigator.mediaDevices.getUserMedia({
       video: { width: 640, height: 480, frameRate: 30 },
       audio: false,
-    })
-    if (!camWanted) {
-      for (const tr of stream.getTracks()) tr.stop()
-      return
-    }
-    camStream = stream
-    video.srcObject = stream
-    await video.play()
-    await tracker.start(video)
-    if (!camWanted) {
-      stopCam()
-      return
-    }
-    trackingUp = true
-    console.log('[mingo] tracking started')
-  } catch (err) {
-    console.warn('[mingo] camera/tracking unavailable — idle mode', err)
-  } finally {
-    camBusy = false
-  }
+  }),
+  onState(state, error) {
+    cameraState = state
+    cameraStatus.textContent = state === 'tracking' ? '카메라 연결됨 · 기기에서만 처리' :
+      state === 'starting' ? '카메라 연결 중…' :
+      state === 'error' ? '카메라 연결 실패 · 자동 모션으로 동작 중' : '카메라 꺼짐 · 자동 모션'
+    cameraButton.textContent = state === 'error' ? '다시 연결' : cameraEnabled ? '카메라 끄기' : '카메라 켜기'
+    cameraButton.setAttribute('aria-pressed', String(state === 'tracking' || state === 'starting'))
+    if (error) console.warn('[mingo] camera/tracking unavailable — idle mode', error)
+  },
+})
+function syncCamera() {
+  cameraSession.setActive(modelLoaded && cameraEnabled && !pipelinePaused)
 }
-
-/** 트래커 + 카메라 완전 정지 (카메라 LED off) */
-function stopCam() {
-  trackingUp = false
-  tracker.stop()
-  if (camStream) {
-    for (const tr of camStream.getTracks()) tr.stop()
-    camStream = null
-  }
-  video.srcObject = null
-}
-startCam()
+cameraButton.addEventListener('click', () => {
+  cameraEnabled = cameraState === 'error' ? true : !cameraEnabled
+  syncCamera()
+})
 
 // ---------- 커서(전역) → 시선 + 히트테스트 + 드래그 ----------
 let cursor: CursorInfo | null = null
@@ -386,31 +387,28 @@ function loop() {
   const dt = Math.min(clock.getDelta(), 0.1)
   const t = clock.elapsedTime
 
-  const raw = trackingUp ? tracker.latest() : neutralFrame()
+  const raw = cameraSession.latest() ?? neutralFrame()
   const frame = aliveness.compose(raw, dt, t, cursor)
   lastTracked = frame.tracked
   mingo.apply(frame, dt, t)
 
   renderer.render(scene, camera)
 }
-loop()
+if (!pipelinePaused) loop()
 
 // ---------- 가시성 연동 (Cmd+Shift+M 퀵 하이드) ----------
 // backgroundThrottling:false라 hide 후에도 rAF가 계속 돌고, visibilityState도
 // 'visible'로 남는다(Electron 문서화 동작) — main 프로세스가 방송하는
 // mingo:visibility로 전체 파이프라인(루프+트래커+카메라 LED)을 멈추고 복귀 시 재시작.
-let pipelinePaused = false
 function setPipelineVisible(visible: boolean) {
   if (visible === !pipelinePaused) return // 중복 이벤트 무시 (idempotent)
   if (!visible) {
     pipelinePaused = true
     cancelAnimationFrame(rafId)
-    camWanted = false
-    stopCam()
+    syncCamera()
   } else {
     pipelinePaused = false
-    camWanted = true
-    startCam()
+    syncCamera()
     clock.getDelta() // 숨김 기간 델타 플러시 (복귀 프레임 점프 방지)
     cancelAnimationFrame(rafId) // 중복 루프 방지
     loop()
@@ -419,3 +417,8 @@ function setPipelineVisible(visible: boolean) {
 window.mingo?.onVisibility?.((visible) => setPipelineVisible(visible))
 // 브라우저 dev 실행 등 브리지 부재 환경 폴백
 document.addEventListener('visibilitychange', () => setPipelineVisible(!document.hidden))
+window.addEventListener('pagehide', () => {
+  cameraSession.setActive(false)
+  cancelAnimationFrame(rafId)
+  renderer.dispose()
+})
