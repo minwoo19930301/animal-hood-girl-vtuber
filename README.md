@@ -1,5 +1,10 @@
 # animal-hood-girl-vtuber
 
+<!-- PROJECT-PRESENTATION:START -->
+<a href="https://github.com/minwoo19930301/animal-hood-girl-vtuber"><img src="docs/gif/bear.gif" alt="animal-hood-girl-vtuber" width="960"></a>
+
+[![QUICK START](https://img.shields.io/badge/QUICK%20START-374151?style=for-the-badge)](#실행) [![SOURCE](https://img.shields.io/badge/SOURCE-444444?style=for-the-badge)](https://github.com/minwoo19930301/animal-hood-girl-vtuber)
+<!-- PROJECT-PRESENTATION:END -->
 
 macOS 화면 위에 떠 있는, 카메라로 움직이는 3D 동물 후드 VTuber 아바타. 눈매·얼굴형·헤어·
 헤드기어·의상이 서로 다른 캐릭터 13종 + 원본 플라밍고 1종.
