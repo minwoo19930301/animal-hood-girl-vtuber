@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "concurrently -k \"vite --port 5183 --strictPort\" \"VITE_DEV_SERVER=http://localhost:5183 electron .\"",
     "typecheck": "tsc --noEmit",
+    "test": "node --test scripts/test-runtime.mjs && node scripts/test-face-warp.mjs && node scripts/test-hair-trim.mjs",
     "build": "vite build",
     "start": "npm run build && electron .",
     "shot": "node scripts/screenshot.mjs",

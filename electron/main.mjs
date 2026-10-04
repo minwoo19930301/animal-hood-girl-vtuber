@@ -3,7 +3,7 @@
 // + visibleOnFullScreen + setIgnoreMouseEvents(forward) + 렌더러 히트테스트 토글
 import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu, systemPreferences, dialog, shell } from 'electron'
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
 import {
   REACTION_CANCEL_ACCELERATOR,
@@ -12,6 +12,7 @@ import {
   reactionAccelerator,
   reactionCommand,
 } from './keys.mjs'
+import { isCameraRequest, isTrustedAppUrl } from './policy.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const avatarCatalog = JSON.parse(
@@ -32,20 +33,30 @@ if (!Array.isArray(reactions) || reactions.length === 0) {
 // 동물 후드/귀 여유 — 기본 420×580은 머리 장식이 잘리는 경우가 있어 키움
 const WIN_W = 560
 const WIN_H = 780
+// 신뢰하는 앱 문서 — 런처 번들(file:// import)로 띄워도 __dirname 이 저장소 electron/ 이라 같은 dist 를 가리킨다
+const appUrl = process.env.VITE_DEV_SERVER
+  ? new URL('index.html', process.env.VITE_DEV_SERVER.replace(/\/?$/, '/')).href
+  : pathToFileURL(join(__dirname, '../dist/index.html')).href
 
 /** @type {BrowserWindow | null} */
 let win = null
 let cursorTimer = null
 
+function trustedEvent(event) {
+  return win && !win.isDestroyed() && event.sender === win.webContents &&
+    event.senderFrame === win.webContents.mainFrame && isTrustedAppUrl(event.senderFrame.url, appUrl)
+}
+
 function switchAvatar(slug) {
   if (!win || win.isDestroyed()) return
+  if (!avatarCatalog.some((entry) => entry.slug === slug)) return
   const script = `localStorage.setItem('mingo-avatar', ${JSON.stringify(slug)});` +
     `const u=new URL(location.href);u.searchParams.set('avatar',${JSON.stringify(slug)});location.replace(u.toString())`
   void win.webContents.executeJavaScript(script)
 }
 
 function sendDebug(cmd) {
-  if (win && !win.isDestroyed()) win.webContents.send('mingo:debug-cmd', cmd)
+  if (win && !win.isDestroyed()) win.webContents.send('mingo:debug-command', cmd)
 }
 
 /**
@@ -136,6 +147,7 @@ function createWindow() {
       backgroundThrottling: false,
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
   })
 
@@ -145,10 +157,12 @@ function createWindow() {
   // 기본은 클릭스루 ON — 렌더러가 아바타 위에서만 OFF로 토글
   win.setIgnoreMouseEvents(true, { forward: true })
 
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!isTrustedAppUrl(url, appUrl)) event.preventDefault()
+  })
   // 기본 아바타는 렌더러 localStorage / ?avatar= 쿼리가 결정 (강제 고정 없음)
-  const devServer = process.env.VITE_DEV_SERVER
-  if (devServer) win.loadURL(devServer + '/index.html')
-  else win.loadFile(join(__dirname, '../dist/index.html'))
+  void win.loadURL(appUrl)
 
   // backgroundThrottling:false면 hide 후에도 renderer의 visibilityState가 'visible'로
   // 남아 visibilitychange가 발화하지 않는다 (Electron 문서화 동작).
@@ -197,9 +211,15 @@ async function ensureCameraAccess() {
 }
 
 app.whenReady().then(async () => {
-  // 렌더러의 media 요청은 허용 (OS 권한은 아래 ensureCameraAccess가 담당)
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
-    cb(permission === 'media')
+  // 이 앱의 메인 프레임이 요청한 카메라(video)만 허용 — 마이크·혼합 요청·다른 문서는 거부.
+  // (macOS OS 권한은 아래 ensureCameraAccess가 담당)
+  session.defaultSession.setPermissionRequestHandler((contents, permission, cb, details) => {
+    cb(contents === win?.webContents && details.isMainFrame &&
+      isTrustedAppUrl(details.requestingUrl, appUrl) && isCameraRequest(permission, details.mediaTypes))
+  })
+  session.defaultSession.setPermissionCheckHandler((contents, permission, _origin, details) => {
+    return contents === win?.webContents && details.isMainFrame &&
+      isTrustedAppUrl(details.requestingUrl, appUrl) && permission === 'media' && details.mediaType === 'video'
   })
   await ensureCameraAccess()
 
@@ -262,27 +282,34 @@ app.whenReady().then(async () => {
   }
 })
 
-ipcMain.on('mingo:click-through', (_e, enabled) => {
-  if (!win) return
+ipcMain.on('mingo:click-through', (event, enabled) => {
+  if (!trustedEvent(event) || typeof enabled !== 'boolean') return
   win.setIgnoreMouseEvents(!!enabled, { forward: true })
 })
 
-ipcMain.on('mingo:drag-by', (_e, dx, dy) => {
-  if (!win) return
+ipcMain.on('mingo:drag-by', (event, dx, dy) => {
+  if (!trustedEvent(event) || !Number.isFinite(dx) || !Number.isFinite(dy)) return
+  if (Math.abs(dx) > 4096 || Math.abs(dy) > 4096) return
   const b = win.getBounds()
   win.setBounds({ ...b, x: Math.round(b.x + dx), y: Math.round(b.y + dy) })
 })
 
 // 렌더러 우클릭/칩 → 통합 옵션 메뉴
-ipcMain.on('mingo:options-menu', (_e, currentSlug) => {
-  popupOptionsMenu(currentSlug)
+ipcMain.on('mingo:options-menu', (event, currentSlug) => {
+  if (!trustedEvent(event)) return
+  popupOptionsMenu(typeof currentSlug === 'string' ? currentSlug : null)
 })
 // 구 이름 호환
-ipcMain.on('mingo:avatar-menu', (_e, currentSlug) => {
-  popupOptionsMenu(currentSlug)
+ipcMain.on('mingo:avatar-menu', (event, currentSlug) => {
+  if (!trustedEvent(event)) return
+  popupOptionsMenu(typeof currentSlug === 'string' ? currentSlug : null)
 })
 
-ipcMain.on('mingo:quit', () => app.quit())
+ipcMain.on('mingo:quit', (event) => { if (trustedEvent(event)) app.quit() })
+// 렌더러가 구독을 마치면 현재 가시성을 한 번 알려 준다 (숨김 상태로 시작했을 때 카메라가 안 켜지게)
+ipcMain.on('mingo:renderer-ready', (event) => {
+  if (trustedEvent(event)) win.webContents.send('mingo:visibility', win.isVisible())
+})
 
 app.on('will-quit', () => {
   if (cursorTimer) clearInterval(cursorTimer)

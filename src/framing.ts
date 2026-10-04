@@ -14,7 +14,7 @@ export interface Framing {
 export function framing(bodyH: number, zoom = 1, pull = 0): Framing {
   const h = Math.max(0.5, bodyH)
   return {
-    fitH: h * 1.35 * Math.max(0.85, zoom) * (1 + pull),
+    fitH: h * 1.35 * zoom * (1 + pull),
     lookY: h * (0.52 + 0.35 * pull),
   }
 }
