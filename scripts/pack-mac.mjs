@@ -20,6 +20,7 @@ import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { VITE_BIN } from './lib/platform.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const NAME = 'Animal Hood VTuber'
@@ -31,7 +32,7 @@ const ICON = join(ROOT, 'build/icon.icns')
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { stdio: 'inherit', ...opts })
 
 if (process.platform !== 'darwin') {
-  console.error('[pack] macOS 전용입니다')
+  console.error('[pack] macOS 전용입니다 (Windows 앱은 npm run pack:win)')
   process.exit(1)
 }
 if (!existsSync(SRC_APP)) {
@@ -43,7 +44,7 @@ const standalone = process.argv.includes('--standalone')
 const rebuild = process.argv.includes('--rebuild') || standalone
 
 // 1) 렌더러 빌드 (하네스 전용 빌드가 남아 있을 수 있어 항상 다시 빌드)
-run('npx', ['vite', 'build'], { cwd: ROOT })
+run(process.execPath, [VITE_BIN, 'build'], { cwd: ROOT })
 
 const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
 const appDir = join(APP, 'Contents/Resources/app')

@@ -10,26 +10,27 @@
  * (virtual-time-budget은 15MB VRM fetch + 모듈 TLA(await mingo.ready)와
  *  교착해 READY 전에 순백 캔버스를 찍는다 — 실시간 폴링이 유일하게 결정적.)
  */
-import { spawn, execSync } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, resolve, join } from 'node:path'
+import { findChrome, VITE_BIN } from './lib/platform.mjs'
 
 const [page = 'harness.html', out = 'shots/shot.png', query = ''] = process.argv.slice(2)
 const [W, H] = (process.env.SIZE ?? '750x1000').split('x').map(Number)
 const PORT = Number(process.env.PORT ?? 5199)
 const CDP_PORT = Number(process.env.CDP_PORT ?? 9333)
 const READY_TIMEOUT_MS = 30000
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+const CHROME = findChrome()
 
 if (!process.env.SKIP_BUILD) {
   // 스크린샷은 harness만 빌드 → 타 모듈 WIP 컴파일 오류와 무관하게 동작
-  execSync('npx vite build', { stdio: 'inherit', env: { ...process.env, HARNESS_ONLY: '1' } })
+  execFileSync(process.execPath, [VITE_BIN, 'build'], { stdio: 'inherit', env: { ...process.env, HARNESS_ONLY: '1' } })
 }
 
 mkdirSync(dirname(resolve(out)), { recursive: true })
 
-const preview = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
+const preview = spawn(process.execPath, [VITE_BIN, 'preview', '--port', String(PORT), '--strictPort'], {
   stdio: 'pipe',
 })
 await new Promise((res, rej) => {

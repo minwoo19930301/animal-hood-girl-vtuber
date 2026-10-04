@@ -21,6 +21,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadAvatarCatalog } from './lib/avatar-pack-common.mjs';
+import { chromeCandidates } from './lib/platform.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VITE_BIN = path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
@@ -98,14 +99,8 @@ function parseArgs(argv) {
 }
 
 function findChrome() {
-  const candidates = [
-    process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
-  ].filter(Boolean);
-  const found = candidates.find((candidate) => fs.existsSync(candidate));
+  // 후보 목록(CHROME/CHROME_BIN → 맥 → Windows Program Files → 리눅스)은 scripts/lib/platform.mjs 가 OS별로 만든다
+  const found = chromeCandidates().find((candidate) => fs.existsSync(candidate));
   if (!found) throw new Error('Chrome/Chromium not found; set CHROME_BIN');
   return found;
 }
