@@ -1,11 +1,11 @@
 /**
  * 숫자키 리액션 10종의 타임라인 (전신 VRoid 소녀용).
  *
- *   1 기쁨   2 슬픔   3 화남   4 놀람   5 사랑   6 인사   7 부끄러움   8 축하   9 신나는 춤   0 귀여운 춤
+ *   1 기쁨   2 슬픔   3 화남   4 놀람   5 사랑   6 인사   7 부끄러움   8 축하   9 꾸벅 인사   0 귀여운 춤
  *
  * 각 리액션은 시간(초) → 목표(Target) 순수 함수 + FX 이벤트 목록이다. 난수는 FX 이벤트의 rng(시드 고정)로만 쓴다.
  * 들어올 때 0.15초, 나갈 때 0.35초는 엔진이 엔벨로프로 처리하므로 여기서는 시간 윈도(ss)를 그 안쪽에 둔다.
- * 춤과 전신 리액션은 tg.legs = 1 로 다리를 강제하고 무릎·발 들기·hipShift 로 하체를 쓴다 (모델은 legsPresent 로 게이팅한다).
+ * 모든 리액션은 tg.legs = 1 로 다리를 강제하고 무릎·발 들기·hipShift 로 하체를 쓴다 (모델은 legsPresent 로 게이팅한다). 꾸벅 인사(9)는 하체를 움직이지 않고 tg.bow 로 허리만 접는다.
  */
 import { Anchor } from './fx'
 import {
@@ -396,74 +396,44 @@ const celebrate: Spec = {
   ],
 }
 
-/* ---------------- 9 신나는 춤 ---------------- */
+/* ---------------- 9 꾸벅 인사 ---------------- */
 
-/** 120 BPM: 한 박 0.5초, 좌우 한 사이클 1초 */
-const B1 = 0.5
-const CYC1 = 1.0
+/** 허리를 숙이는 각 (rad) — 정중한 절은 40~45° */
+const BOW_ANGLE = 0.75
+/** 고개가 허리보다 더 숙이는 각 (rad) */
+const BOW_HEAD = 0.2
 
-const danceEvents: FxEvent[] = []
-for (let k = 0; k < 8; k++) {
-  const side = k % 2 === 0 ? 1 : -1
-  danceEvents.push(ev(0.2 + B1 * k, (fx, rng) => noteUp(fx, rng, Anchor.head, side * R(rng, 0.14, 0.24), R(rng, 0.0, 0.14), side, 0.065)))
-}
-danceEvents.push(ev(1.5, (fx, rng) => sparkleRing(fx, rng, 5)))
-danceEvents.push(ev(3.0, (fx, rng) => sparkleRing(fx, rng, 6)))
-
-const dance: Spec = {
+const bowing: Spec = {
   id: 9,
   key: '9',
-  name: '신나는 춤',
-  dur: 4.3,
-  peak: 1.2,
-  pull: 0.14,
+  name: '꾸벅 인사',
+  dur: 2.6,
+  peak: 1.3,
+  pull: 0.04,
   eval(tl, tg) {
     tg.legs = 1
-    const e = ss(0.0, 0.3, tl) * (1 - ss(3.9, 4.25, tl))
-    const ph = (TAU * tl) / CYC1 // 좌우 한 사이클
-    const bp = (TAU * tl) / B1 // 박자
-    const sw = Math.sin(ph)
-    const cs = Math.cos(ph)
-    tg.happy = 0.55
-    tg.mouthSmile = 1
-    tg.mouthOpen = 0.3 + 0.1 * Math.cos(bp)
-    tg.blush = 0.3
-    // 사이드 스텝: 골반이 좌우로 크게 옮겨 가고(체중 이동) 반대쪽 발이 번갈아 들린다. 몸 전체도 조금 미끄러진다
-    tg.legs = 1
-    tg.shiftX = 0.05 * sw * e
-    tg.hipShift = sw * e
-    tg.liftR = 0.9 * Math.pow(Math.max(0, sw), 1.4) * e
-    tg.liftL = 0.9 * Math.pow(Math.max(0, -sw), 1.4) * e
-    tg.outR = 0.14 * Math.max(0, sw) * e
-    tg.outL = 0.14 * Math.max(0, -sw) * e
-    // 박마다 무릎 바운스 + 위로 통통
-    const dip = 0.5 + 0.5 * Math.cos(bp)
-    tg.kneeL = tg.kneeR = (0.15 + 0.45 * dip) * e
-    tg.bounce = 0.045 * (1 - dip) * e
-    // 머리 까딱(박마다), 기울기, 상체 트위스트 + 엉덩이 반대로 기운다
-    tg.headPitch = 0.12 * Math.cos(bp) * e
-    tg.headRoll = 0.22 * sw * e
-    tg.twist = 0.42 * cs * e
-    tg.leanX = -0.14 * sw * e
-    tg.leanZ = 0.06 * Math.cos(bp) * e
-    tg.shrugL = tg.shrugR = 0.18 * (0.5 + 0.5 * Math.cos(bp)) * e
-    // 팔: 번갈아 펌프(한쪽 위 · 한쪽 아래) → 머리 위 웨이브 → 머리 위 박수 → 만세 피니시
-    const a = ss(0.05, 0.3, tl) * (1 - ss(4.0, 4.28, tl))
-    const pumpS = ss(1.35, 1.65, tl) // 펌프 → 웨이브
-    const clapS = ss(2.85, 3.1, tl) // → 박수
-    const finS = ss(3.7, 3.95, tl)
-    const hit = 0.55 + 0.45 * Math.pow(0.5 + 0.5 * Math.cos(bp), 2)
+    // 두 손을 모은 뒤(0~0.5) 0.5초에 걸쳐 숙이고(0.5~1.0), 0.6초 머물렀다가(1.0~1.6) 0.55초에 걸쳐 일어선다(1.6~2.15). 오르내림은 ease-in-out
+    const k = ss(0.5, 1.0, tl) * (1 - ss(1.6, 2.15, tl))
+    // 인사와 사과에 같이 쓰도록 표정은 차분하게: 웃지 않고 입은 다물고, 숙인 동안 눈을 내리깐다 (홍조·반짝이 없음)
+    tg.relaxed = 0.25
+    tg.mouthSmile = 0.15
+    tg.mouthOpen = 0
+    tg.blush = 0
+    tg.gazeX = 0
+    tg.gazeY = -0.6 * k
+    if (k > 0.02) tg.blink = 0.7 * k
+    // 허리에서 접는 직선 숙임 — 척추는 굽히지 않고(leanZ 0) 고개만 조금 더 숙인다. 다리는 곧게, 발은 그 자리
+    tg.bow = BOW_ANGLE * k
+    tg.headPitch = -BOW_HEAD * k
+    // 아랫배 앞에 두 손을 가지런히 모으고, 숙이는 동안 팔을 곧게 펴 손이 허벅지 앞으로 내려오게 한다
+    const w = ss(0.02, 0.45, tl) * (1 - ss(2.15, 2.55, tl))
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]
-      const alt = 0.5 + 0.5 * Math.sin(ph + i * Math.PI)
-      armSetMix(tg, i, a, G.pump, G.pumpUp, alt)
-      armBlendTo(tg, i, G.hurray, pumpS)
-      nudge(tg, i, 'lower', 0.25 * Math.sin(ph + i * 0.6) * pumpS * (1 - clapS))
-      armBlendTo(tg, i, G.clapHigh, clapS * (1 - finS) * hit)
-      armBlendTo(tg, i, G.cheerWide, finS)
+      armSet(tg, i, w, G.bowHands)
+      armBlendTo(tg, i, G.bowHold, k)
     }
   },
-  events: danceEvents,
+  events: [],
 }
 
 /* ---------------- 0 귀여운 춤 ---------------- */
@@ -550,4 +520,4 @@ const cute: Spec = {
   events: cuteEvents,
 }
 
-export const SPECS: readonly Spec[] = [joy, sad, angry, surprise, love, hello, shy, celebrate, dance, cute]
+export const SPECS: readonly Spec[] = [joy, sad, angry, surprise, love, hello, shy, celebrate, bowing, cute]

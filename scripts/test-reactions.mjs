@@ -8,7 +8,8 @@
  *  - 엔벨로프(시작·끝에서 베이스로 복귀), 교차(다른 키)·재시작(같은 키)의 연속성, 취소, 취소 중 자전이 가장 가까운 정수 바퀴로 풀림
  *  - 트래킹 통과 (덮어쓰지 않는 채널)
  *  - 10종 전부: 유한한 값, 범위, 끝나면 자전 0, compose 가 같은 프레임 객체를 돌려주고 motion/expr 영구 객체를 재사용
- *  - 춤(9, 0)은 다리를 쓴다: legsPresent ≥ 0.9, 무릎·발 들기·hipShift 가 실제로 움직임
+ *  - 귀여운 춤(0)은 다리를 쓴다: legsPresent ≥ 0.9, 무릎·발 들기·hipShift 가 실제로 움직임
+ *  - 꾸벅 인사(9)는 하체를 움직이지 않고 허리만 접는다: 숙인 구간에서 bow 가 목표각, 끝나면 0, 발·골반·무릎·점프·자전 채널 0
  *  - 전신 리액션 전부 legsPresent 를 올리고, 취소·종료 뒤 FX 소멸·anchorsOn 해제
  *  - 프레임당 객체 할당 없음(워밍업 뒤 힙 증가량), shared/reactions.json ↔ 타임라인, electron 키 규약
  */
@@ -53,7 +54,7 @@ try {
       a.push(arm.present, arm.upperDir.x, arm.upperDir.y, arm.upperDir.z, arm.lowerDir.x, arm.lowerDir.y, arm.lowerDir.z, arm.handDir.x, arm.handDir.y, arm.handDir.z, arm.palmNormal.x, arm.palmNormal.y, arm.palmNormal.z, ...arm.fingers, arm.spread)
     }
     const m = f.motion
-    a.push(m ? m.bounce : 0, m ? m.spin : 0, m ? m.shiftX : 0, m ? m.liftL : 0, m ? m.liftR : 0, m ? m.kickL : 0, m ? m.kickR : 0, m ? m.outL : 0, m ? m.outR : 0, m ? m.snap : 0)
+    a.push(m ? m.bounce : 0, m ? m.spin : 0, m ? m.shiftX : 0, m ? m.liftL : 0, m ? m.liftR : 0, m ? m.kickL : 0, m ? m.kickR : 0, m ? m.outL : 0, m ? m.outR : 0, m ? m.snap : 0, m ? m.bow : 0)
     const e = f.expr
     a.push(e ? e.happy : 0, e ? e.sad : 0, e ? e.angry : 0, e ? e.surprised : 0, e ? e.relaxed : 0)
     return a
@@ -84,7 +85,7 @@ try {
   check('명세: 10종, id 1..10, 키 1..9·0 이 한 번씩', SPECS.length === 10 && IDS.join() === '1,2,3,4,5,6,7,8,9,10' && SPECS.map((s) => s.key).join('') === '1234567890')
 
   // 1) 결정성: 같은 트리거·같은 시각 → 같은 값 (프레임과 FX 스프라이트)
-  for (const id of [9, 10, 8]) {
+  for (const id of [10, 8, 9]) {
     const A = createReactions()
     const B = createReactions()
     A.trigger(id, 0); B.trigger(id, 0)
@@ -92,7 +93,7 @@ try {
     const fb = run(B, 0, 1.6)
     const fxState = (R) => JSON.stringify(R.fxRoot.children.map((c) => [c.visible, c.position.x, c.position.y, c.scale.x, c.material.opacity]))
     check(`결정성 ${id}: 두 엔진의 같은 시각 프레임이 일치`, maxDiff(snap(fa), snap(fb)) === 0)
-    check(`결정성 ${id}: 같은 시각 FX 스프라이트 상태가 일치`, fxState(A) === fxState(B) && visibleFx(A) > 0)
+    check(`결정성 ${id}: 같은 시각 FX 스프라이트 상태가 일치`, fxState(A) === fxState(B) && (id === 9 || visibleFx(A) > 0))
     A.dispose(); B.dispose()
   }
 
@@ -134,7 +135,7 @@ try {
     const dirs = (f) => [f.armL.upperDir, f.armL.lowerDir, f.armL.handDir, f.armL.palmNormal, f.armR.upperDir, f.armR.lowerDir, f.armR.handDir, f.armR.palmNormal].map((d) => [d.x, d.y, d.z])
     const scal = (f) => {
       const m = f.motion
-      return [f.blinkL, f.mouthOpen, f.mouthSmile, f.head.pitch, f.head.roll, f.fx.blush ?? 0, f.body.kneeL, f.body.hipShift, f.body.legsPresent, m ? m.bounce : 0, m ? m.shiftX : 0, m ? m.liftL : 0, m ? m.liftR : 0, ...f.armL.fingers, f.armL.spread]
+      return [f.blinkL, f.mouthOpen, f.mouthSmile, f.head.pitch, f.head.roll, f.fx.blush ?? 0, f.body.kneeL, f.body.hipShift, f.body.legsPresent, m ? m.bounce : 0, m ? m.shiftX : 0, m ? m.liftL : 0, m ? m.liftR : 0, m ? m.bow : 0, ...f.armL.fingers, f.armL.spread]
     }
     for (const [a, b, at] of [[9, 3, 1.0], [10, 6, 1.5], [1, 4, 1.0]]) {
       const R = createReactions()
@@ -260,9 +261,9 @@ try {
     check('트래킹 통과: 더하는 채널(머리 yaw)은 트래킹 값 위에 리액션이 얹힌다 (부끄러움 -0.3rad)', Math.abs(diffYaw + 0.3) < 0.02, `diff=${diffYaw.toFixed(3)}`)
     S.dispose()
 
-    // 다리: 웹캠이 상반신만 비춰도(legsPresent 0) 춤은 다리를 쓴다 — 트래킹이 무릎 0.9 를 내도 리액션이 목표값으로 섞는다
+    // 다리: 웹캠이 상반신만 비춰도(legsPresent 0) 귀여운 춤은 다리를 쓴다 — 트래킹이 무릎 0.9 를 내도 리액션이 목표값으로 섞는다
     const T = createReactions()
-    T.trigger(9, 0)
+    T.trigger(10, 0)
     t = 0
     let lastKnee = -1
     for (let i = 0; i < 40; i++) {
@@ -292,7 +293,7 @@ try {
     let maxSpin = 0
     let maxLegs = 0
     let maxFx = 0
-    const mx = { kneeL: 0, kneeR: 0, liftL: 0, liftR: 0, kickL: 0, kickR: 0, hip: 0, shift: 0, bounce: 0 }
+    const mx = { kneeL: 0, kneeR: 0, liftL: 0, liftR: 0, kickL: 0, kickR: 0, hip: 0, shift: 0, bounce: 0, bow: 0 }
     let legsAtMid = 0
     let t = 0
     const end = spec.dur + 0.6
@@ -314,6 +315,8 @@ try {
         mx.liftL = Math.max(mx.liftL, m.liftL); mx.liftR = Math.max(mx.liftR, m.liftR)
         mx.kickL = Math.max(mx.kickL, m.kickL); mx.kickR = Math.max(mx.kickR, m.kickR)
         mx.shift = Math.max(mx.shift, Math.abs(m.shiftX)); mx.bounce = Math.max(mx.bounce, m.bounce)
+        mx.bow = Math.max(mx.bow, m.bow)
+        if (m.bow < -1e-9 || m.bow > 1 + 1e-9) inRange = false
         if (m.bounce < -1e-9 || m.bounce > 0.2) inRange = false
         if (Math.abs(m.shiftX) > 0.2) inRange = false
         if (m.liftL < -1e-9 || m.liftL > 1.5 || m.liftR < -1e-9 || m.liftR > 1.5 || m.kickL < -1e-9 || m.kickL > 1.5 || m.kickR < -1e-9 || m.kickR > 1.5) inRange = false
@@ -344,30 +347,129 @@ try {
     R.dispose()
   }
 
-  // 7b) 춤은 하체가 실제로 움직인다 (무릎·발 들기·hipShift·좌우 이동), 트월은 한 바퀴
-  for (const id of [9, 10]) {
-    const s = stats[id]
-    const name = SPECS.find((x) => x.id === id).name
-    check(`${id} ${name}: 무릎이 굽는다 (kneeL·kneeR 최대 > 0.25)`, s.kneeL > 0.25 && s.kneeR > 0.25, `L=${s.kneeL.toFixed(2)} R=${s.kneeR.toFixed(2)}`)
-    check(`${id} ${name}: 발이 들린다 (liftL·liftR 또는 kick 최대 > 0.3)`, Math.max(s.liftL, s.kickL) > 0.3 && Math.max(s.liftR, s.kickR) > 0.3, `liftL=${s.liftL.toFixed(2)} liftR=${s.liftR.toFixed(2)} kickL=${s.kickL.toFixed(2)} kickR=${s.kickR.toFixed(2)}`)
-    check(`${id} ${name}: 골반 체중 이동 (|hipShift| 최대 > 0.4)`, s.hip > 0.4, `hip=${s.hip.toFixed(2)}`)
-  }
-  check('9 신나는 춤: 좌우 이동 (shiftX 최대 ≥ 0.04)', stats[9].shift >= 0.04, `shift=${stats[9].shift.toFixed(3)}`)
-  check('9 신나는 춤: 박마다 통통 (bounce 최대 > 0.03)', stats[9].bounce > 0.03, `bounce=${stats[9].bounce.toFixed(3)}`)
-  // 번갈아 스텝: 체중이 왼쪽(hipShift>0)일 때 오른발이, 오른쪽일 때 왼발이 들린다 (한 발은 항상 바닥)
+  // 7b) 귀여운 춤은 하체가 실제로 움직인다 (무릎·발 들기·hipShift), 트월은 한 바퀴
   {
+    const s = stats[10]
+    check('10 귀여운 춤: 무릎이 굽는다 (kneeL·kneeR 최대 > 0.25)', s.kneeL > 0.25 && s.kneeR > 0.25, `L=${s.kneeL.toFixed(2)} R=${s.kneeR.toFixed(2)}`)
+    check('10 귀여운 춤: 발이 들린다 (liftL·liftR 또는 kick 최대 > 0.3)', Math.max(s.liftL, s.kickL) > 0.3 && Math.max(s.liftR, s.kickR) > 0.3, `liftL=${s.liftL.toFixed(2)} liftR=${s.liftR.toFixed(2)} kickL=${s.kickL.toFixed(2)} kickR=${s.kickR.toFixed(2)}`)
+    check('10 귀여운 춤: 골반 체중 이동 (|hipShift| 최대 > 0.4)', s.hip > 0.4, `hip=${s.hip.toFixed(2)}`)
+  }
+  // 7c) 9 꾸벅 인사: 허리만 접고 하체는 그대로 — bow 는 9 만 쓴다
+  {
+    const BOW = 0.75
+    for (const id of IDS) {
+      if (id !== 9) check(`${id} ${SPECS.find((x) => x.id === id).name}: bow 채널을 쓰지 않는다 (트래킹·다른 리액션 동작 불변)`, stats[id].bow === 0, `bow=${stats[id].bow}`)
+    }
+    const spec = SPECS.find((x) => x.id === 9)
+    check('9 꾸벅 인사: 이름 "꾸벅 인사", 길이 2.6초', spec.name === '꾸벅 인사' && Math.abs(spec.dur - 2.6) < 1e-9)
+    check('9 꾸벅 인사: 하체 채널 전부 0 (발 들기·차기·벌림·점프·좌우 이동·자전·골반 이동), 무릎 ≤ 0.05', stats[9].liftL === 0 && stats[9].liftR === 0 && stats[9].kickL === 0 && stats[9].kickR === 0 && stats[9].bounce === 0 && stats[9].shift === 0 && stats[9].maxSpin === 0 && stats[9].hip === 0 && stats[9].kneeL <= 0.05 && stats[9].kneeR <= 0.05, `knee=${stats[9].kneeL.toFixed(3)} hip=${stats[9].hip} spin=${stats[9].maxSpin}`)
+    check('9 꾸벅 인사: 이펙트 없음 (스프라이트 0개)', stats[9].maxFx === 0, `max=${stats[9].maxFx}`)
+
+    // 시간대별로 훑는다 (두 엔진이 같은 값을 내는 결정성은 위에서 확인)
     const R = createReactions()
     R.trigger(9, 0)
-    let okL = 0, okR = 0, nL = 0, nR = 0, both = 0
-    run(R, 0, 3.6, (f, t) => {
-      if (t < 0.4 || t > 3.4) return
-      const m = f.motion
-      if (f.body.hipShift > 0.6) { nL++; if (m.liftR > 0.35 && m.liftL < 0.2) okL++ }
-      if (f.body.hipShift < -0.6) { nR++; if (m.liftL > 0.35 && m.liftR < 0.2) okR++ }
-      if (m.liftL > 0.5 && m.liftR > 0.5) both++
+    let holdOk = true
+    let holdMin = 9, holdMax = -9
+    let headMin = 9, headMax = -9
+    let prev = 0
+    let worstStep = 0
+    let afterRise = 0
+    let blushMax = 0, openMax = 0, smileMax = -9, blinkHold = 9, outMax = 0, outOfBand = 0
+    let trackedHip = 9, trackedKnee = 9
+    run(R, 0, spec.dur + 0.6, (f, t) => {
+      const bow = f.motion ? f.motion.bow : 0
+      worstStep = Math.max(worstStep, Math.abs(bow - prev))
+      prev = bow
+      blushMax = Math.max(blushMax, f.fx.blush ?? 0)
+      openMax = Math.max(openMax, f.mouthOpen)
+      smileMax = Math.max(smileMax, f.mouthSmile)
+      if (bow < -1e-9) outOfBand++
+      if (t >= 1.05 && t <= 1.55) {
+        holdMin = Math.min(holdMin, bow); holdMax = Math.max(holdMax, bow)
+        headMin = Math.min(headMin, f.head.pitch); headMax = Math.max(headMax, f.head.pitch)
+        blinkHold = Math.min(blinkHold, f.blinkL)
+        // 척추는 굽히지 않는다 (leanZ 가 아니라 골반으로 접는다)
+        if (Math.abs(f.body.lean.z) > 1e-9 || Math.abs(f.body.lean.x) > 1e-9 || Math.abs(f.body.twist) > 1e-9) holdOk = false
+      }
+      if (t > 2.15 + 0.02) afterRise = Math.max(afterRise, Math.abs(bow))
+      if (!Number.isFinite(bow)) outOfBand++
     })
-    check('9 신나는 춤: 번갈아 스텝 (체중 반대쪽 발이 들림)', nL > 30 && nR > 30 && okL / nL > 0.8 && okR / nR > 0.8 && both === 0, `L ${okL}/${nL} R ${okR}/${nR} 양발동시=${both}`)
+    check('9 꾸벅 인사: 숙인 구간(1.05~1.55초)에서 bow 가 목표각 0.75rad(≈43°)로 일정', Math.abs(holdMin - BOW) < 1e-6 && Math.abs(holdMax - BOW) < 1e-6, `min=${holdMin.toFixed(4)} max=${holdMax.toFixed(4)}`)
+    check('9 꾸벅 인사: 고개는 허리보다 0.2rad 더 숙인다 (head.pitch = -0.2), 척추 lean·twist 는 0 (곧은 허리)', Math.abs(headMin + 0.2) < 1e-6 && Math.abs(headMax + 0.2) < 1e-6 && holdOk, `pitch=${headMin.toFixed(3)}`)
+    check('9 꾸벅 인사: 일어선 뒤(2.17초~) bow = 0, 끝나면 motion 없음', afterRise < 1e-9, `after=${afterRise}`)
+    check('9 꾸벅 인사: bow 가 부드럽다 (프레임당 변화 < 0.06rad, 음수 없음)', worstStep < 0.06 && outOfBand === 0, `step=${worstStep.toFixed(4)}`)
+    check('9 꾸벅 인사: 표정이 차분하다 (홍조 0, 입 다묾, 미소 ≤ 0.2, 숙인 동안 눈을 내리깖 blink ≥ 0.6)', blushMax === 0 && openMax === 0 && smileMax <= 0.2 + 1e-9 && blinkHold >= 0.6, `blush=${blushMax} open=${openMax} smile=${smileMax.toFixed(2)} blink=${blinkHold.toFixed(2)}`)
     R.dispose()
+
+    // 트래킹이 골반·무릎을 움직이고 있어도 숙이는 동안 하체는 리액션 목표(제자리)로 섞인다
+    const T = createReactions()
+    T.trigger(9, 0)
+    let tt = 0
+    for (let i = 0; i < 80; i++) {
+      tt += DT
+      const f = neutralFrame()
+      f.body.hipShift = 0.8
+      f.body.kneeL = 0.9
+      f.body.kneeR = 0.9
+      T.compose(f, DT, tt)
+      trackedHip = f.body.hipShift
+      trackedKnee = Math.max(f.body.kneeL, f.body.kneeR)
+    }
+    check('9 꾸벅 인사: 트래킹 골반 이동·무릎(0.8, 0.9)도 숙이는 동안 제자리로 섞인다', Math.abs(trackedHip) < 1e-6 && trackedKnee < 1e-6, `hip=${trackedHip.toFixed(4)} knee=${trackedKnee.toFixed(4)}`)
+    T.dispose()
+  }
+  // 7d) 허리 숙임 수식(src/model/bow.ts): 모델이 hips·허벅지에 넣는 값으로 만든 가짜 골격에서 발·무릎·고관절이 월드에서 안 움직이고
+  //     상체가 앞(+z, 카메라 쪽)으로 bow 만큼 접힌다 — VRM0(S=+1, 씬이 π 회전)·VRM1(S=-1) 둘 다
+  {
+    const THREE = await vite.ssrLoadModule('three')
+    const { bowPose, createBowPose } = await vite.ssrLoadModule('/src/model/bow.ts')
+    const node = (parent, x, y, z) => { const o = new THREE.Object3D(); o.position.set(x, y, z); parent.add(o); return o }
+    const build = () => {
+      const scene = new THREE.Group()
+      const hips = node(scene, 0, 0.935, 0.007)
+      const L = node(hips, 0.077, -0.04, -0.005), R = node(hips, -0.077, -0.04, -0.005) // 고관절 (중점이 hips 원점이 아니다)
+      const shinL = node(L, -0.02, -0.365, -0.007), shinR = node(R, 0.02, -0.365, -0.007)
+      const footL = node(shinL, -0.01, -0.425, -0.02), footR = node(shinR, 0.01, -0.425, -0.02)
+      const head = node(node(node(hips, 0, 0.1, 0.01), 0, 0.12, 0), 0, 0.3, 0)
+      return { scene, hips, thighs: [L, R], shins: [shinL, shinR], feet: [footL, footR], head, rest: hips.position.clone(), pivot: L.position.clone().add(R.position).multiplyScalar(0.5) }
+    }
+    const worldOf = (o) => o.getWorldPosition(new THREE.Vector3())
+    for (const S of [1, -1]) {
+      const rig = build()
+      rig.scene.rotation.y = S === 1 ? Math.PI : 0 // VRM0 은 rotateVRM0 가 씬을 π 돌려 월드 정면 = +z
+      const out = createBowPose()
+      const pose = (bow) => {
+        bowPose(out, rig.pivot.y, rig.pivot.z, S, bow)
+        rig.hips.position.set(rig.rest.x, rig.rest.y + out.hipsDY, rig.rest.z + out.hipsDZ)
+        rig.hips.rotation.set(out.hipsRotX, 0, 0)
+        for (const t of rig.thighs) t.rotation.set(out.thighRotX, 0, 0)
+        rig.scene.updateMatrixWorld(true)
+      }
+      pose(0)
+      const ref = [...rig.thighs, ...rig.shins, ...rig.feet].map(worldOf)
+      const refHead = worldOf(rig.head)
+      const refHips = worldOf(rig.hips)
+      let worstFoot = 0
+      let okFwd = true
+      let okAngle = true
+      for (const bow of [0.2, 0.5, 0.75, 1.0]) {
+        pose(bow)
+        const now = [...rig.thighs, ...rig.shins, ...rig.feet].map(worldOf)
+        worstFoot = Math.max(worstFoot, ...now.map((p, i) => p.distanceTo(ref[i])))
+        const h = worldOf(rig.head)
+        const hp = worldOf(rig.hips)
+        // 앞(+z)으로 접힌다: 머리가 +z 로 가고 내려간다. 고관절 위 상체 축이 수직에서 bow 만큼 기운다
+        if (!(h.z - refHead.z > 0.05 && h.y < refHead.y)) okFwd = false
+        const dz = h.z - hp.z, dy = h.y - hp.y
+        const refDz = refHead.z - refHips.z, refDy = refHead.y - refHips.y
+        if (Math.abs(Math.atan2(dz, dy) - Math.atan2(refDz, refDy) - bow) > 0.03) okAngle = false
+      }
+      check(`허리 숙임 수식 (S=${S > 0 ? '+1 VRM0' : '-1 VRM1'}): 고관절·무릎·발이 월드에서 안 움직인다 (bow 0.2~1.0)`, worstFoot < 1e-9, `최대 이동=${worstFoot.toExponential(2)}`)
+      check(`허리 숙임 수식 (S=${S > 0 ? '+1 VRM0' : '-1 VRM1'}): 상체가 앞(+z, 카메라 쪽)으로 bow 만큼 접힌다`, okFwd && okAngle, `fwd=${okFwd} angle=${okAngle}`)
+      pose(0)
+      const back = [...rig.thighs, ...rig.shins, ...rig.feet].map(worldOf)
+      check(`허리 숙임 수식 (S=${S > 0 ? '+1 VRM0' : '-1 VRM1'}): bow = 0 이면 hips·다리 변환이 원래와 같다`, out.hipsDY === 0 && out.hipsDZ === 0 && out.thighRotX === 0 && Math.abs(out.hipsRotX) === 0 && back.every((p, i) => p.distanceTo(ref[i]) === 0))
+    }
   }
   check('0 귀여운 춤: 360° 트월 (자전 최대 ≥ 2π)', stats[10].maxSpin >= TAU - 1e-3, `spin=${stats[10].maxSpin.toFixed(2)}`)
   check('8 축하·1 기쁨: 도약 (bounce 최대 > 0.04)', stats[8].bounce > 0.04 && stats[1].bounce > 0.02, `8=${stats[8].bounce.toFixed(3)} 1=${stats[1].bounce.toFixed(3)}`)
