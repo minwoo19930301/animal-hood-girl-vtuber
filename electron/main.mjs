@@ -1,7 +1,7 @@
 // mingo-mate — macOS 데스크톱 마스코트 셸
 // 리서치 검증된 레시피: transparent + frame:false + type:'panel' + screen-saver level
 // + visibleOnFullScreen + setIgnoreMouseEvents(forward) + 렌더러 히트테스트 토글
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu, systemPreferences, dialog, shell } from 'electron'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -172,11 +172,36 @@ function createWindow() {
   }, 33)
 }
 
-app.whenReady().then(() => {
-  // 카메라 권한 자동 허용 (macOS 시스템 프롬프트는 별도로 1회 뜸)
+/**
+ * macOS 카메라 권한(TCC). Electron은 Chromium과 달리 OS 권한 창을 스스로 띄우지 않는다 —
+ * 상태가 not-determined면 getUserMedia가 트랙은 주지만 프레임이 0인 채로 멈춘다(smiley-vtuber 실측).
+ * 창을 만들기 전에 한 번 묻고, 거부돼 있으면 시스템 설정으로 안내한다.
+ */
+async function ensureCameraAccess() {
+  if (process.platform !== 'darwin') return
+  const status = systemPreferences.getMediaAccessStatus('camera')
+  if (status === 'granted') return
+  if (status === 'not-determined') {
+    const ok = await systemPreferences.askForMediaAccess('camera')
+    console.log(`[mingo] camera access ${ok ? 'granted' : 'denied'}`)
+    if (ok) return
+  }
+  const { response } = await dialog.showMessageBox({
+    type: 'warning',
+    message: '카메라를 쓸 수 없습니다',
+    detail: '시스템 설정 > 개인정보 보호 및 보안 > 카메라에서 이 앱(또는 실행한 터미널)을 켠 뒤 다시 실행해 주세요. 카메라 없이도 idle 동작과 리액션은 됩니다.',
+    buttons: ['카메라 설정 열기', '닫기'],
+    defaultId: 0,
+  })
+  if (response === 0) void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Camera')
+}
+
+app.whenReady().then(async () => {
+  // 렌더러의 media 요청은 허용 (OS 권한은 아래 ensureCameraAccess가 담당)
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
     cb(permission === 'media')
   })
+  await ensureCameraAccess()
 
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {
