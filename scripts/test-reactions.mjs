@@ -471,6 +471,93 @@ try {
       check(`허리 숙임 수식 (S=${S > 0 ? '+1 VRM0' : '-1 VRM1'}): bow = 0 이면 hips·다리 변환이 원래와 같다`, out.hipsDY === 0 && out.hipsDZ === 0 && out.thighRotX === 0 && Math.abs(out.hipsRotX) === 0 && back.every((p, i) => p.distanceTo(ref[i]) === 0))
     }
   }
+  // 7e) 꼬리 팔로스루(src/model/strands.ts · bodyParts.ts): 골반이 접히는 동안 꼬리 끝이 한 박자 늦게 따라오고(내려갈 때 뒤로, 일어설 때 앞으로 처졌다 돌아옴),
+  //     숙인 채 머물면 완만한 호로 자리 잡고, 서 있을 때(bow = 0)는 모션이 전혀 바뀌지 않는다. 밑동은 골반 접힘의 일부를 되돌려 수직 막대가 되지 않는다 (VRM0·VRM1 둘 다)
+  {
+    const THREE = await vite.ssrLoadModule('three')
+    const { buildStrand } = await vite.ssrLoadModule('/src/model/strands.ts')
+    const { buildTail } = await vite.ssrLoadModule('/src/model/bodyParts.ts')
+    const { bowPose, createBowPose } = await vite.ssrLoadModule('/src/model/bow.ts')
+    const ss = (x) => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u) }
+    /** 가닥의 분절 피벗 체인 (밑동 → 끝) */
+    const pivotsOf = (strandRoot) => {
+      const out = []
+      let cur = strandRoot.children.find((c) => c.type === 'Group')
+      while (cur) { out.push(cur); cur = cur.children.find((c) => c.type === 'Group') }
+      return out
+    }
+    const strandSpec = { segments: 7, length: 1, radius: 0.05, taper: 0.4, base: 0xffffff, baseShade: 0x888888, restBend: 0.1, amp: 0, freq: 1.9, phase: 0 }
+    const BOWS = 0.6
+    const bowAt = (t) => BOWS * ss((t - 0.5) / 0.5) * (1 - ss((t - 2.6) / 0.55)) // 0.5초에 숙임 → 1.0~2.6 머묾 → 0.55초에 일어섬 (타임라인과 같은 모양)
+
+    // 서 있을 때: bow 를 안 주거나 0 을 줘도 x 굽힘은 0 그대로 (이전 모션과 같다)
+    {
+      const a = buildStrand(strandSpec), b = buildStrand(strandSpec)
+      const pa = pivotsOf(a.root), pb = pivotsOf(b.root)
+      let drift = 0
+      for (let i = 0; i < 180; i++) {
+        a.sway(0, 0, 0, DT)
+        b.sway(0, 0, 0, DT, 0)
+        for (let k = 0; k < pa.length; k++) drift = Math.max(drift, Math.abs(pa[k].rotation.x), Math.abs(pb[k].rotation.x), Math.abs(pa[k].rotation.x - pb[k].rotation.x), Math.abs(pa[k].rotation.z - pb[k].rotation.z))
+        // rotation.z 는 restBend 그대로여야 한다 (idle 진폭 0)
+      }
+      check('꼬리 가닥: bow = 0 이면 x 굽힘 0, bow 인자를 생략해도 같다 (서 있을 때 모션 불변)', drift < 0.1 + 1e-9 && pa.every((p) => p.rotation.x === 0), `최대 편차=${drift.toExponential(2)}`)
+    }
+
+    // 숙임 램프: 내려가는 동안 끝이 정상값보다 더 뒤로, 일어서는 동안은 앞으로 처졌다가 돌아온다
+    {
+      const st = buildStrand(strandSpec)
+      const piv = pivotsOf(st.root)
+      const tip = piv.length - 1
+      let upMax = -9, upMaxBase = -9, dnMin = 9, hold = 0, holdBase = 0, holdPrev = 0, afterMax = 0
+      const frames = Math.round(6 / DT)
+      for (let i = 1; i <= frames; i++) {
+        const t = i * DT
+        st.sway(0, 0, 0, DT, bowAt(t))
+        const x = piv[tip].rotation.x
+        if (t >= 0.5 && t <= 1.4) { upMax = Math.max(upMax, x); upMaxBase = Math.max(upMaxBase, piv[0].rotation.x) }
+        if (t >= 2.6 && t <= 3.6) dnMin = Math.min(dnMin, x)
+        if (Math.abs(t - 2.5) < DT / 2) { hold = x; holdBase = piv[0].rotation.x }
+        if (Math.abs(t - 2.0) < DT / 2) holdPrev = x
+        if (t >= 5) afterMax = Math.max(afterMax, ...piv.map((p) => Math.abs(p.rotation.x)))
+      }
+      check('꼬리 가닥: 숙인 채 머물면 끝이 자기 무게로 뒤로 처져(x > 0) 자리 잡는다 (곧은 막대가 아니라 호)', hold > 0.05 && Math.abs(hold - holdPrev) < 1e-2, `hold=${hold.toFixed(3)} 변화=${Math.abs(hold - holdPrev).toExponential(1)}`)
+      check('꼬리 가닥: 내려가는 동안 끝이 정상값보다 더 뒤로 처진다 (팔로스루 > 0.03rad)', upMax > hold + 0.03, `최대=${upMax.toFixed(3)} 정상=${hold.toFixed(3)}`)
+      check('꼬리 가닥: 일어서는 동안 끝이 앞으로 끌려온다 (x 가 0 아래로, 음수)', dnMin < -0.01, `최소=${dnMin.toFixed(3)}`)
+      check('꼬리 가닥: 끝이 밑동보다 더 늦게·크게 따라간다 (끝 팔로스루 > 밑동)', upMax - hold > upMaxBase - holdBase, `끝=${(upMax - hold).toFixed(3)} 밑동=${(upMaxBase - holdBase).toFixed(3)}`)
+      check('꼬리 가닥: 일어선 뒤(5초~) 모든 분절 x 굽힘이 0 으로 돌아온다', afterMax < 2e-3, `after=${afterMax.toExponential(1)}`)
+    }
+
+    // 꼬리: hips 에 달려 골반과 같이 접히지만, 밑동에서 되돌려 서 있을 때 방향에서 크게 벗어나지 않는다 (강체로 따라가면 -bow 만큼 앞으로 눕는다)
+    for (const S of [1, -1]) {
+      const scene = new THREE.Group()
+      scene.rotation.y = S === 1 ? Math.PI : 0 // 월드 정면 = +z
+      const hips = new THREE.Object3D()
+      hips.position.set(0, 0.935, 0.007)
+      scene.add(hips)
+      const tail = buildTail(hips, 0.23, S, { base: 0xffaa55, baseShade: 0xaa6633, amp: 0 })
+      const chain = []
+      { let cur = tail.root; while (cur) { chain.push(cur); cur = cur.children.find((c) => c.type === 'Group') } }
+      const out = createBowPose()
+      const tilt = (bow) => {
+        // 설정 상태까지 돌린다 (스프링이 수렴)
+        for (let i = 0; i < 360; i++) {
+          bowPose(out, 0.89, 0.002, S, bow)
+          hips.rotation.set(out.hipsRotX, 0, 0)
+          tail.sway(0, 0, 0, DT, bow)
+        }
+        scene.updateMatrixWorld(true)
+        const a = chain[chain.length - 1].getWorldPosition(new THREE.Vector3())
+        const b = chain.find((c) => c.name === '' && c !== tail.root && c.parent?.name !== 'tail').getWorldPosition(new THREE.Vector3())
+        return Math.atan2(-(a.z - b.z), a.y - b.y) // 수직에서 뒤로 기운 각 (rad)
+      }
+      const t0 = tilt(0)
+      const t1 = tilt(BOWS)
+      const delta = t1 - t0
+      // 강체라면 -0.6 (앞으로 눕는다). 밑동 되돌림(+0.8 bow)과 처짐(+)이 더해져 0 근처
+      check(`꼬리 밑동 되돌림 (S=${S > 0 ? '+1 VRM0' : '-1 VRM1'}): bow ${BOWS} 에서 꼬리 방향이 서 있을 때와 ±0.3rad 이내 (강체면 -${BOWS})`, Math.abs(delta) < 0.3, `Δ=${delta.toFixed(3)}rad`)
+    }
+  }
   check('0 귀여운 춤: 360° 트월 (자전 최대 ≥ 2π)', stats[10].maxSpin >= TAU - 1e-3, `spin=${stats[10].maxSpin.toFixed(2)}`)
   check('8 축하·1 기쁨: 도약 (bounce 최대 > 0.04)', stats[8].bounce > 0.04 && stats[1].bounce > 0.02, `8=${stats[8].bounce.toFixed(3)} 1=${stats[1].bounce.toFixed(3)}`)
   check('3 화남: 발 구르기 (liftL·liftR 최대 > 0.5)', stats[3].liftL > 0.5 && stats[3].liftR > 0.5)
