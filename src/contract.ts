@@ -243,6 +243,8 @@ export interface CursorInfo {
 
 /* ============ Electron preload 브리지 (electron/preload.cjs가 노출) ============ */
 export interface MingoBridge {
+  /** Electron의 process.platform ('darwin' | 'win32' | 'linux'). 구버전 preload에는 없다 */
+  platform?: string
   setClickThrough(enabled: boolean): void
   /** 전역 커서 위치 구독 (스크린 좌표 + 윈도우 상대 좌표) */
   onCursor(cb: (p: { sx: number; sy: number; wx: number; wy: number; inWindow: boolean; winW: number; winH: number; screenW: number; screenH: number }) => void): void

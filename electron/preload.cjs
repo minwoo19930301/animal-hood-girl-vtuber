@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('mingo', {
+  /** Node의 process.platform ('darwin' | 'win32' | 'linux') — 렌더러가 OS별 단축키·안내 문구를 고를 때 쓴다 */
+  platform: process.platform,
   setClickThrough(enabled) {
     ipcRenderer.send('mingo:click-through', enabled)
   },
