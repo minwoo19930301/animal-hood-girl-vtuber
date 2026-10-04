@@ -10,3 +10,6 @@ work/avatar-pack/
 
 # Claude agent worktrees
 .claude/worktrees/
+
+# macOS 앱 번들 (npm run pack)
+release/
