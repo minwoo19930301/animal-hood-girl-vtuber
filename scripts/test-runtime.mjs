@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { pathToFileURL } from 'node:url'
+import { join } from 'node:path'
 import { createCameraSession } from '../src/camera.ts'
 import { isCameraRequest, isTrustedAppUrl } from '../electron/policy.mjs'
 
@@ -143,4 +145,15 @@ test('media policy rejects microphones, mixed requests and missing media types',
     assert.equal(isCameraRequest('media', types), false)
   }
   assert.equal(isCameraRequest('geolocation', ['video']), false)
+})
+
+test('launcher bundle: file:// app URL built from the repo path (spaces, Korean) stays trusted', () => {
+  // electron/main.mjs 는 런처가 file:// 로 import 해도 __dirname 이 저장소의 electron/ 이라 같은 식으로 appUrl 을 만든다
+  for (const repo of ['/Users/dev/animal-hood-girl-vtuber', '/Users/김 민우/Documents/버튜버 repo']) {
+    const appUrl = pathToFileURL(join(repo, 'electron', '../dist/index.html')).href
+    assert.ok(isTrustedAppUrl(appUrl, appUrl))
+    assert.ok(isTrustedAppUrl(appUrl + '?avatar=fox#x', appUrl))
+    assert.equal(isTrustedAppUrl(pathToFileURL(join(repo, 'dist/harness.html')).href, appUrl), false)
+    assert.equal(isTrustedAppUrl(pathToFileURL('/tmp/dist/index.html').href, appUrl), false)
+  }
 })
