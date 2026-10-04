@@ -250,11 +250,6 @@ app.whenReady().then(async () => {
         { label: '아바타 작게', accelerator: 'Cmd+Shift+-', click: () => sendDebug('avatar-smaller') },
         { label: '아바타 크게', accelerator: 'Cmd+Shift+=', click: () => sendDebug('avatar-larger') },
         { label: '아바타 크기 리셋', accelerator: 'Cmd+Shift+0', click: () => sendDebug('avatar-reset') },
-        { type: 'separator' },
-        {
-          label: '참고: 카메라 패널/스펙 로그는 동물팩 PR에 아직 없음',
-          enabled: false,
-        },
       ],
     },
   ]))
