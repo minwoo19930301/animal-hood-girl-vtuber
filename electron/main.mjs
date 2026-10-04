@@ -277,14 +277,20 @@ function createTray() {
   if (!isWin) return
   const iconPath = windowsIconPath()
   if (!iconPath) return
-  tray = new Tray(iconPath)
-  tray.setToolTip('Animal Hood VTuber')
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Mingo 숨기기/보이기', click: toggleVisible },
-    { type: 'separator' },
-    { label: '종료', click: () => app.quit() },
-  ]))
-  tray.on('click', toggleVisible)
+  // 트레이는 편의 기능이다 — 아이콘을 못 읽어도 뒤따르는 전역 단축키 등록까지 막지 않는다
+  try {
+    tray = new Tray(iconPath)
+    tray.setToolTip('Animal Hood VTuber')
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: 'Mingo 숨기기/보이기', click: toggleVisible },
+      { type: 'separator' },
+      { label: '종료', click: () => app.quit() },
+    ]))
+    tray.on('click', toggleVisible)
+  } catch (error) {
+    tray = null
+    console.warn('[mingo] 트레이 아이콘을 만들지 못했습니다', error)
+  }
 }
 
 app.whenReady().then(async () => {
