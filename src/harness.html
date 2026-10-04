@@ -6,10 +6,14 @@
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; }
     canvas { display: block; }
+    /* 리액션 시트 라벨 (harnessReactions.ts) */
+    #labels { position: fixed; inset: 0; pointer-events: none; }
+    #labels .tag { position: absolute; font: 600 14px/1.2 -apple-system, "Apple SD Gothic Neo", sans-serif; color: #12202b; background: rgba(255,255,255,0.78); padding: 2px 7px; border-radius: 6px; }
   </style>
 </head>
 <body>
   <canvas id="stage"></canvas>
+  <div id="labels"></div>
   <script type="module" src="./harness.ts"></script>
 </body>
 </html>

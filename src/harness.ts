@@ -20,6 +20,9 @@
  *   kneeL=/kneeR= 로 좌우 무릎을 따로 검증할 수 있음 (knee= 공통 폴백)
  *   legsPresent (지정 시 1; knee/kneeL/kneeR 지정만으로도 켜짐)
  *
+ * 리액션 미리보기 (harnessReactions.ts — 엔진을 트리거부터 1/60초 스텝으로 돌린다):
+ *   reaction=9&rt=1.2  ·  reaction=9&rts=0.3,0.7,1.1&cols=3  ·  reaction=9&strip=8  ·  reaction=all&cols=5  (0 = 10번)
+ *
  * 리액션 계약 필드 (선택 — 모델 단독 검증용):
  *   bounce= spin= shiftX= (키 대비 비율 / rad)  liftL= liftR= kickL= kickR= (0..1)  outL= outR= (rad)
  *   xHappy= xSad= xAngry= xSurprised= xRelaxed= (0..1 표정 오버라이드)  blush= (0..1 볼 홍조)
@@ -29,6 +32,7 @@ import { createMingo } from './model/index'
 import { neutralFrame, neutralArm, neutralMotion, neutralExpr, type ArmPose, type Dir3 } from './contract'
 import { PALETTE } from './palette'
 import { isAvatarSlug } from './model/animals/registry'
+import { runReactionHarness } from './harnessReactions'
 
 let q = new URLSearchParams(location.search)
 const num = (k: string, d = 0) => (q.has(k) ? parseFloat(q.get(k)!) : d)
@@ -240,7 +244,13 @@ function renderPose(seconds: number): void {
   renderer.render(scene, camera)
 }
 
-renderPose(num('t', 1.0))
+if (q.has('reaction')) {
+  // 리액션 모드: 같은 모델에서 엔진을 트리거부터 결정적으로 돌려 컷·스트립·시트를 만든다 (harnessReactions.ts)
+  const labels = document.getElementById('labels')!
+  await runReactionHarness({ q, renderer, scene, mingo, baseFrame: buildFrame, labels, W: w, H: h })
+} else {
+  renderPose(num('t', 1.0))
+}
 document.title = 'READY'
 
 // 시퀀스(GIF) 렌더용 훅 — 같은 페이지에서 포즈만 갈아끼워 VRM 재로드를 피한다.
