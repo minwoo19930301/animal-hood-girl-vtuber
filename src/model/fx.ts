@@ -47,7 +47,7 @@ export function buildFx(crownH: number, cheeks?: CheekSpots): FxRig {
   // ---- 하트 눈앞 2개 (플랫 셰이프는 +Z를 보므로 -Z 정면 프레임에서 y π 회전) ----
   const hearts = new THREE.Group()
   const heartMeshes: THREE.Mesh[] = []
-  const hGeo = heartGeo(0.34 * L)
+  const hGeo = heartGeo(0.26 * L)
   for (const [i, sx] of ([-1, 1] as const).entries()) {
     const m = new THREE.Mesh(hGeo, unlitMat(PALETTE.deepPinkAccent))
     m.position.set(sx * 0.20 * L, 0.46 * L, -1.02 * L)

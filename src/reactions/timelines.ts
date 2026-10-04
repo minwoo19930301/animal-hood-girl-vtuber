@@ -236,7 +236,7 @@ const love: Spec = {
     tg.twist = 0.14 * Math.cos(TAU * 0.8 * tl) * e
     tg.headRoll = 0.14 * Math.sin(TAU * 0.8 * tl + 0.5) * e
     tg.legs = 1
-    tg.hipShift = 0.5 * sw * e
+    tg.hipShift = 0.3 * sw * e
     tg.kneeL = tg.kneeR = 0.1 + 0.07 * Math.sin(TAU * 1.6 * tl)
     hop(tg, tl, 1.75, 0.3, 0.03)
     // 가슴 앞 하트 손 → 머리 위 큰 하트
@@ -247,11 +247,11 @@ const love: Spec = {
     }
   },
   events: [
-    ev(0.3, (fx, rng) => risingHearts(fx, rng, Anchor.head, 3, 0.05, 0.08)),
-    ev(0.85, (fx, rng) => risingHearts(fx, rng, Anchor.head, 2, 0.04, 0.07)),
-    ev(1.3, (fx, rng) => risingHearts(fx, rng, Anchor.head, 3, 0.05, 0.09)),
-    ev(1.8, (fx, rng) => { sparkleRing(fx, rng, 6); risingHearts(fx, rng, Anchor.head, 3, 0.05, 0.09) }),
-    ev(2.3, (fx, rng) => risingHearts(fx, rng, Anchor.head, 2, 0.04, 0.07)),
+    ev(0.3, (fx, rng) => risingHearts(fx, rng, Anchor.head, 3, 0.045, 0.07, 0.15, 0.06, 0.7)),
+    ev(0.85, (fx, rng) => risingHearts(fx, rng, Anchor.head, 2, 0.04, 0.065, 0.15, 0.06, 0.7)),
+    ev(1.3, (fx, rng) => risingHearts(fx, rng, Anchor.head, 3, 0.045, 0.075, 0.15, 0.06, 0.7)),
+    ev(1.8, (fx, rng) => { sparkleRing(fx, rng, 6); risingHearts(fx, rng, Anchor.head, 3, 0.045, 0.075, 0.15, 0.06, 0.7) }),
+    ev(2.3, (fx, rng) => risingHearts(fx, rng, Anchor.head, 2, 0.04, 0.065, 0.15, 0.06, 0.7)),
   ],
 }
 
@@ -277,7 +277,7 @@ const hello: Spec = {
     tg.headPitch = -0.18 * bow
     // 체중을 한쪽에 싣고 손 흔드는 박자로 무릎이 살짝 출렁
     tg.legs = 1
-    tg.hipShift = 0.35 * ss(0.1, 0.5, tl)
+    tg.hipShift = 0.2 * ss(0.1, 0.5, tl)
     tg.kneeL = tg.kneeR = 0.07 + 0.07 * Math.sin(TAU * 2.8 * tl) * ss(0.3, 0.6, tl)
     tg.liftR = 0.1 * ss(0.1, 0.5, tl)
     // 큰 손인사: 팔꿈치를 옆으로 들고 전완을 좌우로
@@ -326,7 +326,7 @@ const shy: Spec = {
     tg.leanX = 0.07 * Math.sin(TAU * 0.9 * tl + 1) * e
     tg.shrugL = tg.shrugR = 0.3 * e
     tg.legs = 1
-    tg.hipShift = 0.7 * sw * e
+    tg.hipShift = 0.4 * sw * e
     tg.kneeL = tg.kneeR = 0.08 + 0.05 * Math.sin(TAU * 1.8 * tl)
     tg.outL = -0.1 * e; tg.outR = -0.1 * e // 살짝 안짱다리
     // 두 손으로 볼을 감싼다

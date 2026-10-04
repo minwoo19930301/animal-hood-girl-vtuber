@@ -111,11 +111,11 @@ export function confettiBurst(fx: Fx, rng: Rng, anchor: AnchorId, n: number, pow
 }
 
 /** 하트가 앵커 위에서 떠오른다 */
-export function risingHearts(fx: Fx, rng: Rng, anchor: AnchorId, n: number, minSize: number, maxSize: number, spreadX = 0.2, oy = 0.12): void {
+export function risingHearts(fx: Fx, rng: Rng, anchor: AnchorId, n: number, minSize: number, maxSize: number, spreadX = 0.2, oy = 0.12, rise = 1): void {
   for (let i = 0; i < n; i++) {
     const p = fx.emit(FxKind.heart, anchor, R(rng, -spreadX, spreadX), oy + R(rng, 0, 0.08))
     if (!p) return
-    p.vy = R(rng, 0.14, 0.22)
+    p.vy = R(rng, 0.14, 0.22) * rise
     p.vx = R(rng, -0.03, 0.04)
     p.ky = 0.6; p.kx = 1
     p.g = 0
