@@ -2,7 +2,7 @@
 // 공통 레시피: transparent + frame:false + screen-saver level + setIgnoreMouseEvents(forward) + 렌더러 히트테스트 토글
 // macOS 추가(리서치 검증): type:'panel' + visibleOnFullScreen (풀스크린 앱 위에도 뜸)
 // Windows 추가: backgroundColor '#00000000', 크기 고정, 작업 표시줄 버튼 + 트레이 아이콘
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu, systemPreferences, dialog, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu, Tray, systemPreferences, dialog, shell } from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -49,6 +49,8 @@ const appUrl = process.env.VITE_DEV_SERVER
 /** @type {BrowserWindow | null} */
 let win = null
 let cursorTimer = null
+/** @type {Tray | null} */
+let tray = null
 // 만들 때 정한 창 크기 — 크기 조절이 없는 Windows에서 이동할 때 그대로 되돌려 주는 값 (drag-by)
 let fixedSize = { width: WIN_W, height: WIN_H }
 
@@ -241,6 +243,25 @@ async function ensureCameraAccess() {
   if (response === 0) void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Camera')
 }
 
+/**
+ * Windows 트레이 아이콘. 창에 프레임이 없고 hide()하면 작업 표시줄 버튼도 사라져서,
+ * 숨긴 아바타를 되살리는 눈에 보이는 길이 필요하다 (전역 단축키 말고도).
+ * 왼쪽 클릭은 숨기기/보이기, 오른쪽 클릭은 메뉴.
+ */
+function createTray() {
+  if (!isWin) return
+  const iconPath = windowsIconPath()
+  if (!iconPath) return
+  tray = new Tray(iconPath)
+  tray.setToolTip('Animal Hood VTuber')
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Mingo 숨기기/보이기', click: toggleVisible },
+    { type: 'separator' },
+    { label: '종료', click: () => app.quit() },
+  ]))
+  tray.on('click', toggleVisible)
+}
+
 app.whenReady().then(async () => {
   // 이 앱의 메인 프레임이 요청한 카메라(video)만 허용 — 마이크·혼합 요청·다른 문서는 거부.
   // (macOS OS 권한은 아래 ensureCameraAccess가 담당)
@@ -282,6 +303,7 @@ app.whenReady().then(async () => {
   ]))
 
   createWindow()
+  createTray()
 
   // 방송 화면공유 대비 퀵 하이드 (setContentProtection은 macOS 15+에서 무력)
   globalShortcut.register('CommandOrControl+Shift+M', toggleVisible)
@@ -338,6 +360,7 @@ ipcMain.on('mingo:renderer-ready', (event) => {
 app.on('will-quit', () => {
   if (cursorTimer) clearInterval(cursorTimer)
   globalShortcut.unregisterAll()
+  tray?.destroy() // 안 지우면 Windows 트레이에 죽은 아이콘이 남는다
 })
 
 app.on('window-all-closed', () => app.quit())
