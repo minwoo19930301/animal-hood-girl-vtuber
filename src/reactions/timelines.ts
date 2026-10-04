@@ -7,11 +7,11 @@
  * 들어올 때 0.15초, 나갈 때 0.35초는 엔진이 엔벨로프로 처리하므로 여기서는 시간 윈도(ss)를 그 안쪽에 둔다.
  * 춤과 전신 리액션은 tg.legs = 1 로 다리를 강제하고 무릎·발 들기·hipShift 로 하체를 쓴다 (모델은 legsPresent 로 게이팅한다).
  */
-import { Anchor, FxKind } from './fx'
+import { Anchor } from './fx'
 import {
   R, angerMark, confettiBurst, dustPuffs, exclaimAt, flowerBurst, noteUp, risingHearts, sparkleAt, sparkleRing, steam, tearDrop,
 } from './fxlib'
-import { G, SIDES, armBlendTo, armSet, armSetMix, hop, nudge, setFingers } from './poses'
+import { G, SIDES, armBlendTo, armSet, armSetMix, hop, nudge } from './poses'
 import type { FxEvent, Spec, Target } from './types'
 import { TAU, bell, ss } from './util'
 
@@ -43,6 +43,7 @@ const joy: Spec = {
   peak: 0.9,
   pull: 0.12,
   eval(tl, tg) {
+    tg.legs = 1
     tg.happy = 0.9
     tg.mouthSmile = 1
     tg.mouthOpen = 0.3 + 0.1 * Math.sin(TAU * 4 * tl)
@@ -89,6 +90,7 @@ const sad: Spec = {
   peak: 1.4,
   pull: 0.03,
   eval(tl, tg) {
+    tg.legs = 1
     const e = ss(0.1, 0.7, tl)
     tg.sad = 1
     tg.mouthSmile = -0.75
@@ -130,6 +132,7 @@ const angry: Spec = {
   peak: 1.05,
   pull: 0.06,
   eval(tl, tg) {
+    tg.legs = 1
     tg.angry = 1
     tg.mouthSmile = -0.9
     tg.mouthOpen = 0.12 + 0.12 * Math.max(0, Math.sin(TAU * 5 * tl))
@@ -176,6 +179,7 @@ const surprise: Spec = {
   peak: 0.4,
   pull: 0.1,
   eval(tl, tg) {
+    tg.legs = 1
     tg.surprised = 1
     tg.mouthOpen = 0.55 - 0.15 * ss(0.3, 0.9, tl)
     tg.mouthSmile = -0.3
@@ -213,6 +217,7 @@ const love: Spec = {
   peak: 1.2,
   pull: 0.08,
   eval(tl, tg) {
+    tg.legs = 1
     tg.happy = 0.3
     tg.relaxed = 0.6
     tg.heart = true
@@ -254,6 +259,7 @@ const hello: Spec = {
   peak: 1.1,
   pull: 0.06,
   eval(tl, tg) {
+    tg.legs = 1
     tg.relaxed = 0.5
     tg.happy = 0.2 * ss(0.3, 0.6, tl)
     tg.mouthSmile = 0.85
@@ -296,6 +302,7 @@ const shy: Spec = {
   peak: 1.3,
   pull: 0.04,
   eval(tl, tg) {
+    tg.legs = 1
     const e = ss(0.1, 0.5, tl)
     tg.relaxed = 0.7
     tg.blush = 1
@@ -315,7 +322,7 @@ const shy: Spec = {
     tg.legs = 1
     tg.hipShift = 0.7 * sw * e
     tg.kneeL = tg.kneeR = 0.08 + 0.05 * Math.sin(TAU * 1.8 * tl)
-    tg.outL = -0.18 * e; tg.outR = -0.18 * e // 안짱다리
+    tg.outL = -0.1 * e; tg.outR = -0.1 * e // 살짝 안짱다리
     // 두 손으로 볼을 감싼다
     const w = ss(0.15, 0.5, tl) * (1 - ss(2.8, 3.15, tl))
     for (let si = 0; si < 2; si++) {
@@ -338,9 +345,10 @@ const celebrate: Spec = {
   key: '8',
   name: '축하',
   dur: 3.2,
-  peak: 0.5,
+  peak: 1.7,
   pull: 0.14,
   eval(tl, tg) {
+    tg.legs = 1
     tg.happy = 0.85
     tg.mouthSmile = 1
     tg.mouthOpen = 0.45 + 0.12 * Math.sin(TAU * 4.5 * tl)
@@ -399,6 +407,7 @@ const dance: Spec = {
   peak: 1.2,
   pull: 0.14,
   eval(tl, tg) {
+    tg.legs = 1
     const e = ss(0.0, 0.3, tl) * (1 - ss(3.9, 4.25, tl))
     const ph = (TAU * tl) / CYC1 // 좌우 한 사이클
     const bp = (TAU * tl) / B1 // 박자
@@ -409,20 +418,20 @@ const dance: Spec = {
     tg.blush = 0.3
     // 사이드 스텝: 몸이 좌우로 옮겨 가고 뒤따르는 발이 들린다 (step-touch)
     tg.legs = 1
-    tg.shiftX = 0.075 * sw * e
-    tg.hipShift = 0.75 * sw * e
+    tg.shiftX = 0.1 * sw * e
+    tg.hipShift = 1 * sw * e
     const cs = Math.cos(ph)
     tg.liftR = 0.75 * Math.max(0, cs) * e
     tg.liftL = 0.75 * Math.max(0, -cs) * e
     // 박마다 무릎 바운스
     const dip = 0.5 + 0.5 * Math.cos(bp)
     tg.kneeL = tg.kneeR = (0.1 + 0.3 * dip) * e
-    tg.bounce = 0.012 * (1 - dip) * e
+    tg.bounce = 0.02 * (1 - dip) * e
     // 머리 까딱, 상체 트위스트
     tg.headPitch = 0.1 * Math.cos(bp) * e
     tg.headRoll = 0.1 * sw * e
-    tg.twist = 0.22 * Math.cos(ph) * e
-    tg.leanX = -0.06 * sw * e
+    tg.twist = 0.28 * Math.cos(ph) * e
+    tg.leanX = -0.07 * sw * e
     tg.leanZ = 0.05 * Math.cos(bp) * e
     // 팔: 번갈아 펌프 → 머리 위 웨이브 → 박수/만세 → 만세 피니시
     const a = ss(0.05, 0.3, tl) * (1 - ss(4.0, 4.28, tl))
@@ -465,23 +474,25 @@ const cute: Spec = {
   key: '0',
   name: '귀여운 춤',
   dur: 4.4,
-  peak: 2.6,
+  peak: 3.65,
   pull: 0.14,
   eval(tl, tg) {
+    tg.legs = 1
     const e = ss(0.0, 0.3, tl) * (1 - ss(4.0, 4.35, tl))
     const bp = (TAU * tl) / B0
-    tg.happy = 0.5
-    tg.relaxed = 0.4
     tg.mouthSmile = 1
     tg.mouthOpen = 0.2
     tg.blush = 0.55
-    tg.legs = 1
     // 구간 가중치
     const A = 1 - ss(1.1, 1.3, tl) // 0 ~ 1.2: 볼 손 + 좌우 스웨이 + 토탭
     const Bh = ss(1.1, 1.3, tl) * (1 - ss(2.1, 2.3, tl)) // 1.2 ~ 2.2: 하트 손 + 킥
     const Cc = ss(2.1, 2.3, tl) * (1 - ss(3.0, 3.15, tl)) // 2.2 ~ 3.1: 트월 + 발레 팔
     const Dd = ss(3.0, 3.2, tl) // 3.1 ~ : 엔딩 포즈
     const sw = Math.sin(TAU * tl / (B0 * 2))
+    // 웃는 눈은 엔딩에서 걷고 윙크를 위해 한쪽 눈을 연다
+    tg.happy = 0.5 * (1 - Dd) + 0.05 * Dd
+    tg.relaxed = 0.4
+    tg.winkL = tl > 3.15 ? ss(3.2, 3.3, tl) * (1 - ss(3.95, 4.05, tl)) : NaN
     // 좌우 스웨이 (전 구간 바탕)
     tg.hipShift = 0.6 * sw * (1 - Dd) * e
     tg.shiftX = 0.04 * sw * (1 - Cc) * (1 - Dd) * e
@@ -506,7 +517,6 @@ const cute: Spec = {
     // 엔딩: 왼발에 체중, 오른발 뒤로 들고 윙크 + V
     tg.liftR += 0.7 * Dd * e
     tg.hipShift += 0.5 * Dd * e
-    tg.blink = Dd > 0.5 ? NaN : NaN
     // 팔
     const a = ss(0.05, 0.3, tl) * (1 - ss(4.05, 4.35, tl))
     for (let si = 0; si < 2; si++) {
@@ -526,6 +536,3 @@ const cute: Spec = {
 }
 
 export const SPECS: readonly Spec[] = [joy, sad, angry, surprise, love, hello, shy, celebrate, dance, cute]
-// 쓰이지 않는 import 경고 방지 (타임라인이 늘어나며 사용)
-void FxKind
-void setFingers

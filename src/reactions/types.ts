@@ -27,6 +27,9 @@ export interface ArmTarget {
 export interface Target {
   /** 얼굴 채널 — NaN 이면 트래킹/idle 값 유지 */
   blink: number
+  /** 한쪽 눈만 (윙크) — blink 위에 덮어쓴다. L = 캐릭터 왼쪽 눈 */
+  winkL: number
+  winkR: number
   gazeX: number
   gazeY: number
   mouthOpen: number
@@ -95,7 +98,7 @@ export function createTarget(): Target {
 
 /** 매 평가 전에 중립으로 되돌린다 (팔 벡터는 armW 가 0 이면 쓰이지 않아 그대로 둔다) */
 export function resetTarget(t: Target): void {
-  t.blink = KEEP; t.gazeX = KEEP; t.gazeY = KEEP; t.mouthOpen = KEEP; t.mouthSmile = KEEP
+  t.blink = KEEP; t.winkL = KEEP; t.winkR = KEEP; t.gazeX = KEEP; t.gazeY = KEEP; t.mouthOpen = KEEP; t.mouthSmile = KEEP
   t.happy = 0; t.sad = 0; t.angry = 0; t.surprised = 0; t.relaxed = 0
   t.blush = 0
   t.heart = false; t.sweat = false; t.anger = false

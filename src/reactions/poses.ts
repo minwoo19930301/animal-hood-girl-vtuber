@@ -109,7 +109,7 @@ export const G = {
 export const SIDES = [0, 1] as const
 
 const norm = (out: Dir3, x: number, y: number, z: number): void => {
-  const l = Math.hypot(x, y, z) || 1
+  const l = Math.sqrt(x * x + y * y + z * z) || 1
   out.x = x / l
   out.y = y / l
   out.z = z / l

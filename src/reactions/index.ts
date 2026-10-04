@@ -87,6 +87,10 @@ interface Layer {
   rng: () => number
   /** 시작 순서 (겹쳐 쓰는 순서) */
   seq: number
+  /** 직전에 평가한 자전 목표 (rad) — 나가기 시작하는 순간 spinHold 로 고정된다 */
+  spin: number
+  /** 나가는 동안 쓰는 자전: 나가기 시작한 시점 값에서 가장 가까운 정수 바퀴로 풀린다 (타임라인이 계속 돌아도 되감김이 반 바퀴를 넘지 않는다) */
+  spinHold: number
 }
 
 const mix = (a: number, b: number, w: number): number => a + (b - a) * w
@@ -96,7 +100,7 @@ export function createReactions(model?: ReactionModel): Reactions {
   const fx: Fx = createFx()
   const layers: Layer[] = []
   for (let i = 0; i < LAYERS; i++) {
-    layers.push({ spec: null, t0: 0, raw: 0, target: 0, outSec: OUT_SEC, ev: 0, rng: mulberry32(1), seq: 0 })
+    layers.push({ spec: null, t0: 0, raw: 0, target: 0, outSec: OUT_SEC, ev: 0, rng: mulberry32(1), seq: 0, spin: 0, spinHold: 0 })
   }
   const order: Layer[] = layers.slice() // 겹쳐 쓰는 순서 (오래된 것 먼저), 프레임마다 제자리 정렬
   const views: LayerView[] = []
@@ -112,31 +116,65 @@ export function createReactions(model?: ReactionModel): Reactions {
   const byId = new Map<number, Spec>()
   for (const s of SPECS) byId.set(s.id, s)
 
-  // 모델 앵커가 아직 없을 때(로드 전·테스트)의 기본값 — 키 단위, 발밑 0 · 머리 ≈0.88
-  const setDefaultAnchors = (): void => {
-    const A = fx.anchors
-    const put = (id: number, x: number, y: number, z = 0): void => { A.x[id] = x; A.y[id] = y; A.z[id] = z }
-    put(Anchor.body, 0, 0)
-    put(Anchor.head, 0, 0.9)
-    put(Anchor.eyeL, 0.02, 0.9, 0.05); put(Anchor.eyeR, -0.02, 0.9, 0.05)
-    put(Anchor.handL, 0.16, 0.48); put(Anchor.handR, -0.16, 0.48)
-    put(Anchor.footL, 0.05, 0.02); put(Anchor.footR, -0.05, 0.02)
-  }
-  setDefaultAnchors()
+  // 모델 앵커가 아직 없을 때(로드 전·테스트)의 기본값 — 키 단위, 발밑 0 · 머리 ≈0.9
+  const A = fx.anchors
+  const setA = (id: number, x: number, y: number, z = 0): void => { A.x[id] = x; A.y[id] = y; A.z[id] = z }
+  setA(Anchor.body, 0, 0)
+  setA(Anchor.head, 0, 0.9)
+  setA(Anchor.eyeL, 0.02, 0.9, 0.05); setA(Anchor.eyeR, -0.02, 0.9, 0.05)
+  setA(Anchor.handL, 0.16, 0.48); setA(Anchor.handR, -0.16, 0.48)
+  setA(Anchor.footL, 0.05, 0.02); setA(Anchor.footR, -0.05, 0.02)
 
-  /** 모델 앵커(월드)를 키 단위로 나눠 FX 앵커에 복사 + FX 루트를 키만큼 스케일 */
+  /** 월드 좌표 앵커를 키 단위로 나눠 FX 앵커에 복사 (invH 는 syncAnchors 가 갱신 — 프레임마다 클로저를 만들지 않는다) */
+  let invH = 1
+  const putAnchor = (id: number, v: THREE.Vector3): void => { A.x[id] = v.x * invH; A.y[id] = v.y * invH; A.z[id] = v.z * invH }
+
+  /** 모델 앵커(월드)를 FX 앵커에 복사 + FX 루트를 키만큼 스케일 */
   const syncAnchors = (): void => {
     if (!model) return
     const H = Math.max(0.5, model.height)
     fx.root.scale.setScalar(H)
     const a = model.anchors
     if (!a || a.head.y < 0.05) return // 아직 한 번도 갱신되지 않음 → 기본값 유지
-    const A = fx.anchors
-    const put = (id: number, v: THREE.Vector3): void => { A.x[id] = v.x / H; A.y[id] = v.y / H; A.z[id] = v.z / H }
-    put(Anchor.body, a.body); put(Anchor.head, a.head)
-    put(Anchor.eyeL, a.eyeL); put(Anchor.eyeR, a.eyeR)
-    put(Anchor.handL, a.handL); put(Anchor.handR, a.handR)
-    put(Anchor.footL, a.footL); put(Anchor.footR, a.footR)
+    invH = 1 / H
+    putAnchor(Anchor.body, a.body); putAnchor(Anchor.head, a.head)
+    putAnchor(Anchor.eyeL, a.eyeL); putAnchor(Anchor.eyeR, a.eyeR)
+    putAnchor(Anchor.handL, a.handL); putAnchor(Anchor.handR, a.handR)
+    putAnchor(Anchor.footL, a.footL); putAnchor(Anchor.footR, a.footR)
+  }
+
+  // 팔 누적기: 레이어마다 프레임 팔 위에 차례로 slerp 하면, 중간값이 다음 레이어 목표의 정반대(내린 팔 ↔ 만세) 근처에 걸릴 때
+  // 회전 평면이 가중치의 미세한 차이에 휙 뒤집힌다 (교차 중 손 방향이 한 프레임에 50° 튀던 문제).
+  // 그래서 레이어들의 *목표끼리* 먼저 섞고(제스처 ↔ 제스처는 정반대가 아니다), 프레임 팔로는 한 번만 섞는다.
+  const accArm: ArmTarget[] = [0, 1].map(() => ({
+    upper: { x: 0, y: -1, z: 0 }, lower: { x: 0, y: -1, z: 0 }, hand: { x: 0, y: -1, z: 0 }, palm: { x: 0, y: 0, z: 1 },
+    fingers: [0, 0, 0, 0, 0], spread: 0,
+  }))
+  const accW = [0, 0]
+
+  /** 누적기(acc, 가중치 accW[i])에 목표 g(가중치 wa)를 쌓는다 — 합쳐진 가중치 = 1-(1-accW)(1-wa), 새 레이어에 wa/합 만큼 기운다 */
+  const accumulateArm = (i: 0 | 1, g: ArmTarget, wa: number): void => {
+    const acc = accArm[i]
+    const outward = i === 0 ? 1 : -1
+    if (accW[i] <= 1e-6) {
+      acc.upper.x = g.upper.x; acc.upper.y = g.upper.y; acc.upper.z = g.upper.z
+      acc.lower.x = g.lower.x; acc.lower.y = g.lower.y; acc.lower.z = g.lower.z
+      acc.hand.x = g.hand.x; acc.hand.y = g.hand.y; acc.hand.z = g.hand.z
+      acc.palm.x = g.palm.x; acc.palm.y = g.palm.y; acc.palm.z = g.palm.z
+      for (let k = 0; k < 5; k++) acc.fingers[k] = g.fingers[k]
+      acc.spread = g.spread
+      accW[i] = wa
+      return
+    }
+    const nw = accW[i] + wa - accW[i] * wa
+    const t = wa / nw
+    slerpInto(acc.upper, acc.upper, g.upper, t, outward)
+    slerpInto(acc.lower, acc.lower, g.lower, t, outward)
+    slerpInto(acc.hand, acc.hand, g.hand, t, outward)
+    slerpInto(acc.palm, acc.palm, g.palm, t, outward)
+    for (let k = 0; k < 5; k++) acc.fingers[k] = mix(acc.fingers[k], g.fingers[k], t)
+    acc.spread = mix(acc.spread, g.spread, t)
+    accW[i] = nw
   }
 
   const blendArm = (a: ArmPose, g: ArmTarget, w: number, outward: number): void => {
@@ -162,6 +200,13 @@ export function createReactions(model?: ReactionModel): Reactions {
     }
   }
 
+  /** 레이어를 내보내기 시작한다 (교체·취소·종료 공통) */
+  const release = (L: Layer, outSec: number): void => {
+    L.target = 0
+    L.outSec = outSec
+    L.spinHold = L.spin
+  }
+
   const resetAcc = (): void => {
     motion.bounce = 0; motion.spin = 0; motion.shiftX = 0
     motion.liftL = 0; motion.liftR = 0; motion.kickL = 0; motion.kickR = 0; motion.outL = 0; motion.outR = 0
@@ -179,10 +224,7 @@ export function createReactions(model?: ReactionModel): Reactions {
       if (!spec) return
       // 지금 재생 중인 레이어는 모두 나가게 한다
       for (const L of layers) {
-        if (L.spec && L.target === 1) {
-          L.target = 0
-          L.outSec = SWAP_OUT_SEC
-        }
+        if (L.spec && L.target === 1) release(L, SWAP_OUT_SEC)
       }
       // 빈 슬롯, 없으면 가장 약한 레이어를 재사용
       let slot = layers[0]
@@ -207,10 +249,7 @@ export function createReactions(model?: ReactionModel): Reactions {
 
     cancel(t) {
       for (const L of layers) {
-        if (L.spec && L.target === 1) {
-          L.target = 0
-          L.outSec = CANCEL_SEC
-        }
+        if (L.spec && L.target === 1) release(L, CANCEL_SEC)
       }
       fx.fadeAll(t, CANCEL_SEC)
     },
@@ -222,6 +261,7 @@ export function createReactions(model?: ReactionModel): Reactions {
       resetAcc()
       let blush = frame.fx.blush ?? 0
       let pullNow = 0
+      accW[0] = 0; accW[1] = 0
 
       for (let li = 0; li < LAYERS; li++) {
         const L = order[li]
@@ -230,10 +270,7 @@ export function createReactions(model?: ReactionModel): Reactions {
         view.id = -1; view.w = 0
         if (!spec) continue
         const tl = t - L.t0
-        if (L.target === 1 && tl >= spec.dur - OUT_SEC) {
-          L.target = 0
-          L.outSec = OUT_SEC
-        }
+        if (L.target === 1 && tl >= spec.dur - OUT_SEC) release(L, OUT_SEC)
         if (L.target === 1) L.raw = Math.min(1, L.raw + dt / IN_SEC)
         else L.raw = Math.max(0, L.raw - dt / L.outSec)
         if (L.target === 0 && L.raw <= 0) {
@@ -245,10 +282,13 @@ export function createReactions(model?: ReactionModel): Reactions {
         view.id = spec.id; view.tl = tl; view.w = w; view.leaving = L.target === 0
         resetTarget(tg)
         spec.eval(tl, tg)
+        if (L.target === 1) L.spin = tg.spin
         pullNow = Math.max(pullNow, spec.pull * w)
 
         // ---- 얼굴: 덮어쓰기 (NaN 은 건드리지 않음) ----
         if (tg.blink === tg.blink) { frame.blinkL = mix(frame.blinkL, tg.blink, w); frame.blinkR = mix(frame.blinkR, tg.blink, w) }
+        if (tg.winkL === tg.winkL) frame.blinkL = mix(frame.blinkL, tg.winkL, w)
+        if (tg.winkR === tg.winkR) frame.blinkR = mix(frame.blinkR, tg.winkR, w)
         if (tg.gazeX === tg.gazeX) frame.gaze.x = mix(frame.gaze.x, tg.gazeX, w)
         if (tg.gazeY === tg.gazeY) frame.gaze.y = mix(frame.gaze.y, tg.gazeY, w)
         if (tg.mouthOpen === tg.mouthOpen) frame.mouthOpen = mix(frame.mouthOpen, tg.mouthOpen, w)
@@ -297,16 +337,18 @@ export function createReactions(model?: ReactionModel): Reactions {
         if (motion.snap < w) motion.snap = w
         if (L.target === 1) motion.spin += tg.spin
         else {
-          const whole = TAU * Math.round(tg.spin / TAU)
-          motion.spin += whole + (tg.spin - whole) * w
+          const whole = TAU * Math.round(L.spinHold / TAU)
+          motion.spin += whole + (L.spinHold - whole) * w
         }
 
-        // ---- 팔 ----
+        // ---- 팔: 목표끼리 먼저 쌓는다 (아래에서 프레임 팔과 한 번만 섞는다) ----
         const aL = w * tg.armW[0]
         const aR = w * tg.armW[1]
-        if (aL > 1e-4) blendArm(frame.armL, tg.arms[0], aL, 1)
-        if (aR > 1e-4) blendArm(frame.armR, tg.arms[1], aR, -1)
+        if (aL > 1e-4) accumulateArm(0, tg.arms[0], aL)
+        if (aR > 1e-4) accumulateArm(1, tg.arms[1], aR)
       }
+      if (accW[0] > 1e-4) blendArm(frame.armL, accArm[0], accW[0], 1)
+      if (accW[1] > 1e-4) blendArm(frame.armR, accArm[1], accW[1], -1)
 
       pull = pullNow
       if (any) {
