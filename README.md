@@ -61,7 +61,7 @@ Node.js 22.18+가 필요하다 (`npm test`는 Node의 TypeScript 실행 기능�
 
 `npm run dev` 개발 모드 · `npm run typecheck` 타입 검사 · `npm run build` 프로덕션 빌드 · `npm run test:reactions` 리액션 엔진 검증 ·
 `npm run pack`(macOS 런처 번들) / `npm run app`(번들을 만들어 실행, macOS 전용) · `npm run pack:win`(Windows 포터블 앱, 아래).
-모든 스크립트가 macOS·Windows(cmd·PowerShell)에서 같게 돈다. 헤드리스 스크린샷·QA 스크립트는 Chrome(Windows는 Edge도 가능)을 찾아 쓰고, 다른 위치에 있으면 `CHROME=<실행 파일 경로>`로 알려 준다.
+npm 스크립트는 Windows(cmd·PowerShell)에서도 돌도록 `VAR=값` 접두 문법·`npx`·맥 Chrome 경로를 걷어냈다(`avatars:gifs`는 `ffmpeg`이 PATH에 있어야 한다). 헤드리스 스크린샷·QA 스크립트는 Chrome(Windows는 Edge도 가능)을 찾아 쓰고, 다른 위치에 있으면 `CHROME=<실행 파일 경로>`로 알려 준다.
 창은 항상 위에 뜨는 투명·클릭통과 오버레이이고, 숨기면 렌더 루프와 웹캠이 함께 멈춘다.
 상단 카메라 버튼으로 언제든 카메라를 끄고 자동 모션만 사용할 수 있다. 권한 거부,
 연결 해제, 트래커 초기화 실패 시 카메라 스트림을 닫고 `다시 연결` 버튼을 표시한다.
