@@ -306,6 +306,9 @@ const cameraSession = createCameraSession({
       state === 'error' ? cameraErrorStatus(os, !!window.mingo, error) : '카메라 꺼짐 · 자동 모션'
     cameraButton.textContent = state === 'error' ? '다시 연결' : cameraEnabled ? '카메라 끄기' : '카메라 켜기'
     cameraButton.setAttribute('aria-pressed', String(state === 'tracking' || state === 'starting'))
+    // 상태 줄은 실패했을 때만 보인다 (정상 연결·꺼짐 상태를 화면에 상시 띄우지 않는다)
+    cameraStatus.hidden = state !== 'error'
+    cameraButton.hidden = state !== 'error'
     if (error) console.warn('[mingo] camera/tracking unavailable — idle mode', error)
   },
 })

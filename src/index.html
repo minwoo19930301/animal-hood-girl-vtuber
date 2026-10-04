@@ -122,8 +122,9 @@
   <div id="runtime-status">
     <span id="model-status" role="status">아바타 불러오는 중…</span>
     <button id="model-retry" type="button" hidden>아바타 다시 불러오기</button>
-    <span id="camera-status" role="status">카메라 대기 중</span>
-    <button id="camera-toggle" type="button" aria-pressed="false">카메라 끄기</button>
+    <!-- 평소엔 숨김. 카메라가 실패했을 때만 원인 안내와 다시 연결 버튼을 보인다 -->
+    <span id="camera-status" role="status" hidden>카메라 대기 중</span>
+    <button id="camera-toggle" type="button" aria-pressed="false" hidden>카메라 끄기</button>
   </div>
   <video id="cam" playsinline muted></video>
   <canvas id="stage"></canvas>
