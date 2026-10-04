@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
 import { createCameraSession } from '../src/camera.ts'
+import { CAMERA_FAILED_STATUS, cameraErrorStatus } from '../src/cameraHelp.ts'
 import { hasAvatarModifier, hasExtraModifier } from '../src/keys.ts'
 import { modLabel, osFromPlatform } from '../src/platform.ts'
 import { isCameraRequest, isTrustedAppUrl } from '../electron/policy.mjs'
@@ -201,4 +202,21 @@ test('캐릭터 전환 수식키: 맥은 ⌘ 만, Windows 는 Ctrl 만 — 다�
   assert.ok(hasAvatarModifier('win', ctrlAlt) && hasExtraModifier('win', ctrlAlt))
   // 그 밖(Linux)은 Windows 와 같은 규칙
   assert.equal(hasAvatarModifier('other', e({ ctrlKey: true })), true)
+})
+
+test('카메라 실패 안내: Windows 데스크톱 앱만 원인별 설정 안내, 나머지는 기존 문구', () => {
+  const dom = (name) => Object.assign(new Error(name), { name })
+  const winBlocked = cameraErrorStatus('win', true, dom('NotAllowedError'))
+  assert.match(winBlocked, /개인 정보 및 보안 > 카메라/)
+  assert.match(winBlocked, /데스크톱 앱이 카메라에 액세스하도록 허용/)
+  assert.equal(cameraErrorStatus('win', true, dom('NotReadableError')), winBlocked)
+  assert.match(cameraErrorStatus('win', true, dom('NotFoundError')), /카메라를 찾을 수 없어요/)
+  assert.equal(cameraErrorStatus('win', true, new Error('카메라 연결이 끊어졌어요. 다시 연결해 주세요.')), CAMERA_FAILED_STATUS)
+  assert.equal(cameraErrorStatus('win', true, undefined), CAMERA_FAILED_STATUS)
+  assert.equal(cameraErrorStatus('win', true, null), CAMERA_FAILED_STATUS)
+  // 브라우저(window.mingo 없음)의 거부는 브라우저 권한이라 Windows 설정을 가리키지 않는다
+  assert.equal(cameraErrorStatus('win', false, dom('NotAllowedError')), CAMERA_FAILED_STATUS)
+  // 맥·Linux 는 기존 문구 그대로
+  for (const os of ['mac', 'other']) assert.equal(cameraErrorStatus(os, true, dom('NotAllowedError')), CAMERA_FAILED_STATUS)
+  assert.equal(CAMERA_FAILED_STATUS, '카메라 연결 실패 · 자동 모션으로 동작 중')
 })

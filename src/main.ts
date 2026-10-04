@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { createMingo } from './model/index'
 import { createTracker } from './tracking/index'
 import { createCameraSession, type CameraState } from './camera'
+import { cameraErrorStatus } from './cameraHelp'
 import { hasAvatarModifier, hasExtraModifier } from './keys'
 import { modLabel, os } from './platform'
 import { createAliveness } from './aliveness/index'
@@ -302,7 +303,7 @@ const cameraSession = createCameraSession({
     cameraState = state
     cameraStatus.textContent = state === 'tracking' ? '카메라 연결됨 · 기기에서만 처리' :
       state === 'starting' ? '카메라 연결 중…' :
-      state === 'error' ? '카메라 연결 실패 · 자동 모션으로 동작 중' : '카메라 꺼짐 · 자동 모션'
+      state === 'error' ? cameraErrorStatus(os, !!window.mingo, error) : '카메라 꺼짐 · 자동 모션'
     cameraButton.textContent = state === 'error' ? '다시 연결' : cameraEnabled ? '카메라 끄기' : '카메라 켜기'
     cameraButton.setAttribute('aria-pressed', String(state === 'tracking' || state === 'starting'))
     if (error) console.warn('[mingo] camera/tracking unavailable — idle mode', error)
