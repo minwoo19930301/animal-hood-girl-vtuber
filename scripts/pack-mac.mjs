@@ -71,6 +71,8 @@ if (standalone) {
     JSON.stringify({ name: pkg.name, productName: NAME, version: pkg.version, type: 'module', main: 'electron/main.mjs' }, null, 2),
   )
   cpSync(join(ROOT, 'electron'), join(appDir, 'electron'), { recursive: true })
+  // electron/main.mjs 가 ../shared/*.json (아바타 카탈로그·리액션 표)을 읽는다 — 빠지면 시작하자마자 던진다
+  cpSync(join(ROOT, 'shared'), join(appDir, 'shared'), { recursive: true })
   cpSync(join(ROOT, 'dist'), join(appDir, 'dist'), { recursive: true })
   rmSync(join(appDir, 'dist/harness.html'), { force: true })
 } else {
