@@ -53,10 +53,10 @@ const joy: Spec = {
     tg.headPitch = 0.1 * e
     tg.twist = 0.12 * Math.sin(TAU * 1.7 * tl + 1) * e
     // 깡충 세 번 (+마지막은 조금 더 크게)
-    hop(tg, tl, 0.25, 0.34, 0.035)
-    hop(tg, tl, 0.85, 0.34, 0.035)
-    hop(tg, tl, 1.45, 0.4, 0.05)
-    hop(tg, tl, 2.05, 0.3, 0.025)
+    hop(tg, tl, 0.25, 0.34, 0.05)
+    hop(tg, tl, 0.85, 0.34, 0.05)
+    hop(tg, tl, 1.45, 0.4, 0.07)
+    hop(tg, tl, 2.05, 0.3, 0.035)
     // 양팔을 번쩍 들고 번갈아 펌프
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]

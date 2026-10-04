@@ -21,6 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+      - run: npm run test:reactions
       - name: Rebuild and audit the 12-avatar pack
         run: |
           npm run avatars:build -- \
