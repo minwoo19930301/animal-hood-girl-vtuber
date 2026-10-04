@@ -507,11 +507,13 @@ const cute: Spec = {
     const tap = Math.pow(0.5 + 0.5 * Math.cos(bp * 0.5), 3)
     tg.liftL += 0.5 * tap * A * Math.max(0, sw) * e
     tg.liftR += 0.5 * tap * A * Math.max(0, -sw) * e
-    // 킥: 1.5초 오른발 옆 킥, 1.9초 왼발 킥
+    // 토 탭: 1.3~1.75초 오른발, 1.7~2.15초 왼발을 앞·옆으로 살짝 내밀어 톡. 반대쪽 다리가 체중을 받는다 (골반이 그쪽으로 옮겨 간다)
     const kickR = bell(1.3, 1.75, tl)
     const kickL = bell(1.7, 2.15, tl)
-    tg.kickR += 0.7 * kickR; tg.outR += 0.35 * kickR
-    tg.kickL += 0.7 * kickL; tg.outL += 0.35 * kickL
+    tg.kickR += 0.35 * kickR; tg.outR += 0.12 * kickR
+    tg.kickL += 0.35 * kickL; tg.outL += 0.12 * kickL
+    tg.hipShift += (0.4 * kickR - 0.4 * kickL) * e
+    tg.leanX += (-0.06 * kickR + 0.06 * kickL) * e
     // 트월: 2.25초부터 0.8초 동안 360°
     tg.spin = TAU * ss(2.25, 3.05, tl)
     tg.bounce += 0.03 * bell(2.2, 2.9, tl) * 1
