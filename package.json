@@ -2,7 +2,7 @@
   "name": "mingo-mate",
   "private": true,
   "version": "0.1.0",
-  "description": "Camera-tracked, toon-shaded 3D animal avatars for macOS (always-on-top, transparent, click-through)",
+  "description": "Camera-tracked, toon-shaded 3D animal avatars for macOS and Windows (always-on-top, transparent, click-through)",
   "type": "module",
   "main": "electron/main.mjs",
   "scripts": {
@@ -18,6 +18,7 @@
     "avatars:gifs": "node scripts/render-avatar-gifs.mjs",
     "test:reactions": "node scripts/test-reactions.mjs",
     "pack": "node scripts/pack-mac.mjs",
+    "pack:win": "node scripts/pack-win.mjs",
     "app": "node scripts/pack-mac.mjs && open 'release/Animal Hood VTuber.app'"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "@napi-rs/canvas": "^1.0.2",
     "@types/three": "^0.185.1",
     "concurrently": "^10.0.3",
