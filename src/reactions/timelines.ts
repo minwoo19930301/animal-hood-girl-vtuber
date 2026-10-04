@@ -40,7 +40,7 @@ const joy: Spec = {
   key: '1',
   name: '기쁨',
   dur: 2.8,
-  peak: 0.9,
+  peak: 1.02,
   pull: 0.12,
   eval(tl, tg) {
     tg.legs = 1
@@ -49,25 +49,28 @@ const joy: Spec = {
     tg.mouthOpen = 0.3 + 0.1 * Math.sin(TAU * 4 * tl)
     tg.blush = 0.35
     const e = ss(0.1, 0.4, tl)
-    tg.headRoll = 0.1 * Math.sin(TAU * 1.7 * tl) * e
+    const sw = Math.sin(TAU * 1.7 * tl)
+    // 깡충 네 번 (가운데 둘이 크다): 뛸 때마다 몸이 좌우로 기울고 고개가 까딱
+    tg.headRoll = 0.14 * sw * e
     tg.headPitch = 0.1 * e
-    tg.twist = 0.12 * Math.sin(TAU * 1.7 * tl + 1) * e
-    // 깡충 세 번 (+마지막은 조금 더 크게)
-    hop(tg, tl, 0.25, 0.34, 0.05)
-    hop(tg, tl, 0.85, 0.34, 0.05)
-    hop(tg, tl, 1.45, 0.4, 0.07)
-    hop(tg, tl, 2.05, 0.3, 0.035)
-    // 양팔을 번쩍 들고 번갈아 펌프
+    tg.twist = 0.14 * Math.sin(TAU * 1.7 * tl + 1) * e
+    tg.leanX = 0.1 * sw * e
+    tg.hipShift = 0.35 * sw * e
+    hop(tg, tl, 0.25, 0.34, 0.05, 0.4)
+    hop(tg, tl, 0.85, 0.36, 0.075, 0.45)
+    hop(tg, tl, 1.45, 0.4, 0.085, 0.45)
+    hop(tg, tl, 2.05, 0.3, 0.04)
+    // 주먹을 꽉 쥐고 번갈아 펌프 (한쪽 위 · 한쪽 앞) — 만세와 구별되는 기쁨의 자세
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]
       const k = 0.5 + 0.5 * Math.sin(TAU * 1.7 * tl + i * Math.PI)
-      armSetMix(tg, i, ss(0.05, 0.3, tl), G.hurray, G.cheer, k)
-      nudge(tg, i, 'hand', 0.2 * Math.sin(TAU * 3.4 * tl + i))
+      armSetMix(tg, i, ss(0.05, 0.3, tl) * (1 - ss(2.55, 2.8, tl)), G.pump, G.pumpUp, k)
+      nudge(tg, i, 'hand', 0.15 * Math.sin(TAU * 3.4 * tl + i))
     }
   },
   events: [
-    ev(0.2, (fx, rng) => { sparkleRing(fx, rng, 6); flowerBurst(fx, rng, 7, 3) }),
-    ev(1.3, (fx, rng) => { sparkleRing(fx, rng, 5); flowerBurst(fx, rng, 5, 3) }),
+    ev(0.2, (fx, rng) => { sparkleRing(fx, rng, 6, 0.2, 0.14, 0.05); flowerBurst(fx, rng, 6, 3) }),
+    ev(1.3, (fx, rng) => { sparkleRing(fx, rng, 5, 0.2, 0.14, 0.05); flowerBurst(fx, rng, 5, 3) }),
   ],
 }
 
@@ -352,32 +355,37 @@ const celebrate: Spec = {
     tg.mouthOpen = 0.45 + 0.12 * Math.sin(TAU * 4.5 * tl)
     tg.blush = 0.4
     const e = ss(0.1, 0.4, tl)
-    tg.headRoll = 0.08 * Math.sin(TAU * 2.2 * tl) * e
+    tg.headRoll = 0.06 * Math.sin(TAU * 2.2 * tl) * e
     tg.headPitch = 0.14 * e
-    hop(tg, tl, 0.3, 0.5, 0.09, 0.4)
-    hop(tg, tl, 1.35, 0.5, 0.1, 0.4)
-    hop(tg, tl, 2.3, 0.4, 0.06, 0.3)
+    // 푹 웅크렸다가 점프 (웅크릴 때 팔이 아래로 모였다가 번쩍 올라간다)
+    hop(tg, tl, 0.3, 0.5, 0.09, 0.6)
+    hop(tg, tl, 1.35, 0.5, 0.1, 0.6)
+    hop(tg, tl, 2.3, 0.4, 0.06, 0.4)
+    const up = Math.max(bell(0.12, 0.8, tl), bell(1.17, 1.85, tl), bell(2.15, 2.7, tl))
+    // 웅크리는 순간(점프 직전) 팔이 아래로 모였다가 도약과 함께 번쩍 올라간다
+    const dip = Math.max(bell(0.12, 0.32, tl), bell(1.17, 1.37, tl), bell(2.12, 2.32, tl))
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]
-      const k = 0.5 + 0.5 * Math.sin(TAU * 2.2 * tl + i * Math.PI)
-      armSetMix(tg, i, ss(0.05, 0.28, tl), G.hurray, G.cheerWide, 0.4 + 0.6 * k)
-      nudge(tg, i, 'hand', 0.25 * Math.sin(TAU * 4.4 * tl + i))
+      // 점프 순간엔 거의 수직으로 쭉, 사이에는 크게 벌린 만세를 유지
+      armSetMix(tg, i, ss(0.05, 0.28, tl), G.cheerWide, G.cheer, up)
+      armBlendTo(tg, i, G.down, 0.8 * dip)
+      nudge(tg, i, 'hand', 0.12 * Math.sin(TAU * 4.4 * tl + i))
     }
   },
   events: [
     ev(0.3, (fx, rng) => {
-      confettiBurst(fx, rng, Anchor.handL, 9, 1, 0.02, 0.05, UP - 0.5, 0.5)
-      confettiBurst(fx, rng, Anchor.handR, 9, 1, -0.02, 0.05, UP + 0.5, 0.5)
+      confettiBurst(fx, rng, Anchor.handL, 14, 1, 0.02, 0.05, UP - 0.5, 0.5)
+      confettiBurst(fx, rng, Anchor.handR, 14, 1, -0.02, 0.05, UP + 0.5, 0.5)
       sparkleRing(fx, rng, 6)
     }),
     ev(1.35, (fx, rng) => {
-      confettiBurst(fx, rng, Anchor.handL, 9, 1.1, 0.02, 0.05, UP - 0.6, 0.55)
-      confettiBurst(fx, rng, Anchor.handR, 9, 1.1, -0.02, 0.05, UP + 0.6, 0.55)
-      confettiBurst(fx, rng, Anchor.head, 7, 0.9, 0, 0.18, UP, 0.7)
+      confettiBurst(fx, rng, Anchor.handL, 14, 1.1, 0.02, 0.05, UP - 0.6, 0.55)
+      confettiBurst(fx, rng, Anchor.handR, 14, 1.1, -0.02, 0.05, UP + 0.6, 0.55)
+      confettiBurst(fx, rng, Anchor.head, 12, 0.9, 0, 0.18, UP, 0.8)
     }),
     ev(2.3, (fx, rng) => {
-      confettiBurst(fx, rng, Anchor.handL, 6, 0.9, 0.02, 0.05, UP - 0.5, 0.5)
-      confettiBurst(fx, rng, Anchor.handR, 6, 0.9, -0.02, 0.05, UP + 0.5, 0.5)
+      confettiBurst(fx, rng, Anchor.handL, 8, 0.9, 0.02, 0.05, UP - 0.5, 0.5)
+      confettiBurst(fx, rng, Anchor.handR, 8, 0.9, -0.02, 0.05, UP + 0.5, 0.5)
       sparkleRing(fx, rng, 5)
     }),
   ],

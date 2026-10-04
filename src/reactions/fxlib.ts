@@ -46,12 +46,12 @@ export function sparkleRing(fx: Fx, rng: Rng, n: number, rx = 0.25, ry = 0.16, c
 export function flowerBurst(fx: Fx, rng: Rng, flowers: number, sparkles: number, lifeScale = 1): void {
   for (let i = 0; i < flowers; i++) {
     const th = R(rng, 0.08 * Math.PI, 0.92 * Math.PI)
-    const r0 = R(rng, 0.14, 0.2)
-    const p = fx.emit(FLOWERS[Math.floor(rng() * 3) % 3], Anchor.head, Math.cos(th) * r0, 0.1 + Math.sin(th) * r0)
+    const r0 = R(rng, 0.07, 0.13)
+    const p = fx.emit(FLOWERS[Math.floor(rng() * 3) % 3], Anchor.head, Math.cos(th) * r0, 0.05 + Math.sin(th) * r0)
     if (!p) return
-    const v = R(rng, 0.16, 0.34)
+    const v = R(rng, 0.08, 0.18)
     p.vx = Math.cos(th) * v
-    p.vy = Math.sin(th) * v + 0.04
+    p.vy = Math.sin(th) * v + 0.03
     p.kx = 2; p.ky = 2
     p.g = R(rng, 0.06, 0.14)
     p.life = R(rng, 1.3, 1.8) * lifeScale
@@ -64,8 +64,8 @@ export function flowerBurst(fx: Fx, rng: Rng, flowers: number, sparkles: number,
   }
   for (let i = 0; i < sparkles; i++) {
     const th = R(rng, 0.1 * Math.PI, 0.9 * Math.PI)
-    const r0 = R(rng, 0.2, 0.3)
-    const p = fx.emit(FxKind.sparkle, Anchor.head, Math.cos(th) * r0, 0.1 + Math.sin(th) * r0)
+    const r0 = R(rng, 0.13, 0.22)
+    const p = fx.emit(FxKind.sparkle, Anchor.head, Math.cos(th) * r0, 0.05 + Math.sin(th) * r0)
     if (!p) return
     p.vy = R(rng, 0.02, 0.08)
     p.life = R(rng, 1.0, 1.5) * lifeScale
@@ -93,7 +93,7 @@ export function confettiBurst(fx: Fx, rng: Rng, anchor: AnchorId, n: number, pow
     p.kx = 1.15; p.ky = 1.2
     p.g = R(rng, 0.45, 0.7)
     p.life = R(rng, 1.8, 2.4)
-    p.size = R(rng, 0.02, 0.032)
+    p.size = R(rng, 0.024, 0.038)
     p.aspect = R(rng, 0.55, 0.9)
     p.rot = R(rng, 0, TAU)
     p.spin = R(rng, -4, 4)
