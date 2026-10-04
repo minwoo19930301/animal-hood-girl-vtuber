@@ -2,6 +2,9 @@ import * as THREE from 'three'
 import { createMingo } from './model/index'
 import { createTracker } from './tracking/index'
 import { createAliveness } from './aliveness/index'
+import { createReactions } from './reactions/index'
+import { prewarmShaders } from './reactions/warm'
+import { framing } from './framing'
 import { neutralFrame, type CursorInfo } from './contract'
 import {
   AVATAR_CATALOG,
@@ -93,7 +96,7 @@ if (gridEl) {
     btn.innerHTML =
       `<span class="emoji">${AVATAR_EMOJI[entry.slug] ?? '🐾'}</span>` +
       `<span class="label">${entry.label}</span>` +
-      `<span class="key">${entry.key}</span>`
+      `<span class="key">⌘${entry.key}</span>`
     btn.addEventListener('click', (e) => {
       e.stopPropagation()
       switchToAvatar(entry.slug)
@@ -151,23 +154,52 @@ const camera = new THREE.PerspectiveCamera(17, 1, 0.1, 100)
 
 const mingo = createMingo(avatar)
 scene.add(mingo.root)
+// 숫자키 리액션: tracking → aliveness → reactions → model. FX(하트·꽃·색종이·음표 …)는 씬에 따로 얹는다
+const reactions = createReactions(mingo)
+scene.add(reactions.fxRoot)
 
-// 빠른 캐릭터 전환: catalog의 1..9, 0, -, =, ` 키 + C(피커 토글).
-// 리로드 시 카메라 스트림도 정상 재초기화되며 선택값은 로컬에만 저장된다.
+/** 숫자 키 → 리액션 번호 (1..9 → 1..9, 0 → 10). 자판 배열과 무관하게 e.code 우선. 숫자가 아니면 0 */
+function digitOf(e: KeyboardEvent): string | null {
+  const m = /^(?:Digit|Numpad)([0-9])$/.exec(e.code)
+  if (m) return m[1]
+  return /^[0-9]$/.test(e.key) ? e.key : null
+}
+
+// 키보드 (창에 포커스가 있을 때 / 브라우저 실행):
+//  - ⌘+1..9, 0, -, =, `, [  캐릭터 전환 (catalog 키). 리로드 시 카메라 스트림도 정상 재초기화되며 선택값은 로컬에만 저장된다.
+//  - 1..9, 0  리액션 재생 (0 = 10번). 꾹 눌러도 한 번만.
+//  - Esc  리액션 취소 + 피커 닫기, C  피커 토글
+// Electron에서는 같은 동작이 메뉴 단축키(⌘숫자)와 전역 단축키(Ctrl+Option+숫자)로도 들어온다.
 window.addEventListener('keydown', (event) => {
   // 입력 필드 포커스 중이면 무시 (현재 없음, 방어)
   const tag = (event.target as HTMLElement | null)?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA') return
+  if (event.isComposing) return
 
-  if (event.key === 'c' || event.key === 'C' || event.key === 'Escape') {
-    if (event.key === 'Escape') setPickerOpen(false)
-    else setPickerOpen(!pickerOpen)
+  if (event.metaKey) {
+    if (event.ctrlKey || event.altKey || event.shiftKey) return // ⌘⇧… 는 메뉴(아바타 크기 등) 몫
+    const d = digitOf(event)
+    const next = avatarKeys[d ?? event.key]
+    if (!next) return
+    event.preventDefault()
+    if (next !== avatar) switchToAvatar(next)
     return
   }
+  if (event.ctrlKey || event.altKey) return
 
-  const next = avatarKeys[event.key]
-  if (!next || next === avatar) return
-  switchToAvatar(next)
+  if (event.key === 'Escape') {
+    setPickerOpen(false)
+    handleCommand('reaction-cancel')
+    return
+  }
+  if (event.key === 'c' || event.key === 'C') {
+    setPickerOpen(!pickerOpen)
+    return
+  }
+  const d = digitOf(event)
+  if (d !== null) {
+    if (!event.repeat) handleCommand(`reaction-${d === '0' ? 10 : Number(d)}`)
+  }
 })
 
 /** 아바타 줌 (1 = 기본, 클수록 멀리 = 더 작게) — 예전 MingoMate 옵션 복원 */
@@ -177,6 +209,9 @@ function setAvatarZoom(z: number) {
   frameCamera()
 }
 
+/** 리액션이 카메라를 뒤로 빼는 정도 (엔진이 엔벨로프로 부드럽게 준다) */
+let cameraPull = 0
+
 function frameCamera() {
   const w = Math.max(1, window.innerWidth)
   const h = Math.max(1, window.innerHeight)
@@ -184,10 +219,13 @@ function frameCamera() {
   // canvas 속성이 버퍼 픽셀(2×)로 남아 창에 반만 보인다.
   renderer.setSize(w, h, true)
   camera.aspect = w / h
-  const bodyH = Math.max(0.5, mingo.height || 1.5)
-  const lookY = bodyH * 0.52
-  // 전신 + 동물 후드/귀 여유. avatarZoom↑ = 더 작게 보임
-  const fitH = bodyH * 1.35 * Math.max(0.85, avatarZoom)
+  applyCamera()
+}
+
+/** 카메라 위치·투영만 갱신 (리사이즈 없이 — 리액션 중 프레임마다 호출해도 싸다) */
+function applyCamera() {
+  // 전신 + 동물 후드/귀 여유. avatarZoom↑ = 더 작게 보임. 리액션 중에는 pull 만큼 뒤로 뺀다
+  const { fitH, lookY } = framing(mingo.height || 1.5, avatarZoom, cameraPull)
   const dist = fitH / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
   camera.position.set(0, lookY, dist)
   camera.lookAt(0, lookY, 0)
@@ -201,10 +239,12 @@ window.addEventListener('resize', frameCamera)
 mingo.ready?.then(() => {
   console.log('[mingo] model ready height=', mingo.height, 'hits=', mingo.hitMeshes.length)
   frameCamera()
+  // 리액션 FX·볼 홍조 셰이더를 미리 컴파일 — 처음 누른 키의 등장 한가운데서 컴파일이 돌아 프레임이 끊기지 않게
+  prewarmShaders(renderer, scene, camera).catch(() => {})
 })
 
-// Electron 메뉴 바 / 우클릭 / 단축키 → 옵션 실행
-window.mingo?.onDebugCommand?.((cmd) => {
+// Electron 메뉴 바 / 우클릭 / 전역 단축키 → 명령 실행
+function handleCommand(cmd: string) {
   if (cmd === 'avatar-smaller') setAvatarZoom(avatarZoom + 0.1)
   else if (cmd === 'avatar-larger') setAvatarZoom(avatarZoom - 0.1)
   else if (cmd === 'avatar-reset' || cmd === 'reset-layout') {
@@ -212,8 +252,13 @@ window.mingo?.onDebugCommand?.((cmd) => {
     frameCamera()
   } else if (cmd === 'quit') {
     window.mingo?.quit()
+  } else if (cmd === 'reaction-cancel') {
+    reactions.cancel(clock.elapsedTime)
+  } else if (cmd.startsWith('reaction-')) {
+    reactions.trigger(Number(cmd.slice('reaction-'.length)), clock.elapsedTime)
   }
-})
+}
+window.mingo?.onDebugCommand?.(handleCommand)
 
 // ---------- 트래킹 + 생명감 ----------
 const tracker = createTracker()
@@ -378,7 +423,8 @@ let lastTracked = 0
 function loop() {
   rafId = requestAnimationFrame(loop)
   const nowMs = performance.now()
-  const targetMs = lastTracked > 0.5 ? TRACKED_FRAME_MS : IDLE_FRAME_MS
+  // 리액션(점프·춤·FX)이 도는 동안은 idle 이어도 60fps — 30fps 로는 박자와 착지가 뚝뚝 끊긴다
+  const targetMs = lastTracked > 0.5 || reactions.busy() ? TRACKED_FRAME_MS : IDLE_FRAME_MS
   // -1ms 허용 오차: rAF 틱 양자화(8.33/16.7ms)로 캡이 한 틱씩 밀리는 것 방지
   if (nowMs - lastRenderMs < targetMs - 1) return
   lastRenderMs = nowMs
@@ -387,9 +433,14 @@ function loop() {
   const t = clock.elapsedTime
 
   const raw = trackingUp ? tracker.latest() : neutralFrame()
-  const frame = aliveness.compose(raw, dt, t, cursor)
+  const frame = reactions.compose(aliveness.compose(raw, dt, t, cursor), dt, t)
   lastTracked = frame.tracked
   mingo.apply(frame, dt, t)
+  const pull = reactions.cameraPull()
+  if (Math.abs(pull - cameraPull) > 1e-4) {
+    cameraPull = pull
+    applyCamera()
+  }
 
   renderer.render(scene, camera)
 }
