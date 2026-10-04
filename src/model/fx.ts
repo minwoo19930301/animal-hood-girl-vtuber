@@ -4,11 +4,13 @@
  *  - heart: 하트 2개, 캐릭터 눈앞
  *  - sweat: 관자놀이(캐릭터-왼쪽 = 뷰어 오른쪽) 땀방울
  *  - anger: 이마/후드 (캐릭터-오른쪽 = 뷰어 왼쪽) 십자 힘줄
+ *  - blush: 볼 홍조 2장 (리액션 fx.blush) — 눈 위치에서 파생, 부드러운 방사형 텍스처
  */
 import * as THREE from 'three'
 import { PALETTE } from '../palette'
 import { unlitMat, addOutline } from './materials'
 import { mergeShapes, teardrop, heartGeo, unitSphereLo } from './geo'
+import type { CheekSpots } from './cheeks'
 
 export interface FxRig {
   group: THREE.Group
@@ -16,9 +18,28 @@ export interface FxRig {
   heartMeshes: THREE.Mesh[]
   sweat: THREE.Group
   anger: THREE.Group
+  blush: THREE.Group
+  blushMats: THREE.MeshBasicMaterial[]
 }
 
-export function buildFx(crownH: number): FxRig {
+/** 중심이 진하고 가장자리가 투명한 분홍 타원 (프로시저럴 캔버스 — 외부 파일 없음) */
+function blushTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas')
+  cv.width = 128
+  cv.height = 128
+  const c = cv.getContext('2d')!
+  const g = c.createRadialGradient(64, 64, 4, 64, 64, 62)
+  g.addColorStop(0, 'rgba(255,92,128,0.95)')
+  g.addColorStop(0.55, 'rgba(255,110,140,0.55)')
+  g.addColorStop(1, 'rgba(255,130,150,0)')
+  c.fillStyle = g
+  c.fillRect(0, 0, 128, 128)
+  const t = new THREE.CanvasTexture(cv)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
+export function buildFx(crownH: number, cheeks?: CheekSpots): FxRig {
   const group = new THREE.Group()
   group.name = 'fx'
   const L = crownH
@@ -86,5 +107,28 @@ export function buildFx(crownH: number): FxRig {
   anger.visible = false
   group.add(anger)
 
-  return { group, hearts, heartMeshes, sweat, anger }
+  // ---- 볼 홍조 (눈 아래 바깥쪽, 얼굴 표면 바로 앞) ----
+  const blush = new THREE.Group()
+  const blushMats: THREE.MeshBasicMaterial[] = []
+  if (cheeks) {
+    const tex = blushTexture()
+    const plane = new THREE.PlaneGeometry(0.40 * L, 0.24 * L)
+    for (const [spot, sx] of [[cheeks.l, 1], [cheeks.r, -1]] as const) {
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false,
+      })
+      blushMats.push(mat)
+      const m = new THREE.Mesh(plane, mat)
+      m.position.copy(spot)
+      // 플레인은 +Z를 본다 → 정면(-Z)으로 y π, 볼 곡면을 따라 바깥쪽으로 살짝 요
+      // (fx.group 로컬은 S와 무관하게 왼눈 x<0, 정면 -Z)
+      m.rotation.set(0.08, Math.PI + sx * 0.38, 0)
+      m.renderOrder = 6
+      blush.add(m)
+    }
+  }
+  blush.visible = false
+  group.add(blush)
+
+  return { group, hearts, heartMeshes, sweat, anger, blush, blushMats }
 }

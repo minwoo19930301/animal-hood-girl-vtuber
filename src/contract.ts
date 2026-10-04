@@ -69,6 +69,41 @@ export interface FxState {
   happy: boolean  // ∪∪ 행복 눈
   sweat: boolean  // 땀방울
   anger: boolean  // 분노 마크
+  /** 볼 홍조 0..1 (리액션 전용 — 트래킹은 채우지 않는다, 없으면 0) */
+  blush?: number
+}
+
+/**
+ * 몸 전체 움직임 — 리액션(src/reactions) 전용 선택 필드. 트래킹·aliveness는 채우지 않으며
+ * 없으면 모델은 이전과 똑같이 움직인다. 길이 단위는 아바타 키(height) 대비 비율.
+ */
+export interface BodyMotion {
+  /** 수직 도약 (+위). 발이 바닥에서 떨어진다 */
+  bounce: number
+  /** 아바타 루트 y축 회전 (rad, 누적 — 2π = 한 바퀴). 조명은 고정, 몸·후드·머리카락만 돈다 */
+  spin: number
+  /** 좌우 이동 (+캐릭터 왼쪽 = 화면 오른쪽) */
+  shiftX: number
+  /** 발 들기 0..1 — 허벅지를 조금 들고 정강이를 뒤로 접는다 (스텝·토탭·점프 때 웅크림) */
+  liftL: number
+  liftR: number
+  /** 다리 차기 0..1 — 무릎을 편 채 다리 전체를 앞으로 휘두른다 */
+  kickL: number
+  kickR: number
+  /** 다리 옆으로 벌림 (rad, +바깥쪽) */
+  outL: number
+  outR: number
+  /** 몸 채널 스무딩 우회 0..1 — 춤처럼 빠른 동작이 평활로 뭉개지지 않게 (1 = 거의 즉시) */
+  snap: number
+}
+
+/** 표정 오버라이드 가중치 0..1 — 트래킹 값과 max로 합친다 (리액션 전용 선택 필드) */
+export interface ExprOverride {
+  happy: number
+  sad: number
+  angry: number
+  surprised: number
+  relaxed: number
 }
 
 /** 트래킹→모델로 흐르는 단일 프레임. 모든 필드는 항상 채워져 있다(널 없음). */
@@ -90,6 +125,10 @@ export interface RigFrame {
   fx: FxState
   /** 호흡 위상 0..1 (aliveness가 채움; 모델은 가슴 스케일 등에 사용) */
   breath: number
+  /** 리액션이 채우는 몸 전체 움직임 (없으면 0 — 트래킹은 절대 채우지 않는다) */
+  motion?: BodyMotion
+  /** 리액션이 채우는 표정 오버라이드 (없으면 0) */
+  expr?: ExprOverride
 }
 
 /** 차렷 자세 팔 (idle 기본): 팔 아래로, 살짝 바깥, 손바닥 몸쪽, 손가락 릴랙스 */
@@ -116,6 +155,14 @@ export function neutralBody(): BodyPose {
     legsPresent: 0,
     kneeL: 0, kneeR: 0,
   }
+}
+
+export function neutralMotion(): BodyMotion {
+  return { bounce: 0, spin: 0, shiftX: 0, liftL: 0, liftR: 0, kickL: 0, kickR: 0, outL: 0, outR: 0, snap: 0 }
+}
+
+export function neutralExpr(): ExprOverride {
+  return { happy: 0, sad: 0, angry: 0, surprised: 0, relaxed: 0 }
 }
 
 export function neutralFrame(): RigFrame {
@@ -145,6 +192,27 @@ export interface MingoModel {
   apply(frame: RigFrame, dt: number, t: number): void
   /** 히트테스트(클릭스루 토글)용 — 레이캐스트 대상 메시들 */
   hitMeshes: import('three').Object3D[]
+  /**
+   * 리액션 FX 앵커(월드 좌표) — anchorsOn=true 인 동안 apply()마다 갱신된다.
+   * 로드 전에는 전부 0. 값은 직전 apply 직후의 포즈다.
+   */
+  anchors?: ModelAnchors
+  /** true면 apply가 앵커를 갱신한다 (월드 행렬 갱신 비용이 있어 리액션이 도는 동안만 켠다) */
+  anchorsOn?: boolean
+}
+
+/** 리액션 FX가 붙는 지점 (월드 좌표) */
+export interface ModelAnchors {
+  /** 발밑 원점 + 도약·좌우 이동 */
+  body: import('three').Vector3
+  /** 머리 본 */
+  head: import('three').Vector3
+  eyeL: import('three').Vector3
+  eyeR: import('three').Vector3
+  handL: import('three').Vector3
+  handR: import('three').Vector3
+  footL: import('three').Vector3
+  footR: import('three').Vector3
 }
 
 /** 트래킹 구현 API (src/tracking/index.ts) */

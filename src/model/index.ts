@@ -14,6 +14,9 @@
  * - 손가락: fingers[5] 개별 본 체인 (엄지 축 별도), spread → proximal 벌림.
  * - BodyPose: shrug→어깨 리프트, lean/twist→spine/chest 분배, hipShift→hips 이동+롤,
  *   knee→다리 (legsPresent 게이팅, 정강이 수직 유지 + hips y 보정으로 발 접지).
+ * - 리액션(선택 필드): frame.motion → 아바타 루트(avatarRoot)의 도약/자전/좌우 이동 + 다리 확장
+ *   (발 들기·차기·벌림), frame.expr → 표정 오버라이드(max 합성), fx.blush → 볼 홍조.
+ *   avatarRoot는 root의 자식이라 고정 조명(sun/amb)은 돌지 않는다.
  * - 결정적: Math.random 없음, 2차 모션은 전부 dt 기반 스프링.
  */
 import * as THREE from 'three'
@@ -22,12 +25,13 @@ import {
   VRM, VRMLoaderPlugin, VRMUtils,
   type MToonMaterial, type VRMExpressionManager, type VRMHumanBoneName,
 } from '@pixiv/three-vrm'
-import type { MingoModel, RigFrame, ArmPose, Dir3 } from '../contract'
+import type { MingoModel, ModelAnchors, RigFrame, ArmPose, Dir3 } from '../contract'
 import { neutralArm } from '../contract'
 import { TOON } from '../palette'
 import { Follower } from './springs'
 import { ArmSolver, armSolverSelfTest } from './armSolver'
 import { buildFx, type FxRig } from './fx'
+import { measureCheeks } from './cheeks'
 import {
   animalBuilder,
   avatarDefinition,
@@ -66,7 +70,18 @@ export const BODY = {
   hipRoll: 0.06,      // hipShift=1 골반 롤 (rad)
   rate: 10,           // 바디 채널 스무딩 (1/s) — 하네스 스텝 입력 스냅 방지
   legGateRate: 4,     // legsPresent 게이트 스무딩 (1/s)
+  // 리액션(motion.snap=1) 중 스무딩: 춤 박자(2Hz)가 τ=0.1s 평활에 뭉개지지 않게 거의 즉시 추종
+  snapRate: 45,
+  snapLegGateRate: 28,
 } as const
+
+/**
+ * 리액션 다리 확장 (rad). 허벅지 각 t, 정강이 상대 회전 -s → 정강이 절대각 = t - s.
+ *  - lift: 허벅지 LIFT.thigh, 정강이는 절대 -(LIFT.fold) (발이 뒤로 접혀 올라감)
+ *  - kick: 무릎을 편 채 허벅지 KICK 만큼 앞으로 (정강이는 허벅지와 같이)
+ * 접지 보정(drop)은 BodyPose knee만 기준 — 도약·발 들기는 리액션 타임라인의 bounce가 책임진다.
+ */
+export const LEG_FX = { liftThigh: 0.5, liftFold: 1.5, kick: 1.0, outMax: 0.7 } as const
 
 /** 손가락 curl 관절별 회전량 — 손가락별 curl 값으로 전 관절 비례 (thumb은 축이 달라 별도) */
 export const FINGER_CURL = { proximal: 1.28, intermediate: 1.5, distal: 0.95 } as const
@@ -129,6 +144,8 @@ interface LegRig {
 
 interface Rig {
   vrm: VRM
+  /** 도약·자전·좌우 이동이 걸리는 그룹 — vrm.scene의 부모, root의 자식 (조명은 root 직속) */
+  avatarRoot: THREE.Group
   S: number
   neck: Node3
   head: Node3
@@ -149,6 +166,15 @@ interface Rig {
   armR: ArmRig
   em: VRMExpressionManager | null
   has: Record<'blinkL' | 'blinkR' | 'blink' | 'aa' | 'happy' | 'relaxed' | 'sad' | 'surprised' | 'angry', boolean>
+  /**
+   * 놀람 표정의 실제 이름. VRoid(VRM0)는 'Surprised'를 unknown 프리셋 커스텀 표정으로 내보내서
+   * three-vrm이 소문자 'surprised'가 아니라 'Surprised'로 등록한다 — 둘 다 찾아 저장한다.
+   */
+  surprisedName: string | null
+  eyeL: Node3
+  eyeR: Node3
+  footL: Node3
+  footR: Node3
   animal: AnimalCostumeRig
   fx: FxRig
 }
@@ -213,6 +239,10 @@ function torsoEuler(nd: Node3, S: number, sm: BodySm, share: number, extraX: num
   nd?.rotation.set(-S * sm.leanZ * share + extraX, sm.twist * share, S * sm.leanX * share)
 }
 
+function setAnchor(out: THREE.Vector3, nd: Node3): void {
+  if (nd) out.setFromMatrixPosition(nd.matrixWorld)
+}
+
 let armSelfTestRan = false
 
 export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
@@ -231,6 +261,12 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
   const amb = new THREE.AmbientLight(0xffffff, 0.55)
   root.add(sun, amb)
 
+  // 도약·자전은 vrm.scene이 아니라 이 그룹에 건다: root에는 고정 조명이 있어 yaw를 걸면 빛이 같이 돌고,
+  // vrm.scene은 rotateVRM0가 이미 y=π를 써 둔다.
+  const avatarRoot = new THREE.Group()
+  avatarRoot.name = 'avatarRoot'
+  root.add(avatarRoot)
+
   let rig: Rig | null = null
 
   // ---- 2차 모션 스프링 (후드가 고개 pitch/yaw를 지연 추종 → 출렁임) ----
@@ -246,11 +282,20 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
     kneeL: 0, kneeR: 0, legGate: 0,
   }
 
+  const anchors: ModelAnchors = {
+    body: new THREE.Vector3(), head: new THREE.Vector3(),
+    eyeL: new THREE.Vector3(), eyeR: new THREE.Vector3(),
+    handL: new THREE.Vector3(), handR: new THREE.Vector3(),
+    footL: new THREE.Vector3(), footR: new THREE.Vector3(),
+  }
+
   const api: MingoModel = {
     root,
     height: 1.5, // 로드 후 실측으로 갱신
     hitMeshes: [],
     ready: undefined,
+    anchors,
+    anchorsOn: false,
     apply(frame: RigFrame, dt: number, t: number) {
       if (!rig) return // 로드 전 no-op
       dt = clamp(dt, 1e-4, 0.05)
@@ -269,12 +314,24 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         vrm.lookAt.pitch = -clamp(frame.gaze.y, -1, 1) * 11
       }
 
+      // ---- 리액션 선택 필드 (트래킹은 채우지 않는다 — 없으면 전부 0) ----
+      const mo = frame.motion
+      const ex = frame.expr
+      const snap = mo ? clamp(mo.snap, 0, 1) : 0
+      const xHappy = ex ? clamp(ex.happy, 0, 1) : 0
+      const xSad = ex ? clamp(ex.sad, 0, 1) : 0
+      const xAngry = ex ? clamp(ex.angry, 0, 1) : 0
+      const xSurp = ex ? clamp(ex.surprised, 0, 1) : 0
+      const xRelax = ex ? clamp(ex.relaxed, 0, 1) : 0
+
       // ---- 표정 (expressionManager) ----
       const em = rig.em
       if (em) {
         const has = rig.has
-        const blL = clamp(frame.blinkL, 0, 1)
-        const blR = clamp(frame.blinkR, 0, 1)
+        // Joy(웃는 눈 ∪∪)는 눈을 이미 감은 모양이라 깜빡임을 얹으면 이중으로 감긴다 → 같이 감쇠
+        const joyAtten = 1 - xHappy
+        const blL = clamp(frame.blinkL, 0, 1) * joyAtten
+        const blR = clamp(frame.blinkR, 0, 1) * joyAtten
         if (has.blinkL && has.blinkR) {
           em.setValue('blinkLeft', blL)
           em.setValue('blinkRight', blR)
@@ -288,7 +345,8 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         const blinkAtten = 1 - Math.max(blL, blR)
         const bias = definition.expressionBias
         if (has.angry) {
-          em.setValue('angry', clamp(definition.eyeSharpen + (bias.angry ?? 0), 0.06, 0.2) * blinkAtten)
+          const base = clamp(definition.eyeSharpen + (bias.angry ?? 0), 0.06, 0.2)
+          em.setValue('angry', Math.max(base, xAngry) * blinkAtten)
         }
         if (has.aa) em.setValue('aa', clamp(frame.mouthOpen, 0, 1))
         const smile = clamp(frame.mouthSmile, -1, 1)
@@ -296,13 +354,18 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         // 미소 리매핑 (closed-lip): 레퍼런스는 다문 입꼬리 미소 — jaw-open이 포함된
         // happy(VRoid Joy)는 상위 구간을 0.2로 캡하고, 입꼬리 상승 위주의
         // relaxed(VRoid Fun)를 주 채널로 쓴다. fx.happy(이벤트)만 풀 Joy.
-        if (has.happy) em.setValue('happy', frame.fx.happy ? 1 : Math.min(sm * 0.5, 0.12))
+        if (has.happy) em.setValue('happy', Math.max(frame.fx.happy ? 1 : Math.min(sm * 0.5, 0.12), xHappy))
         // v3.1 expressionBias.relaxed: 순한/나른한 종의 상시 소량 가산 (blink 감쇠 동일).
-        if (has.relaxed) em.setValue('relaxed', clamp(sm * 0.8 + (bias.relaxed ?? 0) * blinkAtten, 0, 1))
-        if (has.sad) em.setValue('sad', Math.max(0, -smile) * 0.4)
-        if (has.surprised) {
-          const browRaise = Math.max(clamp(frame.browL, -1, 1), clamp(frame.browR, -1, 1))
-          em.setValue('surprised', Math.max(0, browRaise) * 0.3)
+        if (has.relaxed) em.setValue('relaxed', Math.max(clamp(sm * 0.8 + (bias.relaxed ?? 0) * blinkAtten, 0, 1), xRelax))
+        if (has.sad) em.setValue('sad', Math.max(Math.max(0, -smile) * 0.4, xSad))
+        if (rig.surprisedName) {
+          // 트래킹 눈썹 → 놀람은 소문자 'surprised'를 가진 모델에서만 (기존 동작 유지), 리액션은 어느 이름이든
+          let browSurp = 0
+          if (has.surprised) {
+            const browRaise = Math.max(clamp(frame.browL, -1, 1), clamp(frame.browR, -1, 1))
+            browSurp = Math.max(0, browRaise) * 0.3
+          }
+          em.setValue(rig.surprisedName, Math.max(browSurp, xSurp) * blinkAtten)
         }
       }
 
@@ -313,7 +376,7 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
 
       // ---- BodyPose: 채널 평활 ----
       const body = frame.body
-      const kB = 1 - Math.exp(-dt * BODY.rate)
+      const kB = 1 - Math.exp(-dt * lerp(BODY.rate, BODY.snapRate, snap))
       bodySm.leanX += (clamp(body.lean.x, -0.5, 0.5) - bodySm.leanX) * kB
       bodySm.leanZ += (clamp(body.lean.z, -0.5, 0.5) - bodySm.leanZ) * kB
       bodySm.twist += (clamp(body.twist, -0.7, 0.7) - bodySm.twist) * kB
@@ -322,7 +385,7 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
       bodySm.hipShift += (clamp(body.hipShift, -1, 1) - bodySm.hipShift) * kB
       bodySm.kneeL += (clamp(body.kneeL, 0, 1) - bodySm.kneeL) * kB
       bodySm.kneeR += (clamp(body.kneeR, 0, 1) - bodySm.kneeR) * kB
-      bodySm.legGate += (clamp(body.legsPresent, 0, 1) - bodySm.legGate) * (1 - Math.exp(-dt * BODY.legGateRate))
+      bodySm.legGate += (clamp(body.legsPresent, 0, 1) - bodySm.legGate) * (1 - Math.exp(-dt * lerp(BODY.legGateRate, BODY.snapLegGateRate, snap)))
 
       // ---- lean/twist → spine/chest/upperChest 분배 (+호흡 회전은 최상단 본에) ----
       const breathX = S * 0.012 * breathAmp
@@ -339,10 +402,24 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
       const gate = bodySm.legGate
       const aL = bodySm.kneeL * BODY.kneeMax * gate
       const aR = bodySm.kneeR * BODY.kneeMax * gate
-      rig.legL.upper?.rotation.set(S * aL, 0, 0)
-      rig.legL.lower?.rotation.set(-S * aL, 0, 0)
-      rig.legR.upper?.rotation.set(S * aR, 0, 0)
-      rig.legR.lower?.rotation.set(-S * aR, 0, 0)
+      if (mo) {
+        // 리액션 다리 확장: 발 들기(허벅지↑+정강이 접힘) · 차기(무릎 편 채 앞으로) · 옆으로 벌림
+        const lfL = clamp(mo.liftL, 0, 1) * gate, lfR = clamp(mo.liftR, 0, 1) * gate
+        const kkL = clamp(mo.kickL, 0, 1) * gate, kkR = clamp(mo.kickR, 0, 1) * gate
+        const ouL = clamp(mo.outL, -LEG_FX.outMax, LEG_FX.outMax) * gate
+        const ouR = clamp(mo.outR, -LEG_FX.outMax, LEG_FX.outMax) * gate
+        const tL = aL + lfL * LEG_FX.liftThigh + kkL * LEG_FX.kick
+        const tR = aR + lfR * LEG_FX.liftThigh + kkR * LEG_FX.kick
+        rig.legL.upper?.rotation.set(S * tL, 0, -S * ouL)
+        rig.legL.lower?.rotation.set(-S * (aL + lfL * (LEG_FX.liftThigh + LEG_FX.liftFold)), 0, 0)
+        rig.legR.upper?.rotation.set(S * tR, 0, S * ouR)
+        rig.legR.lower?.rotation.set(-S * (aR + lfR * (LEG_FX.liftThigh + LEG_FX.liftFold)), 0, 0)
+      } else {
+        rig.legL.upper?.rotation.set(S * aL, 0, 0)
+        rig.legL.lower?.rotation.set(-S * aL, 0, 0)
+        rig.legR.upper?.rotation.set(S * aR, 0, 0)
+        rig.legR.lower?.rotation.set(-S * aR, 0, 0)
+      }
       const drop = (rig.legL.thigh * (1 - Math.cos(aL)) + rig.legR.thigh * (1 - Math.cos(aR))) / 2
 
       // ---- hipShift: 골반 x 이동 + 미세 롤 (+무릎 굽힘 y 보정) ----
@@ -382,9 +459,30 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
       if (frame.fx.sweat) fx.sweat.position.y = fx.sweat.userData.baseY - Math.abs(Math.sin(t * 3)) * 0.014
       fx.anger.visible = frame.fx.anger
       if (frame.fx.anger) fx.anger.scale.setScalar(1 + 0.06 * Math.sin(t * 7))
+      const blush = frame.fx.blush ?? 0
+      fx.blush.visible = blush > 0.02
+      if (fx.blush.visible) for (const m of fx.blushMats) m.opacity = clamp(blush, 0, 1) * 0.85
+
+      // ---- 아바타 루트: 도약 / 좌우 이동 / 자전 (키 대비 비율) ----
+      const hgt = api.height
+      rig.avatarRoot.position.set(mo ? mo.shiftX * hgt : 0, mo ? mo.bounce * hgt : 0, 0)
+      rig.avatarRoot.rotation.y = mo ? mo.spin : 0
 
       // ---- VRM 갱신 (정규화→raw 복사, lookAt/expression/springbone) ----
       vrm.update(dt)
+
+      // ---- 리액션 FX 앵커 (월드) — 켜진 동안만: 월드 행렬 갱신 비용이 있다 ----
+      if (api.anchorsOn) {
+        rig.avatarRoot.updateWorldMatrix(true, true)
+        anchors.body.setFromMatrixPosition(rig.avatarRoot.matrixWorld)
+        setAnchor(anchors.head, rig.head)
+        setAnchor(anchors.eyeL, rig.eyeL ?? rig.head)
+        setAnchor(anchors.eyeR, rig.eyeR ?? rig.head)
+        setAnchor(anchors.handL, rig.armL.hand)
+        setAnchor(anchors.handR, rig.armR.hand)
+        setAnchor(anchors.footL, rig.footL)
+        setAnchor(anchors.footR, rig.footR)
+      }
     },
   }
 
@@ -433,7 +531,7 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
     }
   }
 
-  api.ready = loadVRM(root, api, definition)
+  api.ready = loadVRM(root, avatarRoot, api, definition)
     .then((r) => { rig = r })
     .catch((err) => { console.error('[mingo] VRM load failed — 모델 없이 idle', err) })
 
@@ -442,6 +540,7 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
 
 async function loadVRM(
   root: THREE.Group,
+  avatarRoot: THREE.Group,
   api: MingoModel,
   definition: AvatarDefinition,
 ): Promise<Rig> {
@@ -471,7 +570,7 @@ async function loadVRM(
     }
   })
   tuneMToon(vrm.materials)
-  root.add(vrm.scene)
+  avatarRoot.add(vrm.scene)
 
   const S = vrm.meta.metaVersion === '0' ? 1 : -1
   const H = vrm.humanoid
@@ -530,6 +629,7 @@ async function loadVRM(
 
   const rig: Omit<Rig, 'animal' | 'fx'> = {
     vrm,
+    avatarRoot,
     S,
     neck: bone('neck'),
     head: headNode,
@@ -557,6 +657,13 @@ async function loadVRM(
       surprised: !!vrm.expressionManager?.getExpression('surprised'),
       angry: !!vrm.expressionManager?.getExpression('angry'),
     },
+    surprisedName: vrm.expressionManager?.getExpression('surprised')
+      ? 'surprised'
+      : vrm.expressionManager?.getExpression('Surprised') ? 'Surprised' : null,
+    eyeL: bone('leftEye'),
+    eyeR: bone('rightEye'),
+    footL: bone('leftFoot'),
+    footR: bone('rightFoot'),
   }
 
   // ---- 머리 바운딩 실측 → 후드 자동 스케일 ----
@@ -640,7 +747,9 @@ async function loadVRM(
       lowerArmR: rig.armR.lower,
     },
   })
-  const fx = buildFx(crownH)
+  // 볼 홍조 자리: 홍채·피부 정점에서 실측 (얼굴형 워프가 종마다 눈·얼굴을 옮긴다)
+  const cheeks = headNode ? measureCheeks(vrm.scene, headNode, S, crownH) : null
+  const fx = buildFx(crownH, cheeks ?? undefined)
   fx.sweat.userData.baseY = fx.sweat.position.y
   if (S === -1) fx.group.rotation.y = Math.PI
   headNode?.add(fx.group)

@@ -19,10 +19,14 @@
  *   shrug= lean= leanZ= twist= hipShift= knee=   BodyPose 채널
  *   kneeL=/kneeR= 로 좌우 무릎을 따로 검증할 수 있음 (knee= 공통 폴백)
  *   legsPresent (지정 시 1; knee/kneeL/kneeR 지정만으로도 켜짐)
+ *
+ * 리액션 계약 필드 (선택 — 모델 단독 검증용):
+ *   bounce= spin= shiftX= (키 대비 비율 / rad)  liftL= liftR= kickL= kickR= (0..1)  outL= outR= (rad)
+ *   xHappy= xSad= xAngry= xSurprised= xRelaxed= (0..1 표정 오버라이드)  blush= (0..1 볼 홍조)
  */
 import * as THREE from 'three'
 import { createMingo } from './model/index'
-import { neutralFrame, neutralArm, type ArmPose, type Dir3 } from './contract'
+import { neutralFrame, neutralArm, neutralMotion, neutralExpr, type ArmPose, type Dir3 } from './contract'
 import { PALETTE } from './palette'
 import { isAvatarSlug } from './model/animals/registry'
 
@@ -194,6 +198,23 @@ f.body.legsPresent = q.has('legsPresent') || hasKnee ? 1 : 0
 f.body.present =
   q.has('shrug') || q.has('lean') || q.has('leanZ') || q.has('twist') ||
   q.has('hipShift') || hasKnee || q.has('legsPresent') ? 1 : 0
+
+// ---- 리액션 선택 필드 (파라미터가 하나라도 있을 때만 채운다) ----
+const MOTION_KEYS = ['bounce', 'spin', 'shiftX', 'liftL', 'liftR', 'kickL', 'kickR', 'outL', 'outR'] as const
+if (MOTION_KEYS.some((k) => q.has(k))) {
+  const m = neutralMotion()
+  for (const k of MOTION_KEYS) m[k] = num(k)
+  m.snap = num('snap')
+  f.motion = m
+  if (!q.has('legsPresent')) f.body.legsPresent = 1
+}
+const EXPR_KEYS = [['xHappy', 'happy'], ['xSad', 'sad'], ['xAngry', 'angry'], ['xSurprised', 'surprised'], ['xRelaxed', 'relaxed']] as const
+if (EXPR_KEYS.some(([k]) => q.has(k))) {
+  const e = neutralExpr()
+  for (const [k, name] of EXPR_KEYS) e[name] = num(k)
+  f.expr = e
+}
+if (q.has('blush')) f.fx.blush = num('blush')
 
 f.fx.heart = flag('heart')
 f.fx.happy = flag('happy')
