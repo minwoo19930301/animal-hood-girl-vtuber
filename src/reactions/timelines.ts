@@ -475,12 +475,12 @@ const cute: Spec = {
   id: 10,
   key: '0',
   name: '귀여운 춤',
-  dur: 4.4,
-  peak: 3.65,
+  dur: 4.75,
+  peak: 3.75,
   pull: 0.14,
   eval(tl, tg) {
     tg.legs = 1
-    const e = ss(0.0, 0.3, tl) * (1 - ss(4.0, 4.35, tl))
+    const e = ss(0.0, 0.3, tl) * (1 - ss(4.3, 4.7, tl))
     const bp = (TAU * tl) / B0
     tg.mouthSmile = 1
     tg.mouthOpen = 0.2
@@ -488,18 +488,18 @@ const cute: Spec = {
     // 구간 가중치
     const A = 1 - ss(1.1, 1.3, tl) // 0 ~ 1.2: 볼 손 + 좌우 스웨이 + 토탭
     const Bh = ss(1.1, 1.3, tl) * (1 - ss(2.1, 2.3, tl)) // 1.2 ~ 2.2: 하트 손 + 킥
-    const Cc = ss(2.1, 2.3, tl) * (1 - ss(3.0, 3.15, tl)) // 2.2 ~ 3.1: 트월 + 발레 팔
-    const Dd = ss(3.0, 3.2, tl) // 3.1 ~ : 엔딩 포즈
+    const Cc = ss(2.1, 2.3, tl) * (1 - ss(2.95, 3.1, tl)) // 2.2 ~ 3.0: 트월 + 비대칭 팔 (한 팔 위 · 한 손 허리)
+    const Dd = ss(3.0, 3.2, tl) // 3.1 ~ : 엔딩 포즈 (정면을 보고 한 박 이상 멈춘다)
     const sw = Math.sin(TAU * tl / (B0 * 2))
     // 웃는 눈은 엔딩에서 걷고 윙크를 위해 한쪽 눈을 연다
     tg.happy = 0.5 * (1 - Dd) + 0.05 * Dd
     tg.relaxed = 0.4
-    tg.winkL = tl > 3.15 ? ss(3.2, 3.3, tl) * (1 - ss(3.95, 4.05, tl)) : NaN
+    tg.winkL = tl > 3.15 ? ss(3.2, 3.3, tl) * (1 - ss(4.2, 4.3, tl)) : NaN
     // 좌우 스웨이 (전 구간 바탕)
     tg.hipShift = 0.6 * sw * (1 - Dd) * e
     tg.shiftX = 0.04 * sw * (1 - Cc) * (1 - Dd) * e
     tg.twist = 0.18 * Math.cos(TAU * tl / (B0 * 2)) * (1 - Dd) * e
-    tg.headRoll = 0.14 * sw * (1 - Dd) * e + 0.18 * Dd
+    tg.headRoll = 0.14 * sw * (1 - Dd) * e + 0.18 * Dd * (1 - ss(3.3, 3.6, tl)) * e
     tg.headPitch = 0.06 * Math.cos(bp) * (1 - Dd) * e
     const dip = 0.5 + 0.5 * Math.cos(bp)
     tg.kneeL = tg.kneeR = (0.08 + 0.18 * dip) * (1 - Dd) * e + 0.1 * Dd
@@ -514,15 +514,15 @@ const cute: Spec = {
     tg.kickL += 0.35 * kickL; tg.outL += 0.12 * kickL
     tg.hipShift += (0.4 * kickR - 0.4 * kickL) * e
     tg.leanX += (-0.06 * kickR + 0.06 * kickL) * e
-    // 트월: 2.25초부터 0.8초 동안 360°
-    tg.spin = TAU * ss(2.25, 3.05, tl)
-    tg.bounce += 0.03 * bell(2.2, 2.9, tl) * 1
-    tg.liftR += 0.5 * Cc
+    // 트월: 2.05~2.25초 웅크렸다가 점프하며 0.6초 동안 360° (도약 중 양발을 접는다)
+    tg.kneeL += 0.4 * bell(2.0, 2.3, tl) * e; tg.kneeR += 0.4 * bell(2.0, 2.3, tl) * e
+    hop(tg, tl, 2.25, 0.45, 0.06, 0.3)
+    tg.spin = TAU * ss(2.25, 2.85, tl)
     // 엔딩: 왼발에 체중, 오른발 뒤로 들고 윙크 + V
     tg.liftR += 0.7 * Dd * e
     tg.hipShift += 0.5 * Dd * e
     // 팔
-    const a = ss(0.05, 0.3, tl) * (1 - ss(4.05, 4.35, tl))
+    const a = ss(0.05, 0.3, tl) * (1 - ss(4.35, 4.7, tl))
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]
       // A: 볼 손 → 살랑살랑
@@ -530,8 +530,8 @@ const cute: Spec = {
       nudge(tg, i, 'lower', 0.06 * Math.sin(TAU * tl / B0 + i * Math.PI) * A, 0.04 * Math.cos(TAU * tl / B0 + i) * A)
       // B: 하트 손
       armBlendTo(tg, i, G.heartChest, Bh)
-      // C: 발레 팔
-      armBlendTo(tg, i, G.ballet, Cc)
+      // C: 한 팔은 머리 위로 둥글게, 한 손은 허리 (돌 때 팔이 머리를 가리지 않게)
+      armBlendTo(tg, i, i === 0 ? G.ballet : G.hip, Cc)
       // D: 왼팔 V 윙크, 오른팔 허리
       armBlendTo(tg, i, i === 0 ? G.peaceEye : G.hip, Dd)
     }
