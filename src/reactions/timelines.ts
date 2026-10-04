@@ -9,7 +9,7 @@
  */
 import { Anchor } from './fx'
 import {
-  R, angerMark, confettiBurst, dustPuffs, exclaimAt, flowerBurst, noteUp, risingHearts, sparkleAt, sparkleRing, steam, tearDrop,
+  R, angerMark, confettiBurst, dustPuffs, exclaimAt, flowerBurst, noteUp, risingHearts, sparkleAt, sparkleRing, tearDrop,
 } from './fxlib'
 import { G, SIDES, armBlendTo, armSet, armSetMix, hop, nudge } from './poses'
 import type { FxEvent, Spec, Target } from './types'
@@ -27,7 +27,7 @@ function stomp(tg: Target, tl: number, T: number, side: 0 | 1, h = 0.8): void {
   else tg.liftR += lift * h
   const tau = tl - T
   if (tau >= 0 && tau < 0.5) {
-    const k = 0.22 * Math.exp(-tau / 0.09) * (0.5 + 0.5 * Math.cos((TAU * tau) / 0.24))
+    const k = 0.4 * Math.exp(-tau / 0.09) * (0.5 + 0.5 * Math.cos((TAU * tau) / 0.24))
     tg.kneeL += k; tg.kneeR += k
   }
   if (lift > 0 || (tau >= 0 && tau < 0.5)) tg.legs = 1
@@ -129,7 +129,7 @@ const angry: Spec = {
   key: '3',
   name: '화남',
   dur: 2.8,
-  peak: 1.05,
+  peak: 1.04,
   pull: 0.06,
   eval(tl, tg) {
     tg.legs = 1
@@ -138,34 +138,32 @@ const angry: Spec = {
     tg.mouthOpen = 0.12 + 0.12 * Math.max(0, Math.sin(TAU * 5 * tl))
     tg.blush = 0.55
     const tr = ss(0.08, 0.25, tl) * (1 - ss(2.1, 2.45, tl))
-    // 부들부들 떨며 노려본다
-    tg.headRoll = 0.05 * Math.sin(TAU * 13 * tl + 1) * tr
-    tg.headYaw = 0.04 * Math.sin(TAU * 11 * tl) * tr
-    tg.headPitch = -0.12 * tr
-    tg.leanZ = 0.1 * tr
-    tg.shiftX = 0.006 * Math.sin(TAU * 17 * tl) * tr
-    tg.shrugL = tg.shrugR = 0.35 * tr
-    // 발 구르기 세 번 (오른발 → 왼발 → 오른발)
-    stomp(tg, tl, 0.62, 1)
-    stomp(tg, tl, 1.1, 0, 0.9)
-    stomp(tg, tl, 1.6, 1, 1)
-    // 주먹을 꽉 쥐고 부들
+    // 앞으로 숙여 노려보고 부들부들 떤다 (머리·몸통이 같이)
+    tg.headRoll = 0.1 * Math.sin(TAU * 13 * tl + 1) * tr
+    tg.headYaw = 0.08 * Math.sin(TAU * 11 * tl) * tr
+    tg.headPitch = -0.14 * tr
+    tg.leanZ = 0.25 * tr
+    tg.twist = 0.06 * Math.sin(TAU * 9 * tl + 2) * tr
+    tg.shiftX = 0.01 * Math.sin(TAU * 17 * tl) * tr
+    tg.shrugL = tg.shrugR = 0.4 * tr
+    // 발 구르기 세 번 (오른발 → 왼발 → 오른발): 내려찍는 순간 몸이 푹 꺼진다
+    stomp(tg, tl, 0.6, 1)
+    stomp(tg, tl, 1.0, 0, 0.9)
+    stomp(tg, tl, 1.45, 1, 1)
+    // 주먹을 꽉 쥐고 가슴 앞으로 끌어올려 부들
     const w = ss(0.1, 0.3, tl) * (1 - ss(2.1, 2.45, tl))
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]
-      armSet(tg, i, w, G.fistDown)
-      nudge(tg, i, 'lower', 0, 0.05 * Math.sin(TAU * 16 * tl + i * 1.7) * tr)
-      nudge(tg, i, 'upper', 0.03 * Math.sin(TAU * 14 * tl + i) * tr)
+      armSet(tg, i, w, G.fistChest)
+      nudge(tg, i, 'lower', 0.02 * Math.sin(TAU * 16 * tl + i * 1.7) * tr, 0.08 * Math.sin(TAU * 16 * tl + i * 1.7) * tr)
+      nudge(tg, i, 'upper', 0.05 * Math.sin(TAU * 14 * tl + i) * tr)
     }
   },
   events: [
-    ev(0.2, (fx) => angerMark(fx, Anchor.head, 0.15, 0.17, 0.075, 2.0)),
-    ev(0.45, (fx, rng) => steam(fx, rng)),
-    ev(0.62, (fx) => dustPuffs(fx, Anchor.footR)),
-    ev(1.1, (fx) => dustPuffs(fx, Anchor.footL)),
-    ev(1.25, (fx, rng) => steam(fx, rng)),
-    ev(1.6, (fx) => dustPuffs(fx, Anchor.footR, 0.065)),
-    ev(1.8, (fx, rng) => steam(fx, rng)),
+    ev(0.2, (fx) => angerMark(fx, Anchor.head, 0.1, 0.1, 0.13, 2.1, 0.12)),
+    ev(0.66, (fx) => dustPuffs(fx, Anchor.footR, 0.075)), // 발이 바닥에 닿은 뒤에 (앵커는 직전 프레임 포즈라 같은 프레임에 쏘면 들린 발 높이에서 나온다)
+    ev(1.06, (fx) => dustPuffs(fx, Anchor.footL, 0.075)),
+    ev(1.51, (fx) => dustPuffs(fx, Anchor.footR, 0.09)),
   ],
 }
 

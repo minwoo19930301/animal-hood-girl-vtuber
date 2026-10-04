@@ -275,26 +275,33 @@ const drawDrop: Draw = (c, S) => {
 }
 
 const drawAnger: Draw = (c, S) => {
-  // 💢: 네 개의 굽은 괄호가 가운데를 향한다
+  // 💢: 네 개의 굽은 괄호가 가운데를 향한다. 흰 윤곽 → 진한 빨강 본체 (주황 후드 위에서도 읽힘)
   c.lineCap = 'round'
   c.lineJoin = 'round'
-  c.strokeStyle = '#E4463A'
-  c.lineWidth = S * 0.2
-  for (let q = 0; q < 4; q++) {
-    const sx = q % 2 === 0 ? -1 : 1
-    const sy = q < 2 ? -1 : 1
-    c.beginPath()
-    c.moveTo(sx * S * 0.8, sy * S * 0.2)
-    c.quadraticCurveTo(sx * S * 0.2, sy * S * 0.2, sx * S * 0.2, sy * S * 0.8)
-    c.stroke()
+  const brackets = (): void => {
+    for (let q = 0; q < 4; q++) {
+      const sx = q % 2 === 0 ? -1 : 1
+      const sy = q < 2 ? -1 : 1
+      c.beginPath()
+      c.moveTo(sx * S * 0.8, sy * S * 0.2)
+      c.quadraticCurveTo(sx * S * 0.2, sy * S * 0.2, sx * S * 0.2, sy * S * 0.8)
+      c.stroke()
+    }
   }
+  c.strokeStyle = '#FFFFFF'
+  c.lineWidth = S * 0.42
+  brackets()
+  c.strokeStyle = '#C71F1A'
+  c.lineWidth = S * 0.24
+  brackets()
 }
 
+/** 먼지: 따뜻한 회갈색 덩어리 (밝은 배경 위에서도 읽히게 어둡고 불투명하게) */
 const drawPuff: Draw = (c, S) => {
   const g = c.createRadialGradient(0, 0, 0, 0, 0, S)
-  g.addColorStop(0, 'rgba(250,250,252,0.95)')
-  g.addColorStop(0.55, 'rgba(236,238,244,0.75)')
-  g.addColorStop(1, 'rgba(222,226,236,0)')
+  g.addColorStop(0, 'rgba(176,156,132,0.95)')
+  g.addColorStop(0.6, 'rgba(188,170,146,0.8)')
+  g.addColorStop(1, 'rgba(200,184,160,0)')
   c.fillStyle = g
   c.beginPath()
   c.arc(0, 0, S, 0, TAU)

@@ -184,25 +184,6 @@ export function dustPuffs(fx: Fx, anchor: AnchorId, size = 0.05): void {
   }
 }
 
-/** 머리 위로 김이 푹 올라온다 (화남) */
-export function steam(fx: Fx, rng: Rng): void {
-  for (const sx of [-1, 1]) {
-    const p = fx.emit(FxKind.puff, Anchor.head, sx * R(rng, 0.1, 0.15), 0.1)
-    if (!p) return
-    p.vx = sx * 0.05
-    p.vy = 0.16
-    p.kx = 1.5; p.ky = 1.2
-    p.size = 0.028
-    p.grow = 1.0
-    p.life = 0.85
-    p.alpha = 0.95
-    p.pop = 0.1
-    p.fadeAt = 0.35
-    p.follow = 0.5
-    p.delay = sx > 0 ? 0.08 : 0
-  }
-}
-
 /** 느낌표 하나 (머리 위 오른쪽) */
 export function exclaimAt(fx: Fx, anchor: AnchorId, ox: number, oy: number, size = 0.11): void {
   const p = fx.emit(FxKind.exclaim, anchor, ox, oy)
@@ -218,8 +199,8 @@ export function exclaimAt(fx: Fx, anchor: AnchorId, ox: number, oy: number, size
 }
 
 /** 분노 마크 💢 (머리 옆) */
-export function angerMark(fx: Fx, anchor: AnchorId, ox: number, oy: number, size = 0.09, life = 1.9): void {
-  const p = fx.emit(FxKind.anger, anchor, ox, oy)
+export function angerMark(fx: Fx, anchor: AnchorId, ox: number, oy: number, size = 0.09, life = 1.9, oz = 0): void {
+  const p = fx.emit(FxKind.anger, anchor, ox, oy, oz)
   if (!p) return
   p.size = size
   p.rot = 0.12
