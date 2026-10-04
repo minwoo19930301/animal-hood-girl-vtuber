@@ -15,8 +15,9 @@ if (!Array.isArray(avatarCatalog) || avatarCatalog.length === 0) {
   throw new Error('shared/avatar-catalog.json must contain at least one avatar')
 }
 
-const WIN_W = 420
-const WIN_H = 580
+// 동물 후드/귀 여유 — 기본 420×580은 머리 장식이 잘리는 경우가 있어 키움
+const WIN_W = 560
+const WIN_H = 780
 
 /** @type {BrowserWindow | null} */
 let win = null
@@ -27,6 +28,45 @@ function switchAvatar(slug) {
   const script = `localStorage.setItem('mingo-avatar', ${JSON.stringify(slug)});` +
     `const u=new URL(location.href);u.searchParams.set('avatar',${JSON.stringify(slug)});location.replace(u.toString())`
   void win.webContents.executeJavaScript(script)
+}
+
+function sendDebug(cmd) {
+  if (win && !win.isDestroyed()) win.webContents.send('mingo:debug-cmd', cmd)
+}
+
+function avatarMenuTemplate(currentSlug) {
+  return avatarCatalog.map((entry) => ({
+    label: `${entry.label}  (${entry.key})`,
+    type: 'radio',
+    checked: entry.slug === currentSlug,
+    accelerator: /^[0-9]$/.test(entry.key) ? entry.key : undefined,
+    click: () => switchAvatar(entry.slug),
+  }))
+}
+
+/** 우클릭/칩 — 예전 옵션 + 캐릭터 전환 통합 메뉴 */
+function popupOptionsMenu(currentSlug) {
+  if (!win || win.isDestroyed()) return
+  const menu = Menu.buildFromTemplate([
+    {
+      label: '캐릭터',
+      submenu: avatarMenuTemplate(currentSlug),
+    },
+    { type: 'separator' },
+    { label: '아바타 작게', accelerator: 'Cmd+Shift+-', click: () => sendDebug('avatar-smaller') },
+    { label: '아바타 크게', accelerator: 'Cmd+Shift+=', click: () => sendDebug('avatar-larger') },
+    { label: '아바타 크기 리셋', click: () => sendDebug('avatar-reset') },
+    { type: 'separator' },
+    {
+      label: 'Mingo 숨기기/보이기',
+      accelerator: 'Cmd+Shift+M',
+      click: () => { if (win) win.isVisible() ? win.hide() : win.show() },
+    },
+    { role: 'reload' },
+    { type: 'separator' },
+    { label: '종료', accelerator: 'Cmd+Q', click: () => app.quit() },
+  ])
+  menu.popup({ window: win })
 }
 
 function createWindow() {
@@ -41,7 +81,9 @@ function createWindow() {
     frame: false,
     type: 'panel', // NSPanel: 풀스크린 앱 위에도 뜸 (electron#36364 회피)
     hasShadow: false,
-    resizable: false,
+    resizable: true,
+    minWidth: 420,
+    minHeight: 640,
     fullscreenable: false,
     webPreferences: {
       preload: join(__dirname, 'preload.cjs'),
@@ -57,6 +99,7 @@ function createWindow() {
   // 기본은 클릭스루 ON — 렌더러가 아바타 위에서만 OFF로 토글
   win.setIgnoreMouseEvents(true, { forward: true })
 
+  // 기본 아바타는 렌더러 localStorage / ?avatar= 쿼리가 결정 (강제 고정 없음)
   const devServer = process.env.VITE_DEV_SERVER
   if (devServer) win.loadURL(devServer + '/index.html')
   else win.loadFile(join(__dirname, '../dist/index.html'))
@@ -93,19 +136,33 @@ app.whenReady().then(() => {
     {
       label: 'MingoMate',
       submenu: [
-        { label: 'Mingo 숨기기/보이기', accelerator: 'Cmd+Shift+M', click: () => { if (win) win.isVisible() ? win.hide() : win.show() } },
         {
-          label: '캐릭터',
-          submenu: avatarCatalog.map((entry) => ({
-            label: `${entry.label} (${entry.key})`,
-            accelerator: /^[0-9]$/.test(entry.key) ? entry.key : undefined,
-            click: () => switchAvatar(entry.slug),
-          })),
+          label: 'Mingo 숨기기/보이기',
+          accelerator: 'Cmd+Shift+M',
+          click: () => { if (win) win.isVisible() ? win.hide() : win.show() },
         },
         { role: 'reload' },
         { role: 'toggleDevTools' }, // 주의: 투명창은 detached 모드로만
         { type: 'separator' },
-        { role: 'quit' },
+        { label: 'MingoMate 종료', accelerator: 'Cmd+Q', click: () => app.quit() },
+      ],
+    },
+    {
+      label: '캐릭터',
+      submenu: avatarMenuTemplate(null),
+    },
+    {
+      // 예전 04/MingoMate 앱에 있던 보기 옵션 복원
+      label: '보기',
+      submenu: [
+        { label: '아바타 작게', accelerator: 'Cmd+Shift+-', click: () => sendDebug('avatar-smaller') },
+        { label: '아바타 크게', accelerator: 'Cmd+Shift+=', click: () => sendDebug('avatar-larger') },
+        { label: '아바타 크기 리셋', accelerator: 'Cmd+Shift+0', click: () => sendDebug('avatar-reset') },
+        { type: 'separator' },
+        {
+          label: '참고: 카메라 패널/스펙 로그는 동물팩 PR에 아직 없음',
+          enabled: false,
+        },
       ],
     },
   ]))
@@ -127,6 +184,15 @@ ipcMain.on('mingo:drag-by', (_e, dx, dy) => {
   if (!win) return
   const b = win.getBounds()
   win.setBounds({ ...b, x: Math.round(b.x + dx), y: Math.round(b.y + dy) })
+})
+
+// 렌더러 우클릭/칩 → 통합 옵션 메뉴
+ipcMain.on('mingo:options-menu', (_e, currentSlug) => {
+  popupOptionsMenu(currentSlug)
+})
+// 구 이름 호환
+ipcMain.on('mingo:avatar-menu', (_e, currentSlug) => {
+  popupOptionsMenu(currentSlug)
 })
 
 ipcMain.on('mingo:quit', () => app.quit())
