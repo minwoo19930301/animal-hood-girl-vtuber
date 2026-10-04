@@ -22,7 +22,7 @@
 
 - 들어올 때 0.15초, 나갈 때 0.35초(끝나기 직전)입니다. 엔벨로프는 smoothstep입니다.
 - 같은 키를 다시 누르면 처음부터 다시 재생합니다. 다른 키는 이전 리액션이 0.22초에 걸쳐 나가는 동안 새 리액션이 들어옵니다(교차).
-- `Esc`(Electron에서는 `Ctrl+Option+Esc`)는 0.3초에 걸쳐 접고 FX도 같이 사라집니다.
+- `Esc`(Electron에서는 맥 `Ctrl+Option+Esc`, Windows `Ctrl+Alt+Esc`)는 0.3초에 걸쳐 접고 FX도 같이 사라집니다.
 - 키를 꾹 누르는 반복 입력은 무시합니다. 반복 입력이 리액션을 계속 처음으로 되돌리지 않게 하려는 것입니다.
 - 열 개 모두 다리를 씁니다. 리액션이 도는 동안 `legsPresent`를 1로 올리고 무릎·골반·발 들기를 목표값으로 섞습니다.
 
@@ -32,9 +32,9 @@
 |---|---|---|
 | 숫자 1~9, 0 (창 포커스) | 리액션 재생. 0은 10번 | `src/main.ts` keydown, `e.code`(Digit/Numpad) 우선 |
 | Esc (창 포커스) | 리액션 취소와 피커 닫기 | 같은 handler |
-| `Ctrl+Option+1`~`9`, `0` (전역) | 리액션 재생 | `electron/main.mjs` globalShortcut |
-| `Ctrl+Option+Esc` (전역) | 리액션 취소 | 같은 곳. 0이 리액션이라 숫자를 쓰지 않습니다 |
-| `⌘1`~`9`, `⌘0`, `⌘-`, `⌘=`, `` ⌘` ``, `⌘[` | 캐릭터 전환 | 메뉴 바 accelerator와 렌더러 keydown(`metaKey`). 키는 `shared/avatar-catalog.json` 그대로 |
+| `Ctrl+Option+1`~`9`, `0` (전역, Windows는 `Ctrl+Alt+숫자`) | 리액션 재생 | `electron/main.mjs` globalShortcut. accelerator는 `Control+Alt+숫자` 한 표기로 두 OS를 덮습니다(Alt가 맥의 Option) |
+| `Ctrl+Option+Esc` (전역, Windows는 `Ctrl+Alt+Esc`) | 리액션 취소 | 같은 곳. 0이 리액션이라 숫자를 쓰지 않습니다 |
+| `⌘1`~`9`, `⌘0`, `⌘-`, `⌘=`, `` ⌘` ``, `⌘[` (Windows는 `Ctrl+` 같은 키) | 캐릭터 전환 | 메뉴 바 accelerator(`CommandOrControl+키`)와 렌더러 keydown(맥 `metaKey`, Windows `ctrlKey`, `src/keys.ts`). 다른 수식키가 같이 눌린 조합(`Ctrl+Alt+숫자`, `⌘⇧…`)은 전환으로 읽지 않습니다. 키는 `shared/avatar-catalog.json` 그대로 |
 | `C` | 캐릭터 피커 토글 | 렌더러 keydown |
 | 메뉴 바 `리액션`, 우클릭 팝업 `리액션` | 리액션 재생·취소 | `reactionMenuItems()` 공유. 단축키는 표시만 하고 등록하지 않습니다(`registerAccelerator: false`) |
 
@@ -159,8 +159,9 @@ harness.html?reaction=6&yaw=0.3                       트래킹 값을 같이 �
 - 볼 홍조는 평면 두 장입니다. 고개를 많이 돌리면 가장자리가 윤곽 쪽으로 번질 수 있습니다.
 - 모든 리액션이 다리를 강제하므로, 전신 트래킹 중에 리액션을 재생하면 그동안 사용자의 무릎은 반영되지 않습니다.
 - `` ⌘` ``(플라밍고)는 macOS가 창 순환 단축키로 먼저 가져갈 수 있습니다. 이 경우 칩이나 피커로 전환합니다.
-- 브라우저로 열었을 때(`npm run dev`를 브라우저에서) `⌘1`~`9`, `⌘0`, `⌘-`, `⌘=`는 브라우저가 먼저 가져갑니다(탭 전환, 확대·축소). 이 경로의 캐릭터 전환은 칩이나 피커를 씁니다. Electron에서는 메뉴 accelerator가 처리합니다.
-- 오버레이 창은 클릭스루라 맨 숫자 키는 창을 한 번 클릭해 포커스를 준 뒤에만 먹습니다. 평소에는 `Ctrl+Option+숫자`가 주 경로입니다.
+- 브라우저로 열었을 때(`npm run dev`를 브라우저에서) `⌘1`~`9`, `⌘0`, `⌘-`, `⌘=`(Windows는 `Ctrl+1`~)는 브라우저가 먼저 가져갑니다(탭 전환, 확대·축소). 이 경로의 캐릭터 전환은 칩이나 피커를 씁니다. Electron에서는 메뉴 accelerator가 처리합니다.
+- 오버레이 창은 클릭스루라 맨 숫자 키는 창을 한 번 클릭해 포커스를 준 뒤에만 먹습니다. 평소에는 `Ctrl+Option+숫자`(Windows는 `Ctrl+Alt+숫자`)가 주 경로입니다.
+- Windows에서 AltGr(= Ctrl+Alt)로 글자를 입력하는 자판은 `Ctrl+Alt+숫자`가 글자 입력과 겹칠 수 있습니다. 이 경우 창 포커스의 맨 숫자 키나 메뉴의 `리액션`을 씁니다.
 - `anchorsOn` 동안 `apply`가 월드 행렬을 한 번 더 갱신합니다(렌더러가 한 번 더 합니다). 리액션이 도는 동안만 드는 비용입니다.
 - 할당 테스트의 한도(2KB/프레임)는 Node 26 기준 측정치(≈780B) 위에 둔 값입니다. CI의 Node 22에서는 V8 박싱 동작이 달라 흔들릴 수 있습니다.
-- 메뉴 accelerator와 전역 단축키는 Electron을 띄워 등록 성공까지 확인했지만, 실제 오버레이 창에서 사람이 눌러 본 것은 아닙니다. 실제 웹캠 트래킹 위에서 리액션이 이어지는 느낌도 하네스와 가짜 입력으로만 확인했습니다.
+- 메뉴 accelerator와 전역 단축키는 Electron을 띄워 등록 성공까지 확인했지만, 실제 오버레이 창에서 사람이 눌러 본 것은 아닙니다. Windows(`CommandOrControl`·`Control+Alt` 표기)는 macOS에서 문자열과 순수 로직만 검증했고 Windows 실기에서는 확인하지 못했습니다. 실제 웹캠 트래킹 위에서 리액션이 이어지는 느낌도 하네스와 가짜 입력으로만 확인했습니다.
