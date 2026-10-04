@@ -95,6 +95,8 @@ export interface BodyMotion {
   outR: number
   /** 몸 채널 스무딩 우회 0..1 — 춤처럼 빠른 동작이 평활로 뭉개지지 않게 (1 = 거의 즉시) */
   snap: number
+  /** 허리 숙임 (rad, +앞) — 골반을 앞으로 접고 허벅지를 반대로 돌려 다리는 곧게·발은 제자리에 둔다. 상체는 굽히지 않는 직선 (꾸벅 인사) */
+  bow: number
 }
 
 /** 표정 오버라이드 가중치 0..1 — 트래킹 값과 max로 합친다 (리액션 전용 선택 필드) */
@@ -158,7 +160,7 @@ export function neutralBody(): BodyPose {
 }
 
 export function neutralMotion(): BodyMotion {
-  return { bounce: 0, spin: 0, shiftX: 0, liftL: 0, liftR: 0, kickL: 0, kickR: 0, outL: 0, outR: 0, snap: 0 }
+  return { bounce: 0, spin: 0, shiftX: 0, liftL: 0, liftR: 0, kickL: 0, kickR: 0, outL: 0, outR: 0, snap: 0, bow: 0 }
 }
 
 export function neutralExpr(): ExprOverride {

@@ -24,7 +24,7 @@
  *   reaction=9&rt=1.2  ·  reaction=9&rts=0.3,0.7,1.1&cols=3  ·  reaction=9&strip=8  ·  reaction=all&cols=5  (0 = 10번)
  *
  * 리액션 계약 필드 (선택 — 모델 단독 검증용):
- *   bounce= spin= shiftX= (키 대비 비율 / rad)  liftL= liftR= kickL= kickR= (0..1)  outL= outR= (rad)
+ *   bounce= spin= shiftX= (키 대비 비율 / rad)  liftL= liftR= kickL= kickR= (0..1)  outL= outR= (rad)  bow= (rad, 허리 숙임)
  *   xHappy= xSad= xAngry= xSurprised= xRelaxed= (0..1 표정 오버라이드)  blush= (0..1 볼 홍조)
  */
 import * as THREE from 'three'
@@ -204,7 +204,7 @@ f.body.present =
   q.has('hipShift') || hasKnee || q.has('legsPresent') ? 1 : 0
 
 // ---- 리액션 선택 필드 (파라미터가 하나라도 있을 때만 채운다) ----
-const MOTION_KEYS = ['bounce', 'spin', 'shiftX', 'liftL', 'liftR', 'kickL', 'kickR', 'outL', 'outR'] as const
+const MOTION_KEYS = ['bounce', 'spin', 'shiftX', 'liftL', 'liftR', 'kickL', 'kickR', 'outL', 'outR', 'bow'] as const
 if (MOTION_KEYS.some((k) => q.has(k))) {
   const m = neutralMotion()
   for (const k of MOTION_KEYS) m[k] = num(k)

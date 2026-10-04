@@ -15,7 +15,7 @@
  * - BodyPose: shrug→어깨 리프트, lean/twist→spine/chest 분배, hipShift→hips 이동+롤,
  *   knee→다리 (legsPresent 게이팅, 정강이 수직 유지 + hips y 보정으로 발 접지).
  * - 리액션(선택 필드): frame.motion → 아바타 루트(avatarRoot)의 도약/자전/좌우 이동 + 다리 확장
- *   (발 들기·차기·벌림), frame.expr → 표정 오버라이드(max 합성), fx.blush → 볼 홍조.
+ *   (발 들기·차기·벌림) + 허리 숙임(bow: 골반 pitch, 허벅지 역회전), frame.expr → 표정 오버라이드(max 합성), fx.blush → 볼 홍조.
  *   avatarRoot는 root의 자식이라 고정 조명(sun/amb)은 돌지 않는다.
  * - 결정적: Math.random 없음, 2차 모션은 전부 dt 기반 스프링.
  */
@@ -86,6 +86,9 @@ export const BODY = {
  * 접지 보정(drop)은 BodyPose knee만 기준 — 도약·발 들기는 리액션 타임라인의 bounce가 책임진다.
  */
 export const LEG_FX = { liftThigh: 0.5, liftFold: 1.5, kick: 1.0, outMax: 0.7 } as const
+
+/** 허리 숙임(motion.bow) 한도 (rad) — 꾸벅 인사는 0.75(≈43°), 그보다 깊게는 허용하지 않는다 */
+export const BOW_MAX = 1.0
 
 /** 손가락 curl 관절별 회전량 — 손가락별 curl 값으로 전 관절 비례 (thumb은 축이 달라 별도) */
 export const FINGER_CURL = { proximal: 1.28, intermediate: 1.5, distal: 0.95 } as const
@@ -162,6 +165,8 @@ interface Rig {
   rawChest: Node3
   hips: Node3
   hipsRest: THREE.Vector3
+  /** 두 고관절 중점 (hips 로컬, rest) — 허리 숙임이 골반을 접는 축 위의 점 */
+  hipPivot: THREE.Vector3
   legL: LegRig
   legR: LegRig
   /** 다리 전체 길이 (hipShift 스케일 기준) */
@@ -406,14 +411,16 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
       const gate = bodySm.legGate
       const aL = bodySm.kneeL * BODY.kneeMax * gate
       const aR = bodySm.kneeR * BODY.kneeMax * gate
+      // 허리 숙임: hips 를 앞으로 접은 만큼 허벅지를 같은 각만큼 되돌려 다리는 곧게 선다 (게이트를 곱하지 않는다 — 두 회전은 항상 한 쌍)
+      const bow = mo ? clamp(mo.bow, 0, BOW_MAX) : 0
       if (mo) {
         // 리액션 다리 확장: 발 들기(허벅지↑+정강이 접힘) · 차기(무릎 편 채 앞으로) · 옆으로 벌림
         const lfL = clamp(mo.liftL, 0, 1) * gate, lfR = clamp(mo.liftR, 0, 1) * gate
         const kkL = clamp(mo.kickL, 0, 1) * gate, kkR = clamp(mo.kickR, 0, 1) * gate
         const ouL = clamp(mo.outL, -LEG_FX.outMax, LEG_FX.outMax) * gate
         const ouR = clamp(mo.outR, -LEG_FX.outMax, LEG_FX.outMax) * gate
-        const tL = aL + lfL * LEG_FX.liftThigh + kkL * LEG_FX.kick
-        const tR = aR + lfR * LEG_FX.liftThigh + kkR * LEG_FX.kick
+        const tL = aL + bow + lfL * LEG_FX.liftThigh + kkL * LEG_FX.kick
+        const tR = aR + bow + lfR * LEG_FX.liftThigh + kkR * LEG_FX.kick
         rig.legL.upper?.rotation.set(S * tL, 0, -S * ouL)
         rig.legL.lower?.rotation.set(-S * (aL + lfL * (LEG_FX.liftThigh + LEG_FX.liftFold)), 0, 0)
         rig.legR.upper?.rotation.set(S * tR, 0, S * ouR)
@@ -430,8 +437,19 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
       if (rig.hips) {
         const hipMul = lerp(1, BODY.snapHipMul, snap)
         const shiftW = bodySm.hipShift * BODY.hipShiftX * hipMul * rig.legLen // 월드 +x = 캐릭터 왼쪽
-        rig.hips.position.set(rig.hipsRest.x - S * shiftW, rig.hipsRest.y - drop, rig.hipsRest.z)
-        rig.hips.rotation.set(0, 0, -S * bodySm.hipShift * BODY.hipRoll * hipMul)
+        // 숙이는 축은 hips 원점이 아니라 고관절 중점이다: 접은 만큼 hips 를 옮겨 고관절(= 다리·발)이 제자리에 남게 한다
+        let pivY = 0
+        let pivZ = 0
+        if (bow !== 0) {
+          const a = -S * bow // 로컬 x 회전 (몸통 lean 과 같은 규약: 앞 숙임 = -S)
+          const c = rig.hipPivot
+          const cs = Math.cos(a)
+          const sn = Math.sin(a)
+          pivY = c.y - (c.y * cs - c.z * sn)
+          pivZ = c.z - (c.y * sn + c.z * cs)
+        }
+        rig.hips.position.set(rig.hipsRest.x - S * shiftW, rig.hipsRest.y - drop + pivY, rig.hipsRest.z + pivZ)
+        rig.hips.rotation.set(-S * bow, 0, -S * bodySm.hipShift * BODY.hipRoll * hipMul)
       }
 
       // ---- 팔 = ArmPose 방향벡터 FK (어깨 리프트: 호흡 + shrug + 팔들기 보조) ----
@@ -646,6 +664,9 @@ async function loadVRM(
     rawChest: H.getRawBoneNode('chest'),
     hips: hipsNode,
     hipsRest: hipsNode ? hipsNode.position.clone() : new THREE.Vector3(),
+    hipPivot: legL.upper && legR.upper
+      ? legL.upper.position.clone().add(legR.upper.position).multiplyScalar(0.5)
+      : new THREE.Vector3(),
     legL,
     legR,
     legLen,
