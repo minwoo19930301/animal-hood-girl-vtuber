@@ -157,9 +157,9 @@ export function tearDrop(fx: Fx, rng: Rng, anchor: AnchorId, ox: number, size = 
   if (!p) return
   p.vy = -0.02
   p.ky = 0.1
-  p.g = R(rng, 0.45, 0.65)
-  p.life = R(rng, 0.7, 0.95)
-  p.size = size * R(rng, 0.85, 1.15)
+  p.g = R(rng, 0.4, 0.55)
+  p.life = R(rng, 0.55, 0.7)
+  p.size = size * R(rng, 0.9, 1.1)
   p.aspect = 1.25
   p.pop = 0.1
   p.fadeAt = 0.55

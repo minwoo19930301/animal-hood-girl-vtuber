@@ -79,9 +79,10 @@ const joy: Spec = {
 const sadEvents: FxEvent[] = []
 for (let k = 0; k < 8; k++) {
   const t = 0.7 + 0.31 * k
+  // 눈물은 볼 바깥쪽에서 나와 턱선까지만 흘러내린다 (몸 위로 쏟아지지 않게)
   sadEvents.push(ev(t, (fx, rng) => {
-    tearDrop(fx, rng, Anchor.eyeL, R(rng, -0.004, 0.012))
-    tearDrop(fx, rng, Anchor.eyeR, R(rng, -0.012, 0.004), 0.022, 0.06)
+    tearDrop(fx, rng, Anchor.eyeL, R(rng, 0.008, 0.02), 0.034)
+    tearDrop(fx, rng, Anchor.eyeR, R(rng, -0.02, -0.008), 0.034, 0.06)
   }))
 }
 
@@ -100,24 +101,28 @@ const sad: Spec = {
     tg.mouthOpen = 0.04 + 0.04 * Math.sin(TAU * 1.1 * tl)
     tg.blink = 0.28
     tg.gazeY = -0.5
-    tg.headPitch = -0.18 * e
-    tg.headRoll = 0.08 * Math.sin(TAU * 0.5 * tl) * e
-    tg.leanZ = 0.16 * e
-    tg.leanX = 0.04 * Math.sin(TAU * 0.5 * tl) * e
+    // 고개를 푹 떨구고 어깨가 앞으로 말린다
+    tg.headPitch = -0.26 * e
+    tg.headRoll = 0.1 * Math.sin(TAU * 0.4 * tl) * e
+    tg.leanZ = 0.26 * e
+    tg.leanX = 0.04 * Math.sin(TAU * 0.4 * tl) * e
     // 흐느낌: 어깨가 들썩
     const sob = ss(0.6, 1.0, tl) * (1 - ss(2.7, 3.1, tl))
-    const sh = 0.12 + 0.12 * Math.max(0, Math.sin(TAU * 2.2 * tl)) * sob
+    const sh = 0.22 + 0.14 * Math.max(0, Math.sin(TAU * 2.2 * tl)) * sob
     tg.shrugL = sh; tg.shrugR = sh
-    // 힘이 풀려 무릎이 살짝 꺾인다
+    // 힘이 풀려 무릎이 꺾인다
     tg.legs = 1
-    tg.kneeL = tg.kneeR = 0.12 * e + 0.03 * Math.sin(TAU * 2.2 * tl) * sob
-    tg.hipShift = 0.2 * Math.sin(TAU * 0.5 * tl)
-    // 두 손으로 눈가를 번갈아 훔친다
+    tg.kneeL = tg.kneeR = 0.18 * e + 0.03 * Math.sin(TAU * 2.2 * tl) * sob
+    tg.hipShift = 0.1 * Math.sin(TAU * 0.4 * tl)
+    // 한 손씩 번갈아 눈가를 훔친다 (쉬는 손은 배 앞에 늘어뜨림 — 표정이 가려지지 않는다)
     const w = ss(0.25, 0.75, tl) * (1 - ss(2.8, 3.2, tl))
+    const wipeL = ss(0.3, 0.7, 0.5 + 0.5 * Math.sin(TAU * 0.4 * (tl - 0.35)))
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]
-      armSet(tg, i, w, G.eyes)
-      const rub = Math.sin(TAU * 1.4 * tl + i * Math.PI) * ss(0.9, 1.3, tl)
+      const act = i === 0 ? wipeL : 1 - wipeL
+      armSet(tg, i, w, G.clasp)
+      armBlendTo(tg, i, G.eyes, act)
+      const rub = Math.sin(TAU * 1.6 * tl + i * Math.PI) * ss(0.9, 1.3, tl) * act
       nudge(tg, i, 'lower', 0.06 * rub, 0.05 * rub)
       nudge(tg, i, 'hand', 0.12 * rub)
     }
