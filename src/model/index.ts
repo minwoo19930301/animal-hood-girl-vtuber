@@ -88,7 +88,7 @@ export const BODY = {
  */
 export const LEG_FX = { liftThigh: 0.5, liftFold: 1.5, kick: 1.0, outMax: 0.7 } as const
 
-/** 허리 숙임(motion.bow) 한도 (rad) — 꾸벅 인사는 0.75(≈43°), 그보다 깊게는 허용하지 않는다 */
+/** 허리 숙임(motion.bow) 한도 (rad) — 꾸벅 인사는 0.6(≈34°), 하네스·검증에서 1.0 까지 보며 그보다 깊게는 허용하지 않는다 */
 export const BOW_MAX = 1.0
 const BOW_POSE = createBowPose()
 

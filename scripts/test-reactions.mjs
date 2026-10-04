@@ -356,7 +356,7 @@ try {
   }
   // 7c) 9 꾸벅 인사: 허리만 접고 하체는 그대로 — bow 는 9 만 쓴다
   {
-    const BOW = 0.75
+    const BOW = 0.6
     for (const id of IDS) {
       if (id !== 9) check(`${id} ${SPECS.find((x) => x.id === id).name}: bow 채널을 쓰지 않는다 (트래킹·다른 리액션 동작 불변)`, stats[id].bow === 0, `bow=${stats[id].bow}`)
     }
@@ -394,8 +394,8 @@ try {
       if (t > 2.15 + 0.02) afterRise = Math.max(afterRise, Math.abs(bow))
       if (!Number.isFinite(bow)) outOfBand++
     })
-    check('9 꾸벅 인사: 숙인 구간(1.05~1.55초)에서 bow 가 목표각 0.75rad(≈43°)로 일정', Math.abs(holdMin - BOW) < 1e-6 && Math.abs(holdMax - BOW) < 1e-6, `min=${holdMin.toFixed(4)} max=${holdMax.toFixed(4)}`)
-    check('9 꾸벅 인사: 고개는 허리보다 0.2rad 더 숙인다 (head.pitch = -0.2), 척추 lean·twist 는 0 (곧은 허리)', Math.abs(headMin + 0.2) < 1e-6 && Math.abs(headMax + 0.2) < 1e-6 && holdOk, `pitch=${headMin.toFixed(3)}`)
+    check('9 꾸벅 인사: 숙인 구간(1.05~1.55초)에서 bow 가 목표각 0.6rad(≈34°)로 일정', Math.abs(holdMin - BOW) < 1e-6 && Math.abs(holdMax - BOW) < 1e-6, `min=${holdMin.toFixed(4)} max=${holdMax.toFixed(4)}`)
+    check('9 꾸벅 인사: 고개는 허리보다 0.06rad 만 더 숙인다 (head.pitch = -0.06 — 더 숙이면 정면에서 얼굴이 후드에 가린다), 척추 lean·twist 는 0 (곧은 허리)', Math.abs(headMin + 0.06) < 1e-6 && Math.abs(headMax + 0.06) < 1e-6 && holdOk, `pitch=${headMin.toFixed(3)}`)
     check('9 꾸벅 인사: 일어선 뒤(2.17초~) bow = 0, 끝나면 motion 없음', afterRise < 1e-9, `after=${afterRise}`)
     check('9 꾸벅 인사: bow 가 부드럽다 (프레임당 변화 < 0.06rad, 음수 없음)', worstStep < 0.06 && outOfBand === 0, `step=${worstStep.toFixed(4)}`)
     check('9 꾸벅 인사: 표정이 차분하다 (홍조 0, 입 다묾, 미소 ≤ 0.2, 숙인 동안 눈을 내리깖 blink ≥ 0.6)', blushMax === 0 && openMax === 0 && smileMax <= 0.2 + 1e-9 && blinkHold >= 0.6, `blush=${blushMax} open=${openMax} smile=${smileMax.toFixed(2)} blink=${blinkHold.toFixed(2)}`)
