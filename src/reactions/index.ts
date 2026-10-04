@@ -210,6 +210,7 @@ export function createReactions(model?: ReactionModel): Reactions {
   const resetAcc = (): void => {
     motion.bounce = 0; motion.spin = 0; motion.shiftX = 0
     motion.liftL = 0; motion.liftR = 0; motion.kickL = 0; motion.kickR = 0; motion.outL = 0; motion.outR = 0
+    motion.bow = 0
     motion.snap = 0
     expr.happy = 0; expr.sad = 0; expr.angry = 0; expr.surprised = 0; expr.relaxed = 0
   }
@@ -328,12 +329,13 @@ export function createReactions(model?: ReactionModel): Reactions {
           if (b.present < lw) b.present = lw
         }
 
-        // ---- 몸 움직임: 가중 합. 자전은 나가는 중에 가장 가까운 정수 바퀴로 풀려 돌아온다 (뒤로 감기는 각도가 최대 반 바퀴) ----
+        // ---- 몸 움직임: 가중 합 (허리 숙임 bow 포함 — 두 레이어가 겹쳐도 한도는 모델이 자른다). 자전은 나가는 중에 가장 가까운 정수 바퀴로 풀려 돌아온다 (뒤로 감기는 각도가 최대 반 바퀴) ----
         motion.bounce += tg.bounce * w
         motion.shiftX += tg.shiftX * w
         motion.liftL += tg.liftL * w; motion.liftR += tg.liftR * w
         motion.kickL += tg.kickL * w; motion.kickR += tg.kickR * w
         motion.outL += tg.outL * w; motion.outR += tg.outR * w
+        motion.bow += tg.bow * w
         if (motion.snap < w) motion.snap = w
         if (L.target === 1) motion.spin += tg.spin
         else {

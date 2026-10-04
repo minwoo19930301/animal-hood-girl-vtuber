@@ -7,7 +7,7 @@
  *  - 표정 가중치(happy/sad/…)는 max로 합친다 (모델이 트래킹 값과 다시 max).
  *  - 머리·몸통(lean/twist/shrug)은 더한다. 트래킹이 계속 살아 있다.
  *  - 다리(knee/hipShift)는 목표 값으로 섞는다 (legs 가중치 × w) — 트래킹 무릎이 0이 아닐 수 있어 더하지 않는다.
- *  - 몸 움직임(bounce/shiftX/lift/kick/out)은 가중치를 곱해 합친다. 자전(spin)만 따로 다룬다 (index.ts).
+ *  - 몸 움직임(bounce/shiftX/lift/kick/out/bow)은 가중치를 곱해 합친다. 자전(spin)만 따로 다룬다 (index.ts).
  *  - 팔은 armW(0..1) 만큼 목표 자세로 방향을 섞는다.
  */
 import type { Dir3 } from '../contract'
@@ -71,6 +71,8 @@ export interface Target {
   kickR: number
   outL: number
   outR: number
+  /** 허리 숙임 (rad, +앞) — 골반을 접는 꾸벅 인사. 상체는 곧게 둔 채 숙이고 다리·발은 제자리다 (leanZ 와 달리 척추를 굽히지 않는다) */
+  bow: number
   /** 팔 덮어쓰기 강도 0..1 (L = 캐릭터 왼팔, R = 캐릭터 오른팔) */
   armW: [number, number]
   arms: [ArmTarget, ArmTarget]
@@ -106,7 +108,7 @@ export function resetTarget(t: Target): void {
   t.leanX = 0; t.leanZ = 0; t.twist = 0; t.shrugL = 0; t.shrugR = 0
   t.legs = 0; t.kneeL = 0; t.kneeR = 0; t.hipShift = 0
   t.bounce = 0; t.spin = 0; t.shiftX = 0
-  t.liftL = 0; t.liftR = 0; t.kickL = 0; t.kickR = 0; t.outL = 0; t.outR = 0
+  t.liftL = 0; t.liftR = 0; t.kickL = 0; t.kickR = 0; t.outL = 0; t.outR = 0; t.bow = 0
   t.armW[0] = 0; t.armW[1] = 0
 }
 
