@@ -5,6 +5,13 @@ import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu } fr
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import {
+  REACTION_CANCEL_ACCELERATOR,
+  REACTION_CANCEL_COMMAND,
+  avatarAccelerator,
+  reactionAccelerator,
+  reactionCommand,
+} from './keys.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const avatarCatalog = JSON.parse(
@@ -13,6 +20,13 @@ const avatarCatalog = JSON.parse(
 // 팩 크기는 카탈로그가 결정한다 (v3: 12종 + 플라밍고 = 13)
 if (!Array.isArray(avatarCatalog) || avatarCatalog.length === 0) {
   throw new Error('shared/avatar-catalog.json must contain at least one avatar')
+}
+// 숫자키 리액션 10종 (id 1..10, 키 1..9·0) — 렌더러 src/reactions 와 같은 번호 (scripts/test-reactions.mjs 가 일치 검사)
+const reactions = JSON.parse(
+  readFileSync(join(__dirname, '../shared/reactions.json'), 'utf8'),
+)
+if (!Array.isArray(reactions) || reactions.length === 0) {
+  throw new Error('shared/reactions.json must contain at least one reaction')
 }
 
 // 동물 후드/귀 여유 — 기본 420×580은 머리 장식이 잘리는 경우가 있어 키움
@@ -34,14 +48,45 @@ function sendDebug(cmd) {
   if (win && !win.isDestroyed()) win.webContents.send('mingo:debug-cmd', cmd)
 }
 
+/**
+ * 캐릭터 전환 메뉴. 단축키는 ⌘+카탈로그 키 (1..9, 0, -, =, `, [) — 숫자만 맨 키로 쓰던 때와 달리
+ * 이제 맨 숫자 키는 리액션이다. 메뉴 라벨엔 키를 적지 않는다 (accelerator 가 알아서 ⌘1 로 표시된다).
+ */
 function avatarMenuTemplate(currentSlug) {
   return avatarCatalog.map((entry) => ({
-    label: `${entry.label}  (${entry.key})`,
+    label: entry.label,
     type: 'radio',
     checked: entry.slug === currentSlug,
-    accelerator: /^[0-9]$/.test(entry.key) ? entry.key : undefined,
+    accelerator: avatarAccelerator(entry.key),
     click: () => switchAvatar(entry.slug),
   }))
+}
+
+/**
+ * 리액션 메뉴(메뉴 바 + 우클릭 팝업 공유). 단축키는 전역 등록(globalShortcut)이 처리하므로 메뉴에는 표시만 하고
+ * 따로 등록하지 않는다 (registerAccelerator: false — 같은 키가 두 번 발동하지 않게).
+ * 숨겨진 동안(카메라·렌더 루프 정지)에는 보내지 않는다 — 다시 보일 때 옛 리액션이 갑자기 재생되지 않게.
+ */
+function sendReaction(cmd) {
+  if (win && !win.isDestroyed() && win.isVisible()) sendDebug(cmd)
+}
+
+function reactionMenuItems() {
+  return [
+    ...reactions.map((r) => ({
+      label: `${r.key}  ${r.name}`,
+      accelerator: reactionAccelerator(r),
+      registerAccelerator: false,
+      click: () => sendReaction(reactionCommand(r)),
+    })),
+    { type: 'separator' },
+    {
+      label: '리액션 취소',
+      accelerator: REACTION_CANCEL_ACCELERATOR,
+      registerAccelerator: false,
+      click: () => sendReaction(REACTION_CANCEL_COMMAND),
+    },
+  ]
 }
 
 /** 우클릭/칩 — 예전 옵션 + 캐릭터 전환 통합 메뉴 */
@@ -52,6 +97,7 @@ function popupOptionsMenu(currentSlug) {
       label: '캐릭터',
       submenu: avatarMenuTemplate(currentSlug),
     },
+    { label: '리액션', submenu: reactionMenuItems() },
     { type: 'separator' },
     { label: '아바타 작게', accelerator: 'Cmd+Shift+-', click: () => sendDebug('avatar-smaller') },
     { label: '아바타 크게', accelerator: 'Cmd+Shift+=', click: () => sendDebug('avatar-larger') },
@@ -151,6 +197,7 @@ app.whenReady().then(() => {
       label: '캐릭터',
       submenu: avatarMenuTemplate(null),
     },
+    { label: '리액션', submenu: reactionMenuItems() },
     {
       // 예전 04/MingoMate 앱에 있던 보기 옵션 복원
       label: '보기',
@@ -173,6 +220,21 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+M', () => {
     if (win) win.isVisible() ? win.hide() : win.show()
   })
+
+  // 숫자키 리액션: Ctrl+Option+1..9, 0 재생, Ctrl+Option+Esc 취소 — 전역이라 다른 앱을 쓰는 중에도 먹는다
+  // (오버레이 창은 클릭스루라 평소에는 포커스가 없어서 이 경로가 주 경로다)
+  const taken = []
+  for (const r of reactions) {
+    if (!globalShortcut.register(reactionAccelerator(r), () => sendReaction(reactionCommand(r)))) {
+      taken.push(reactionAccelerator(r))
+    }
+  }
+  if (!globalShortcut.register(REACTION_CANCEL_ACCELERATOR, () => sendReaction(REACTION_CANCEL_COMMAND))) {
+    taken.push(REACTION_CANCEL_ACCELERATOR)
+  }
+  if (taken.length > 0) {
+    console.warn(`[mingo] 전역 단축키를 못 잡았습니다 (다른 앱이 쓰는 중): ${taken.join(', ')}`)
+  }
 })
 
 ipcMain.on('mingo:click-through', (_e, enabled) => {
