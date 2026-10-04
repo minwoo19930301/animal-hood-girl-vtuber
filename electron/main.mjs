@@ -59,9 +59,13 @@ function sendDebug(cmd) {
   if (win && !win.isDestroyed()) win.webContents.send('mingo:debug-command', cmd)
 }
 
+function toggleVisible() {
+  if (win && !win.isDestroyed()) win.isVisible() ? win.hide() : win.show()
+}
+
 /**
- * 캐릭터 전환 메뉴. 단축키는 ⌘+카탈로그 키 (1..9, 0, -, =, `, [) — 숫자만 맨 키로 쓰던 때와 달리
- * 이제 맨 숫자 키는 리액션이다. 메뉴 라벨엔 키를 적지 않는다 (accelerator 가 알아서 ⌘1 로 표시된다).
+ * 캐릭터 전환 메뉴. 단축키는 ⌘(맥)/Ctrl(Windows)+카탈로그 키 (1..9, 0, -, =, `, [) — 숫자만 맨 키로 쓰던 때와 달리
+ * 이제 맨 숫자 키는 리액션이다. 메뉴 라벨엔 키를 적지 않는다 (accelerator 가 알아서 ⌘1 / Ctrl+1 로 표시된다).
  */
 function avatarMenuTemplate(currentSlug) {
   return avatarCatalog.map((entry) => ({
@@ -110,18 +114,14 @@ function popupOptionsMenu(currentSlug) {
     },
     { label: '리액션', submenu: reactionMenuItems() },
     { type: 'separator' },
-    { label: '아바타 작게', accelerator: 'Cmd+Shift+-', click: () => sendDebug('avatar-smaller') },
-    { label: '아바타 크게', accelerator: 'Cmd+Shift+=', click: () => sendDebug('avatar-larger') },
+    { label: '아바타 작게', accelerator: 'CommandOrControl+Shift+-', click: () => sendDebug('avatar-smaller') },
+    { label: '아바타 크게', accelerator: 'CommandOrControl+Shift+=', click: () => sendDebug('avatar-larger') },
     { label: '아바타 크기 리셋', click: () => sendDebug('avatar-reset') },
     { type: 'separator' },
-    {
-      label: 'Mingo 숨기기/보이기',
-      accelerator: 'Cmd+Shift+M',
-      click: () => { if (win) win.isVisible() ? win.hide() : win.show() },
-    },
+    { label: 'Mingo 숨기기/보이기', accelerator: 'CommandOrControl+Shift+M', click: toggleVisible },
     { role: 'reload' },
     { type: 'separator' },
-    { label: '종료', accelerator: 'Cmd+Q', click: () => app.quit() },
+    { label: '종료', accelerator: 'CommandOrControl+Q', click: () => app.quit() },
   ])
   menu.popup({ window: win })
 }
@@ -227,15 +227,11 @@ app.whenReady().then(async () => {
     {
       label: 'MingoMate',
       submenu: [
-        {
-          label: 'Mingo 숨기기/보이기',
-          accelerator: 'Cmd+Shift+M',
-          click: () => { if (win) win.isVisible() ? win.hide() : win.show() },
-        },
+        { label: 'Mingo 숨기기/보이기', accelerator: 'CommandOrControl+Shift+M', click: toggleVisible },
         { role: 'reload' },
         { role: 'toggleDevTools' }, // 주의: 투명창은 detached 모드로만
         { type: 'separator' },
-        { label: 'MingoMate 종료', accelerator: 'Cmd+Q', click: () => app.quit() },
+        { label: 'MingoMate 종료', accelerator: 'CommandOrControl+Q', click: () => app.quit() },
       ],
     },
     {
@@ -247,9 +243,9 @@ app.whenReady().then(async () => {
       // 예전 04/MingoMate 앱에 있던 보기 옵션 복원
       label: '보기',
       submenu: [
-        { label: '아바타 작게', accelerator: 'Cmd+Shift+-', click: () => sendDebug('avatar-smaller') },
-        { label: '아바타 크게', accelerator: 'Cmd+Shift+=', click: () => sendDebug('avatar-larger') },
-        { label: '아바타 크기 리셋', accelerator: 'Cmd+Shift+0', click: () => sendDebug('avatar-reset') },
+        { label: '아바타 작게', accelerator: 'CommandOrControl+Shift+-', click: () => sendDebug('avatar-smaller') },
+        { label: '아바타 크게', accelerator: 'CommandOrControl+Shift+=', click: () => sendDebug('avatar-larger') },
+        { label: '아바타 크기 리셋', accelerator: 'CommandOrControl+Shift+0', click: () => sendDebug('avatar-reset') },
       ],
     },
   ]))
@@ -257,11 +253,9 @@ app.whenReady().then(async () => {
   createWindow()
 
   // 방송 화면공유 대비 퀵 하이드 (setContentProtection은 macOS 15+에서 무력)
-  globalShortcut.register('CommandOrControl+Shift+M', () => {
-    if (win) win.isVisible() ? win.hide() : win.show()
-  })
+  globalShortcut.register('CommandOrControl+Shift+M', toggleVisible)
 
-  // 숫자키 리액션: Ctrl+Option+1..9, 0 재생, Ctrl+Option+Esc 취소 — 전역이라 다른 앱을 쓰는 중에도 먹는다
+  // 숫자키 리액션: Ctrl+Option(맥)/Ctrl+Alt(Windows)+1..9, 0 재생, +Esc 취소 — 전역이라 다른 앱을 쓰는 중에도 먹는다
   // (오버레이 창은 클릭스루라 평소에는 포커스가 없어서 이 경로가 주 경로다)
   const taken = []
   for (const r of reactions) {

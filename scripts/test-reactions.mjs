@@ -435,9 +435,9 @@ try {
     const keys = await import(join(root, 'electron/keys.mjs'))
     const rxAcc = cat.map((c) => keys.reactionAccelerator(c))
     const avAcc = avatars.map((a) => keys.avatarAccelerator(a.key))
-    check('전역 리액션 단축키: Ctrl+Alt+숫자 10개, 중복 없음', rxAcc.length === 10 && new Set(rxAcc).size === 10 && rxAcc.every((a) => /^Ctrl\+Alt\+[0-9]$/.test(a)), rxAcc.join(' '))
+    check('전역 리액션 단축키: Control+Alt+숫자 10개, 중복 없음 (맥 Ctrl+Option / Windows Ctrl+Alt)', rxAcc.length === 10 && new Set(rxAcc).size === 10 && rxAcc.every((a) => /^Control\+Alt\+[0-9]$/.test(a)), rxAcc.join(' '))
     check('전역 취소 단축키는 숫자가 아니다 (0 이 리액션)', !/[0-9]$/.test(keys.REACTION_CANCEL_ACCELERATOR) && !rxAcc.includes(keys.REACTION_CANCEL_ACCELERATOR), keys.REACTION_CANCEL_ACCELERATOR)
-    check('캐릭터 메뉴 accelerator: 모두 Cmd+카탈로그 키, 중복 없음 (맨 숫자는 리액션 몫)', avAcc.length === avatars.length && new Set(avAcc).size === avAcc.length && avAcc.every((a) => /^Cmd\+[0-9\-=`\[]$/.test(a)), avAcc.join(' '))
+    check('캐릭터 메뉴 accelerator: 모두 CommandOrControl+카탈로그 키, 중복 없음 (맨 숫자는 리액션 몫)', avAcc.length === avatars.length && new Set(avAcc).size === avAcc.length && avAcc.every((a) => /^CommandOrControl\+[0-9\-=`\[]$/.test(a)), avAcc.join(' '))
     check('명령 문자열: reaction-<id> / reaction-cancel', keys.reactionCommand(cat[9]) === 'reaction-10' && keys.REACTION_CANCEL_COMMAND === 'reaction-cancel')
   }
 } finally {
