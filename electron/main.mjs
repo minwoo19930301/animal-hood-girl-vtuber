@@ -1,8 +1,9 @@
-// mingo-mate — macOS 데스크톱 마스코트 셸
-// 리서치 검증된 레시피: transparent + frame:false + type:'panel' + screen-saver level
-// + visibleOnFullScreen + setIgnoreMouseEvents(forward) + 렌더러 히트테스트 토글
+// mingo-mate — macOS·Windows 데스크톱 마스코트 셸
+// 공통 레시피: transparent + frame:false + screen-saver level + setIgnoreMouseEvents(forward) + 렌더러 히트테스트 토글
+// macOS 추가(리서치 검증): type:'panel' + visibleOnFullScreen (풀스크린 앱 위에도 뜸)
+// Windows 추가: backgroundColor '#00000000', 크기 고정, 작업 표시줄 버튼 + 트레이 아이콘
 import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, Menu, systemPreferences, dialog, shell } from 'electron'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
 import {
@@ -15,6 +16,13 @@ import {
 import { isCameraRequest, isTrustedAppUrl } from './policy.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+const isMac = process.platform === 'darwin'
+const isWin = process.platform === 'win32'
+
+// Windows: 작업 표시줄 그룹·알림이 이 앱으로 묶이게 (macOS 번들 ID와 같은 값)
+if (isWin) app.setAppUserModelId('com.minwokim.animal-hood-vtuber')
+
 const avatarCatalog = JSON.parse(
   readFileSync(join(__dirname, '../shared/avatar-catalog.json'), 'utf8'),
 )
@@ -41,6 +49,14 @@ const appUrl = process.env.VITE_DEV_SERVER
 /** @type {BrowserWindow | null} */
 let win = null
 let cursorTimer = null
+// 만들 때 정한 창 크기 — 크기 조절이 없는 Windows에서 이동할 때 그대로 되돌려 주는 값 (drag-by)
+let fixedSize = { width: WIN_W, height: WIN_H }
+
+/** Windows 아이콘(.ico): 패키징된 앱은 electron/icon.ico, 저장소에서 실행하면 build/icon.ico */
+function windowsIconPath() {
+  for (const p of [join(__dirname, 'icon.ico'), join(__dirname, '../build/icon.ico')]) if (existsSync(p)) return p
+  return undefined
+}
 
 function trustedEvent(event) {
   return win && !win.isDestroyed() && event.sender === win.webContents &&
@@ -128,19 +144,32 @@ function popupOptionsMenu(currentSlug) {
 
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay()
+  const windowIcon = isWin ? windowsIconPath() : undefined
+  // Windows 노트북(1080p 배율 150% = 작업 영역 높이 ≈ 680 DIP)에서는 780이 화면보다 커서 머리가 잘린다 → 작업 영역 안으로 줄인다.
+  // 크기를 못 바꾸는 창이라 처음에 맞춰 둬야 한다. 맥은 그대로 780.
+  const winH = isMac ? WIN_H : Math.min(WIN_H, workArea.height - 8)
+  fixedSize = { width: WIN_W, height: winH }
 
   win = new BrowserWindow({
     width: WIN_W,
-    height: WIN_H,
+    height: winH,
     x: workArea.x + workArea.width - WIN_W - 24,
-    y: workArea.y + workArea.height - WIN_H - 8,
+    y: workArea.y + workArea.height - winH - 8,
     transparent: true,
     frame: false,
-    type: 'panel', // NSPanel: 풀스크린 앱 위에도 뜸 (electron#36364 회피)
     hasShadow: false,
-    resizable: true,
+    ...(isMac
+      ? { type: 'panel' } // NSPanel: 풀스크린 앱 위에도 뜸 (electron#36364 회피)
+      : {
+          backgroundColor: '#00000000', // Windows: 완전 투명 (없으면 합성 단계에서 흰/검은 배경이 비칠 수 있다)
+          skipTaskbar: false, // 프레임 없는 창이라 작업 표시줄 버튼이 앱을 찾는 단서다
+          ...(windowIcon ? { icon: windowIcon } : {}),
+        }),
+    // Electron 문서: 투명 창에 resizable:true 를 주면 Windows에서 투명이 깨질 수 있다. 맥은 지금 그대로 둔다.
+    // Windows는 창 크기를 고정한다 (이동은 아래 drag-by IPC, 아바타 크기는 메뉴의 줌으로 조절).
+    resizable: isMac,
     minWidth: 420,
-    minHeight: 640,
+    minHeight: Math.min(640, winH),
     fullscreenable: false,
     webPreferences: {
       preload: join(__dirname, 'preload.cjs'),
@@ -152,8 +181,10 @@ function createWindow() {
   })
 
   win.setAlwaysOnTop(true, 'screen-saver')
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  if (win.setHiddenInMissionControl) win.setHiddenInMissionControl(true)
+  if (isMac) {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    if (win.setHiddenInMissionControl) win.setHiddenInMissionControl(true)
+  }
   // 기본은 클릭스루 ON — 렌더러가 아바타 위에서만 OFF로 토글
   win.setIgnoreMouseEvents(true, { forward: true })
 
@@ -280,7 +311,11 @@ ipcMain.on('mingo:drag-by', (event, dx, dy) => {
   if (!trustedEvent(event) || !Number.isFinite(dx) || !Number.isFinite(dy)) return
   if (Math.abs(dx) > 4096 || Math.abs(dy) > 4096) return
   const b = win.getBounds()
-  win.setBounds({ ...b, x: Math.round(b.x + dx), y: Math.round(b.y + dy) })
+  const next = { ...b, x: Math.round(b.x + dx), y: Math.round(b.y + dy) }
+  // Windows(배율 125·150%)는 getBounds→setBounds 왕복마다 DIP↔픽셀 반올림으로 창 크기가 조금씩 변한다.
+  // 크기 조절이 없는 Windows에서는 만들 때의 크기를 그대로 넘겨 이동만 하게 한다.
+  if (!isMac) { next.width = fixedSize.width; next.height = fixedSize.height }
+  win.setBounds(next)
 })
 
 // 렌더러 우클릭/칩 → 통합 옵션 메뉴
