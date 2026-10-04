@@ -220,12 +220,37 @@ function createWindow() {
 }
 
 /**
+ * Windows 카메라 권한. Windows에는 앱별 권한 창(TCC)이 없고 "설정 > 개인 정보 및 보안 > 카메라"의 전역 스위치
+ * ("카메라 액세스", "데스크톱 앱이 카메라에 액세스하도록 허용")만 있다. 꺼져 있으면 getUserMedia가
+ * NotAllowedError/NotReadableError로 실패하므로, 'denied'로 읽힐 때만 미리 안내한다 (모르겠으면 조용히 통과 —
+ * 그때는 렌더러가 getUserMedia 실패를 보고 상태 줄로 알려 준다: src/cameraHelp.ts).
+ */
+async function ensureCameraAccessWindows() {
+  let status = 'unknown'
+  try {
+    status = systemPreferences.getMediaAccessStatus('camera')
+  } catch {
+    return
+  }
+  if (status !== 'denied') return
+  const { response } = await dialog.showMessageBox({
+    type: 'warning',
+    message: '카메라를 쓸 수 없습니다',
+    detail: 'Windows 설정 > 개인 정보 및 보안 > 카메라에서 "카메라 액세스"와 "데스크톱 앱이 카메라에 액세스하도록 허용"을 켠 뒤 다시 실행해 주세요. 카메라 없이도 idle 동작과 리액션은 됩니다.',
+    buttons: ['카메라 설정 열기', '닫기'],
+    defaultId: 0,
+  })
+  if (response === 0) void shell.openExternal('ms-settings:privacy-webcam')
+}
+
+/**
  * macOS 카메라 권한(TCC). Electron은 Chromium과 달리 OS 권한 창을 스스로 띄우지 않는다 —
  * 상태가 not-determined면 getUserMedia가 트랙은 주지만 프레임이 0인 채로 멈춘다(smiley-vtuber 실측).
  * 창을 만들기 전에 한 번 묻고, 거부돼 있으면 시스템 설정으로 안내한다.
  */
 async function ensureCameraAccess() {
-  if (process.platform !== 'darwin') return
+  if (isWin) return ensureCameraAccessWindows()
+  if (!isMac) return
   const status = systemPreferences.getMediaAccessStatus('camera')
   if (status === 'granted') return
   if (status === 'not-determined') {
