@@ -412,41 +412,43 @@ const dance: Spec = {
     const ph = (TAU * tl) / CYC1 // 좌우 한 사이클
     const bp = (TAU * tl) / B1 // 박자
     const sw = Math.sin(ph)
+    const cs = Math.cos(ph)
     tg.happy = 0.55
     tg.mouthSmile = 1
     tg.mouthOpen = 0.3 + 0.1 * Math.cos(bp)
     tg.blush = 0.3
-    // 사이드 스텝: 몸이 좌우로 옮겨 가고 뒤따르는 발이 들린다 (step-touch)
+    // 사이드 스텝: 골반이 좌우로 크게 옮겨 가고(체중 이동) 반대쪽 발이 번갈아 들린다. 몸 전체도 조금 미끄러진다
     tg.legs = 1
-    tg.shiftX = 0.1 * sw * e
-    tg.hipShift = 1 * sw * e
-    const cs = Math.cos(ph)
-    tg.liftR = 0.75 * Math.max(0, cs) * e
-    tg.liftL = 0.75 * Math.max(0, -cs) * e
-    // 박마다 무릎 바운스
+    tg.shiftX = 0.05 * sw * e
+    tg.hipShift = sw * e
+    tg.liftR = 0.9 * Math.pow(Math.max(0, sw), 1.4) * e
+    tg.liftL = 0.9 * Math.pow(Math.max(0, -sw), 1.4) * e
+    tg.outR = 0.14 * Math.max(0, sw) * e
+    tg.outL = 0.14 * Math.max(0, -sw) * e
+    // 박마다 무릎 바운스 + 위로 통통
     const dip = 0.5 + 0.5 * Math.cos(bp)
-    tg.kneeL = tg.kneeR = (0.1 + 0.3 * dip) * e
-    tg.bounce = 0.02 * (1 - dip) * e
-    // 머리 까딱, 상체 트위스트
-    tg.headPitch = 0.1 * Math.cos(bp) * e
-    tg.headRoll = 0.1 * sw * e
-    tg.twist = 0.28 * Math.cos(ph) * e
-    tg.leanX = -0.07 * sw * e
-    tg.leanZ = 0.05 * Math.cos(bp) * e
-    // 팔: 번갈아 펌프 → 머리 위 웨이브 → 박수/만세 → 만세 피니시
+    tg.kneeL = tg.kneeR = (0.15 + 0.45 * dip) * e
+    tg.bounce = 0.045 * (1 - dip) * e
+    // 머리 까딱(박마다), 기울기, 상체 트위스트 + 엉덩이 반대로 기운다
+    tg.headPitch = 0.12 * Math.cos(bp) * e
+    tg.headRoll = 0.22 * sw * e
+    tg.twist = 0.42 * cs * e
+    tg.leanX = -0.14 * sw * e
+    tg.leanZ = 0.06 * Math.cos(bp) * e
+    tg.shrugL = tg.shrugR = 0.18 * (0.5 + 0.5 * Math.cos(bp)) * e
+    // 팔: 번갈아 펌프(한쪽 위 · 한쪽 아래) → 머리 위 웨이브 → 머리 위 박수 → 만세 피니시
     const a = ss(0.05, 0.3, tl) * (1 - ss(4.0, 4.28, tl))
     const pumpS = ss(1.35, 1.65, tl) // 펌프 → 웨이브
-    const clapS = ss(2.85, 3.1, tl) // → 박수/만세 교차
+    const clapS = ss(2.85, 3.1, tl) // → 박수
     const finS = ss(3.7, 3.95, tl)
+    const hit = 0.55 + 0.45 * Math.pow(0.5 + 0.5 * Math.cos(bp), 2)
     for (let si = 0; si < 2; si++) {
       const i = SIDES[si]
       const alt = 0.5 + 0.5 * Math.sin(ph + i * Math.PI)
       armSetMix(tg, i, a, G.pump, G.pumpUp, alt)
       armBlendTo(tg, i, G.hurray, pumpS)
       nudge(tg, i, 'lower', 0.25 * Math.sin(ph + i * 0.6) * pumpS * (1 - clapS))
-      // 박수: 박마다 가슴 앞 ↔ 위
-      const hit = Math.pow(0.5 + 0.5 * Math.cos(bp), 2)
-      armBlendTo(tg, i, G.clap, clapS * (1 - finS) * hit)
+      armBlendTo(tg, i, G.clapHigh, clapS * (1 - finS) * hit)
       armBlendTo(tg, i, G.cheerWide, finS)
     }
   },

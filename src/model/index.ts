@@ -73,6 +73,10 @@ export const BODY = {
   // 리액션(motion.snap=1) 중 스무딩: 춤 박자(2Hz)가 τ=0.1s 평활에 뭉개지지 않게 거의 즉시 추종
   snapRate: 45,
   snapLegGateRate: 28,
+  // 리액션(snap=1) 중 골반 좌우 이동·롤 배율: 트래킹 hipShift=1 은 5cm 라 춤의 체중 이동이 안 보인다 (트래킹은 snap=0 이라 영향 없음)
+  snapHipMul: 2.8,
+  // 리액션 중 팔 present 크로스페이드 시정수 (s) — 박자에 맞는 팔 동작이 0.12초 지연에 뭉개지지 않게
+  snapPresentTau: 0.04,
 } as const
 
 /**
@@ -424,9 +428,10 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
 
       // ---- hipShift: 골반 x 이동 + 미세 롤 (+무릎 굽힘 y 보정) ----
       if (rig.hips) {
-        const shiftW = bodySm.hipShift * BODY.hipShiftX * rig.legLen // 월드 +x = 캐릭터 왼쪽
+        const hipMul = lerp(1, BODY.snapHipMul, snap)
+        const shiftW = bodySm.hipShift * BODY.hipShiftX * hipMul * rig.legLen // 월드 +x = 캐릭터 왼쪽
         rig.hips.position.set(rig.hipsRest.x - S * shiftW, rig.hipsRest.y - drop, rig.hipsRest.z)
-        rig.hips.rotation.set(0, 0, -S * bodySm.hipShift * BODY.hipRoll)
+        rig.hips.rotation.set(0, 0, -S * bodySm.hipShift * BODY.hipRoll * hipMul)
       }
 
       // ---- 팔 = ArmPose 방향벡터 FK (어깨 리프트: 호흡 + shrug + 팔들기 보조) ----
@@ -434,8 +439,9 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
         + Math.max(0, frame.armL.upperDir.y) * BODY.raiseAssist * rig.armL.pSm
       const liftR = breathLift + bodySm.shrugR * BODY.shrugMax
         + Math.max(0, frame.armR.upperDir.y) * BODY.raiseAssist * rig.armR.pSm
-      applyArm(rig.armL, frame.armL, dt, t, liftL)
-      applyArm(rig.armR, frame.armR, dt, t, liftR)
+      const presentTau = lerp(PRESENT_TAU, BODY.snapPresentTau, snap)
+      applyArm(rig.armL, frame.armL, dt, t, liftL, presentTau)
+      applyArm(rig.armR, frame.armR, dt, t, liftR, presentTau)
 
       // ---- 동물 헤드/주둥이 2차 모션 ----
       const hp = headP.step(S * pitch, dt)
@@ -490,11 +496,11 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
    * ArmPose 한 팔 적용: present 크로스페이드(neutralArm↔트래킹) → wave 오버레이 →
    * FK 솔브 → 손가락 5개 개별 체인. 스크래치 전부 ArmRig 필드 재사용 (할당 0).
    */
-  function applyArm(a: ArmRig, w: ArmPose, dt: number, t: number, lift: number) {
+  function applyArm(a: ArmRig, w: ArmPose, dt: number, t: number, lift: number, presentTau: number) {
     a.shoulder?.rotation.set(0, 0, -a.sign * lift)
 
     // present 크로스페이드 (트래킹 히스테리시스 위 얇은 완충 — 스냅 금지)
-    a.pSm += (clamp(w.present, 0, 1) - a.pSm) * (1 - Math.exp(-dt / PRESENT_TAU))
+    a.pSm += (clamp(w.present, 0, 1) - a.pSm) * (1 - Math.exp(-dt / presentTau))
     const p = a.pSm
 
     blendDir(a.u, a.neutral.u, w.upperDir, p)

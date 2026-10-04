@@ -352,7 +352,23 @@ try {
     check(`${id} ${name}: 발이 들린다 (liftL·liftR 또는 kick 최대 > 0.3)`, Math.max(s.liftL, s.kickL) > 0.3 && Math.max(s.liftR, s.kickR) > 0.3, `liftL=${s.liftL.toFixed(2)} liftR=${s.liftR.toFixed(2)} kickL=${s.kickL.toFixed(2)} kickR=${s.kickR.toFixed(2)}`)
     check(`${id} ${name}: 골반 체중 이동 (|hipShift| 최대 > 0.4)`, s.hip > 0.4, `hip=${s.hip.toFixed(2)}`)
   }
-  check('9 신나는 춤: 좌우 이동 (shiftX 최대 > 0.05)', stats[9].shift > 0.05, `shift=${stats[9].shift.toFixed(3)}`)
+  check('9 신나는 춤: 좌우 이동 (shiftX 최대 ≥ 0.04)', stats[9].shift >= 0.04, `shift=${stats[9].shift.toFixed(3)}`)
+  check('9 신나는 춤: 박마다 통통 (bounce 최대 > 0.03)', stats[9].bounce > 0.03, `bounce=${stats[9].bounce.toFixed(3)}`)
+  // 번갈아 스텝: 체중이 왼쪽(hipShift>0)일 때 오른발이, 오른쪽일 때 왼발이 들린다 (한 발은 항상 바닥)
+  {
+    const R = createReactions()
+    R.trigger(9, 0)
+    let okL = 0, okR = 0, nL = 0, nR = 0, both = 0
+    run(R, 0, 3.6, (f, t) => {
+      if (t < 0.4 || t > 3.4) return
+      const m = f.motion
+      if (f.body.hipShift > 0.6) { nL++; if (m.liftR > 0.35 && m.liftL < 0.2) okL++ }
+      if (f.body.hipShift < -0.6) { nR++; if (m.liftL > 0.35 && m.liftR < 0.2) okR++ }
+      if (m.liftL > 0.5 && m.liftR > 0.5) both++
+    })
+    check('9 신나는 춤: 번갈아 스텝 (체중 반대쪽 발이 들림)', nL > 30 && nR > 30 && okL / nL > 0.8 && okR / nR > 0.8 && both === 0, `L ${okL}/${nL} R ${okR}/${nR} 양발동시=${both}`)
+    R.dispose()
+  }
   check('0 귀여운 춤: 360° 트월 (자전 최대 ≥ 2π)', stats[10].maxSpin >= TAU - 1e-3, `spin=${stats[10].maxSpin.toFixed(2)}`)
   check('8 축하·1 기쁨: 도약 (bounce 최대 > 0.04)', stats[8].bounce > 0.04 && stats[1].bounce > 0.02, `8=${stats[8].bounce.toFixed(3)} 1=${stats[1].bounce.toFixed(3)}`)
   check('3 화남: 발 구르기 (liftL·liftR 최대 > 0.5)', stats[3].liftL > 0.5 && stats[3].liftR > 0.5)
