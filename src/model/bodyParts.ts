@@ -21,9 +21,16 @@ import { buildStrand, type StrandRig } from './strands'
 
 export interface TailRig {
   root: THREE.Group
-  /** 매 프레임 호출 — 살랑거림 + 고개 반응 지연 */
-  sway(pitchS: number, yaw: number, breath: number, dt: number): void
+  /** 매 프레임 호출 — 살랑거림 + 고개 반응 지연 + 허리 숙임 팔로스루 (bow: rad, 생략하면 0) */
+  sway(pitchS: number, yaw: number, breath: number, dt: number, bow?: number): void
 }
+
+/**
+ * 허리 숙임에 꼬리 밑동이 들리는 정도 (bow 에 곱하는 rad 계수) — 꼬리는 hips 의 자식이라 골반과 같이 접혀 꼬리가 거의 수직 막대가 된다.
+ * 그만큼의 일부를 밑동에서 되돌려 꼬리가 등에서 떠 뒤로 들린 채 유지되게 한다 (1 이면 서 있을 때와 같은 월드 방향).
+ * 부호는 실측: x 회전이 hips 의 접힘 반대(뒤)로 꼬리를 젖히는 쪽을 +로 둔다.
+ */
+const TAIL_LIFT = 0.8
 
 export interface TailSpec {
   /** 메인 색 / 셰이드 */
@@ -75,13 +82,16 @@ export function buildTail(
   if (S === -1) root.rotation.y = Math.PI
 
   // 밑동 앵커: 등 표면 밖(로컬 +Z = 뒤), 힙보다 살짝 위.
-  const anchor = new THREE.Group()
+  // lift 는 밑동 위치에서 허리 숙임만큼 꼬리를 젖히는 피벗이다 — bow = 0 이면 회전 0 이라 아래 anchor 가 이전과 똑같은 자리·자세다.
+  const lift = new THREE.Group()
   // 옆으로 확실히 빼서 정면 실루엣에 걸리게 한다 (이전 x 0.10은 등 뒤에 가려졌다).
-  anchor.position.set(side * 0.62 * unit, 0.10 * unit, 0.66 * unit)
+  lift.position.set(side * 0.62 * unit, 0.10 * unit, 0.66 * unit)
+  root.add(lift)
+  const anchor = new THREE.Group()
   // 가닥은 -Y로 자라므로, 위로 치켜세우려면 밑동을 뒤로 크게 젖힌다(≈150°).
   anchor.rotation.x = -2.62
   anchor.rotation.z = -side * 0.72
-  root.add(anchor)
+  lift.add(anchor)
 
   const strand = buildStrand({
     segments: 7,
@@ -108,8 +118,9 @@ export function buildTail(
   hips.add(root)
   return {
     root,
-    sway(pitchS, yaw, breath, dt) {
-      strand.sway(pitchS, yaw, breath, dt)
+    sway(pitchS, yaw, breath, dt, bow = 0) {
+      lift.rotation.x = TAIL_LIFT * bow
+      strand.sway(pitchS, yaw, breath, dt, bow)
     },
   }
 }

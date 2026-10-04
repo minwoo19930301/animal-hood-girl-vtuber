@@ -414,7 +414,8 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
       const aL = bodySm.kneeL * BODY.kneeMax * gate
       const aR = bodySm.kneeR * BODY.kneeMax * gate
       // 허리 숙임: hips 를 앞으로 접은 만큼 허벅지를 같은 각만큼 되돌려 다리는 곧게 선다 (게이트를 곱하지 않는다 — 두 회전은 항상 한 쌍)
-      const bp = bowPose(BOW_POSE, rig.hipPivot.y, rig.hipPivot.z, S, mo ? clamp(mo.bow, 0, BOW_MAX) : 0)
+      const bowAmt = mo ? clamp(mo.bow, 0, BOW_MAX) : 0
+      const bp = bowPose(BOW_POSE, rig.hipPivot.y, rig.hipPivot.z, S, bowAmt)
       if (mo) {
         // 리액션 다리 확장: 발 들기(허벅지↑+정강이 접힘) · 차기(무릎 편 채 앞으로) · 옆으로 벌림
         const lfL = clamp(mo.liftL, 0, 1) * gate, lfR = clamp(mo.liftR, 0, 1) * gate
@@ -460,7 +461,7 @@ export function createMingo(avatar: AvatarSlug = 'bear'): MingoModel {
       const mp = muzzleP.step(S * pitch, dt)
       const my = muzzleY.step(yaw, dt)
       rig.animal.muzzleFollow.rotation.set(mp * 0.18, 0, -my * 0.16)
-      rig.animal.update?.(S * pitch, yaw, breathAmp, dt)
+      rig.animal.update?.(S * pitch, yaw, breathAmp, dt, bowAmt)
 
       // ---- FX ----
       const fx = rig.fx

@@ -60,8 +60,25 @@ export interface StrandSpec {
 
 export interface StrandRig {
   root: THREE.Group
-  sway(pitchS: number, yaw: number, breath: number, dt: number): void
+  /**
+   * @param bow 허리 숙임(rad, 0 = 서 있음) — 꼬리처럼 hips 에 붙은 가닥이 골반 접힘을 한 박자 늦게 따라가게 한다 (생략하면 0)
+   */
+  sway(pitchS: number, yaw: number, breath: number, dt: number, bow?: number): void
 }
+
+/**
+ * 골반 접힘(bow)을 늦게 따라가는 정도 — 분절마다 스프링 Follower 가 내는 지연량(spring - 입력, rad)에 곱해 x축 굽힘으로 싣는다.
+ * 부호(-)는 실측으로 확정: 입력이 오르면 지연량이 음수라 x 굽힘이 +(끝이 뒤로)가 된다 — 골반이 앞으로 접히는 동안 끝이 뒤에 처졌다가 멈추면 제자리로 돌아오고,
+ * 일어서는 동안에는 반대로 앞으로 끌려온다 (CDP 로 꼬리 끝 월드 좌표를 재서 정상값 대비 내려가는 중 약 +14°·올라오는 중 약 -12° 처짐을 확인).
+ */
+const BOW_LAG_GAIN = -1.4
+/** 마지막 숙임 뒤 이만큼(초) 지나면 지연 스프링은 이미 수렴이라, 서 있는 동안 갈기·꼬리 가닥마다 적분하지 않는다 */
+const BOW_QUIET_SEC = 2.5
+/**
+ * 숙인 채 머물 때 끝이 자기 무게로 뒤로 처지는 정도 (분절당 rad / bow rad, 깊이로 가중) — 곧게 선 막대로 보이지 않고 완만한 호가 되게 한다.
+ * 부호(+)는 실측: 위·뒤로 선 가닥의 끝이 더 뒤로 눕는 쪽.
+ */
+const BOW_SAG = 0.2
 
 /**
  * 한 가닥을 만든다. 로컬 기준: 가닥은 -Y(아래)로 자라고, +Z가 바깥(방사)이다.
@@ -75,6 +92,7 @@ export function buildStrand(spec: StrandSpec): StrandRig {
 
   const pivots: THREE.Group[] = []
   const followers: Follower[] = []
+  const bowFollowers: Follower[] = []
   const restZ: number[] = []
   // 분절 회전은 체인을 따라 누적된다 — 분절 수로 나누지 않으면 마디를 늘릴 때마다
   // 총 회전량이 비례해 커져 끝이 원뿔을 그리며 돈다('헬리콥터' 버그).
@@ -98,6 +116,8 @@ export function buildStrand(spec: StrandSpec): StrandRig {
     pivots.push(pivot)
     // 끝으로 갈수록 무른 스프링 → 지연이 커지고 채찍처럼 휜다
     followers.push(new Follower(70 - i * 11, 6.2 - i * 0.7, 0.5))
+    // 허리 숙임 지연용: 골반이 0.5초에 접히는 속도에 맞춘 (너무 무르면 숙임이 끝난 뒤에도 질질 끌린다) 밑동 빠르고 끝 느린 스프링
+    bowFollowers.push(new Follower(150 - i * 14, 12 - i * 0.9, 0.5))
 
     const t0 = i / n
     const t1 = (i + 1) / n
@@ -133,6 +153,7 @@ export function buildStrand(spec: StrandSpec): StrandRig {
   }
 
   let clock = 0
+  let bowQuiet = Infinity // 마지막으로 bow > 0 이었던 뒤 경과 시간
   // 분절별 스무딩 상태 — 끝으로 갈수록 시간상수를 키워 반응이 늦게 도착한다.
   const smoothYaw = new Array<number>(n).fill(0)
   const smoothPitch = new Array<number>(n).fill(0)
@@ -140,8 +161,11 @@ export function buildStrand(spec: StrandSpec): StrandRig {
 
   return {
     root,
-    sway(pitchS, yaw, breath, dt) {
+    sway(pitchS, yaw, breath, dt, bow = 0) {
       clock += dt
+      if (bow > 1e-6) bowQuiet = 0
+      else bowQuiet += dt
+      const bowOn = bowQuiet < BOW_QUIET_SEC
       for (let i = 0; i < n; i++) {
         const depth = (i + 1) / n // 끝일수록 크게 흔들린다
         // 위상을 분절 인덱스로 밀어 파동이 밑동→끝으로 타고 내려간다
@@ -157,7 +181,10 @@ export function buildStrand(spec: StrandSpec): StrandRig {
         smoothPitch[i] += (pitchS - smoothPitch[i]) * rate
         pivots[i].rotation.z = restZ[i] + idle + counter * smoothYaw[i] * 1.05 * norm * depth
         // x축(앞뒤)은 작게만 — z축 스윙과 섞이면 끝이 원을 그린다.
-        pivots[i].rotation.x = counter * smoothPitch[i] * 0.06 * norm * depth
+        // 허리 숙임 지연: 입력 bow 를 늦게 따라가는 스프링이 입력보다 얼마나 뒤처졌는지(spring - bow)가 곧 골반 대비 꼬리의 휨이다.
+        // 서 있을 때(bow = 0)는 0 이라 기존 모션과 같다
+        const bowLag = bowOn ? bowFollowers[i].step(bow, dt) : 0
+        pivots[i].rotation.x = counter * smoothPitch[i] * 0.06 * norm * depth + (BOW_LAG_GAIN * bowLag + BOW_SAG * bow) * norm * depth
       }
     },
   }
@@ -170,8 +197,8 @@ export function groupStrands(strands: StrandRig[]): StrandRig {
   for (const s of strands) root.add(s.root)
   return {
     root,
-    sway(pitchS, yaw, breath, dt) {
-      for (const s of strands) s.sway(pitchS, yaw, breath, dt)
+    sway(pitchS, yaw, breath, dt, bow = 0) {
+      for (const s of strands) s.sway(pitchS, yaw, breath, dt, bow)
     },
   }
 }

@@ -56,7 +56,8 @@ export interface AnimalCostumeRig {
   muzzleFollow: THREE.Group
   hitMeshes: THREE.Mesh[]
   /** Optional costume-specific animation. */
-  update?(pitchS: number, yaw: number, breath: number, dt: number): void
+  /** bow = 허리 숙임(rad, 0 = 서 있음) — 꼬리처럼 골반에 붙은 파츠의 팔로스루용. 쓰지 않는 코스튬은 무시한다 */
+  update?(pitchS: number, yaw: number, breath: number, dt: number, bow?: number): void
 }
 
 export type AnimalBuilder = (context: AnimalBuildContext) => AnimalCostumeRig

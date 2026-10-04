@@ -150,9 +150,9 @@ export function buildDog(ctx: AnimalBuildContext): AnimalCostumeRig {
     headFollow: base.shellPivot,
     muzzleFollow,
     hitMeshes: base.hitMeshes,
-    update: (pitchS, yaw, breath, dt) => {
+    update: (pitchS, yaw, breath, dt, bow) => {
       acc.sway(pitchS, yaw, breath, dt)
-      tail?.sway(pitchS, yaw, breath, dt)
+      tail?.sway(pitchS, yaw, breath, dt, bow)
       for (const e of ears) {
         const p = e.fp.step(pitchS, dt)
         const y = e.fy.step(yaw, dt)

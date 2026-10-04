@@ -171,9 +171,9 @@ export function buildFox(ctx: AnimalBuildContext): AnimalCostumeRig {
     headFollow: base.shellPivot,
     muzzleFollow,
     hitMeshes: base.hitMeshes,
-    update: (pitchS, yaw, breath, dt) => {
+    update: (pitchS, yaw, breath, dt, bow) => {
       acc.sway(pitchS, yaw, breath, dt)
-      tail?.sway(pitchS, yaw, breath, dt)
+      tail?.sway(pitchS, yaw, breath, dt, bow)
     },
   }
 }
