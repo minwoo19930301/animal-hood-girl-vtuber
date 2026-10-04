@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import { createMingo } from './model/index'
 import { createTracker } from './tracking/index'
 import { createCameraSession, type CameraState } from './camera'
+import { hasAvatarModifier, hasExtraModifier } from './keys'
+import { modLabel, os } from './platform'
 import { createAliveness } from './aliveness/index'
 import { createReactions } from './reactions/index'
 import { prewarmShaders } from './reactions/warm'
@@ -105,7 +107,7 @@ if (gridEl) {
     btn.innerHTML =
       `<span class="emoji">${AVATAR_EMOJI[entry.slug] ?? '🐾'}</span>` +
       `<span class="label">${entry.label}</span>` +
-      `<span class="key">⌘${entry.key}</span>`
+      `<span class="key">${modLabel(os)}${entry.key}</span>`
     btn.addEventListener('click', (e) => {
       e.stopPropagation()
       switchToAvatar(entry.slug)
@@ -114,6 +116,10 @@ if (gridEl) {
   }
 }
 refreshChip()
+// 단축키 안내는 OS별 수식키 표기를 쓴다 (맥 ⌘ / Windows·Linux Ctrl+)
+const hintEl = document.getElementById('picker-hint')
+if (hintEl) hintEl.textContent = `${modLabel(os)}1–0 캐릭터 · 1–0 리액션 · C`
+chipEl?.setAttribute('title', `캐릭터 바꾸기 (C / 우클릭 / ${modLabel(os)}숫자) · 리액션은 숫자 1–0`)
 
 chipEl?.addEventListener('click', (e) => {
   e.stopPropagation()
@@ -175,18 +181,18 @@ function digitOf(e: KeyboardEvent): string | null {
 }
 
 // 키보드 (창에 포커스가 있을 때 / 브라우저 실행):
-//  - ⌘+1..9, 0, -, =, `, [  캐릭터 전환 (catalog 키). 리로드 시 카메라 스트림도 정상 재초기화되며 선택값은 로컬에만 저장된다.
+//  - ⌘(Windows는 Ctrl)+1..9, 0, -, =, `, [  캐릭터 전환 (catalog 키). 리로드 시 카메라 스트림도 정상 재초기화되며 선택값은 로컬에만 저장된다.
 //  - 1..9, 0  리액션 재생 (0 = 10번). 꾹 눌러도 한 번만.
 //  - Esc  리액션 취소 + 피커 닫기, C  피커 토글
-// Electron에서는 같은 동작이 메뉴 단축키(⌘숫자)와 전역 단축키(Ctrl+Option+숫자)로도 들어온다.
+// Electron에서는 같은 동작이 메뉴 단축키(⌘/Ctrl+숫자)와 전역 단축키(Ctrl+Option/Alt+숫자)로도 들어온다.
 window.addEventListener('keydown', (event) => {
   // 입력 필드 포커스 중이면 무시 (현재 없음, 방어)
   const tag = (event.target as HTMLElement | null)?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA') return
   if (event.isComposing) return
 
-  if (event.metaKey) {
-    if (event.ctrlKey || event.altKey || event.shiftKey) return // ⌘⇧… 는 메뉴(아바타 크기 등) 몫
+  if (hasAvatarModifier(os, event)) {
+    if (hasExtraModifier(os, event)) return // ⌘⇧… 는 메뉴(아바타 크기 등) 몫, Ctrl+Alt+숫자는 전역 리액션 단축키 몫
     const d = digitOf(event)
     const next = avatarKeys[d ?? event.key]
     if (!next) return
@@ -447,7 +453,7 @@ function loop() {
 }
 if (!pipelinePaused) loop()
 
-// ---------- 가시성 연동 (Cmd+Shift+M 퀵 하이드) ----------
+// ---------- 가시성 연동 (⌘/Ctrl+Shift+M 퀵 하이드) ----------
 // backgroundThrottling:false라 hide 후에도 rAF가 계속 돌고, visibilityState도
 // 'visible'로 남는다(Electron 문서화 동작) — main 프로세스가 방송하는
 // mingo:visibility로 전체 파이프라인(루프+트래커+카메라 LED)을 멈추고 복귀 시 재시작.

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
 import { createCameraSession } from '../src/camera.ts'
+import { hasAvatarModifier, hasExtraModifier } from '../src/keys.ts'
+import { modLabel, osFromPlatform } from '../src/platform.ts'
 import { isCameraRequest, isTrustedAppUrl } from '../electron/policy.mjs'
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
@@ -156,4 +158,47 @@ test('launcher bundle: file:// app URL built from the repo path (spaces, Korean)
     assert.equal(isTrustedAppUrl(pathToFileURL(join(repo, 'dist/harness.html')).href, appUrl), false)
     assert.equal(isTrustedAppUrl(pathToFileURL('/tmp/dist/index.html').href, appUrl), false)
   }
+})
+
+test('launcher/portable bundle on Windows: file:///C:/… app URL (spaces, drive letter) stays trusted', () => {
+  // pack:win 결과물은 C:\Users\김 민우\Animal Hood VTuber-win32-x64\resources\app\dist\index.html 을 file:// 로 연다 — pathToFileURL 이 Windows 에서 만드는 모양
+  const appUrl = 'file:///C:/Users/%EA%B9%80%20%EB%AF%BC%EC%9A%B0/Animal%20Hood%20VTuber-win32-x64/resources/app/dist/index.html'
+  assert.ok(isTrustedAppUrl(appUrl, appUrl))
+  assert.ok(isTrustedAppUrl(appUrl + '?avatar=fox', appUrl))
+  assert.equal(isTrustedAppUrl(appUrl.replace('index.html', 'harness.html'), appUrl), false)
+  assert.equal(isTrustedAppUrl('file:///C:/Windows/Temp/index.html', appUrl), false)
+  assert.equal(isTrustedAppUrl(appUrl.replace('C:', 'D:'), appUrl), false)
+})
+
+test('platform: process.platform / navigator 문자열을 mac·win·other 로 가른다', () => {
+  assert.equal(osFromPlatform('darwin'), 'mac') // 'darwin' 안의 'win' 에 속지 않는다
+  assert.equal(osFromPlatform('MacIntel'), 'mac')
+  assert.equal(osFromPlatform('win32'), 'win')
+  assert.equal(osFromPlatform('Win32'), 'win')
+  assert.equal(osFromPlatform('Windows'), 'win')
+  assert.equal(osFromPlatform('linux'), 'other')
+  assert.equal(osFromPlatform('Linux x86_64'), 'other')
+  assert.equal(osFromPlatform(undefined), 'other')
+  assert.equal(modLabel('mac'), '⌘')
+  assert.equal(modLabel('win'), 'Ctrl+')
+})
+
+test('캐릭터 전환 수식키: 맥은 ⌘ 만, Windows 는 Ctrl 만 — 다른 수식키가 섞이면 전역·메뉴 단축키 몫', () => {
+  const none = { metaKey: false, ctrlKey: false, altKey: false, shiftKey: false }
+  const e = (patch) => ({ ...none, ...patch })
+  // 맥 (기존 동작 그대로)
+  assert.equal(hasAvatarModifier('mac', e({ metaKey: true })), true)
+  assert.equal(hasAvatarModifier('mac', e({ ctrlKey: true })), false) // Ctrl+Option+숫자 전역 단축키가 캐릭터를 바꾸면 안 된다
+  assert.equal(hasExtraModifier('mac', e({ metaKey: true })), false)
+  for (const extra of ['ctrlKey', 'altKey', 'shiftKey']) assert.equal(hasExtraModifier('mac', e({ metaKey: true, [extra]: true })), true, extra)
+  // Windows
+  assert.equal(hasAvatarModifier('win', e({ ctrlKey: true })), true)
+  assert.equal(hasAvatarModifier('win', e({ metaKey: true })), false)
+  assert.equal(hasExtraModifier('win', e({ ctrlKey: true })), false)
+  for (const extra of ['metaKey', 'altKey', 'shiftKey']) assert.equal(hasExtraModifier('win', e({ ctrlKey: true, [extra]: true })), true, extra)
+  // Ctrl+Alt+숫자(전역 리액션, AltGr 자판)는 전환으로 읽히지 않는다
+  const ctrlAlt = e({ ctrlKey: true, altKey: true })
+  assert.ok(hasAvatarModifier('win', ctrlAlt) && hasExtraModifier('win', ctrlAlt))
+  // 그 밖(Linux)은 Windows 와 같은 규칙
+  assert.equal(hasAvatarModifier('other', e({ ctrlKey: true })), true)
 })
